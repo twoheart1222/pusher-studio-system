@@ -111,7 +111,6 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .cat-收音{ background:rgba(5,150,105,.1); color:#059669; }
 .cat-配件{ background:rgba(190,24,93,.1); color:#be185d; }
 .cat-支撐{ background:rgba(120,113,108,.1); color:#57534e; }
-/* 自訂分類 */
 [class^="cat-"]:not(.cat-攝影機):not(.cat-鏡頭):not(.cat-燈光):not(.cat-收音):not(.cat-配件):not(.cat-支撐) { background: rgba(88,28,135,.1); color: #7c3aed; }
 
 .status-dot{ width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px; }
@@ -413,7 +412,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       
       <div class="field">
         <label>現值估算（NT$）</label>
-        <input type="number" id="item-cur-value" placeholder="自動計算" readonly style="background:rgba(0,0,0,.03); color:var(--ink); font-weight:600; cursor:not-allowed;">
+        <input type="text" id="item-cur-value" placeholder="自動計算" readonly style="background:rgba(0,0,0,.03); color:var(--ink); font-weight:600; cursor:not-allowed;">
         <span class="field-hint" id="cur-value-hint" style="color:var(--acc);">※ 系統自動依「購入日期」計算，每年折損 10%（每月攤提）</span>
       </div>
       
@@ -533,7 +532,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       </p>
       <div style="background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-size:10px;font-family:var(--font-mono);color:var(--ink2);line-height:1.8;overflow-x:auto;">
         A: 器材名稱 *&nbsp;&nbsp;&nbsp;B: 類別&nbsp;&nbsp;&nbsp;C: 品牌&nbsp;&nbsp;&nbsp;D: 型號/編號&nbsp;&nbsp;&nbsp;E: 數量<br>
-        F: 狀態&nbsp;&nbsp;&nbsp;G: 購入價&nbsp;&nbsp;&nbsp;H: 現值(免填自動算)&nbsp;&nbsp;&nbsp;I: 日租金&nbsp;&nbsp;&nbsp;J: 購入日&nbsp;&nbsp;&nbsp;K: 保固期&nbsp;&nbsp;&nbsp;L: 備註<br>
+        F: 狀態&nbsp;&nbsp;&nbsp;G: 購入價&nbsp;&nbsp;&nbsp;H: 現值(免填自動算)&nbsp;&nbsp;&nbsp;I: 日租金&nbsp;&nbsp;&nbsp;J: 購入日(支援只填年份)&nbsp;&nbsp;&nbsp;K: 保固期&nbsp;&nbsp;&nbsp;L: 備註<br>
         M: 市場行情(選填)
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -667,6 +666,21 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   </div>
 </div>
 
+<script type="module">
+  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+  try {
+    const app = getApp();
+    const fbDb = getFirestore(app);
+
+    window._invFb = { collection, getDocs, doc, setDoc, deleteDoc, getDoc, fbDb };
+    window._fbDb = fbDb;
+    window._fbReady = true;
+  } catch(e) {
+    console.error("Firestore init error:", e);
+  }
+</script>
 
 <script>
 /* =============================================
@@ -716,7 +730,7 @@ window.updateCurValueField = function() {
   const hintEl = document.getElementById('cur-value-hint');
   
   if (parseFloat(price) > 0 && curVal <= 0) {
-    inputEl.value = 0;
+    inputEl.value = 'NT$ 0';
     inputEl.style.color = '#dc2626';
     hintEl.innerHTML = '<span style="color:#dc2626;font-weight:bold;">※ 殘值已歸零 (已折足)</span>';
   } else {
@@ -730,37 +744,25 @@ window.updateCurValueField = function() {
 /* =============================================
    FIREBASE
    ============================================= */
-let fbDb = null, fbReady = false;
-
 async function initData() {
-  try {
-    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
-    const { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } =
-      await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
-    
-    let waited = 0;
-    while (!window._fbDb && waited < 5000) {
-      await new Promise(r => setTimeout(r, 100));
-      waited += 100;
-    }
-
-    if(window._fbDb) {
-       fbDb = window._fbDb;
-       window._invFb = { collection, getDocs, doc, setDoc, deleteDoc, fbDb };
-       fbReady = true;
-       setSyncStatus('ok','已連線');
-       setPill('ok');
-       await loadAll();
-    } else {
-       throw new Error("Firebase not initialized");
-    }
-  } catch(e) {
-    console.warn('Firebase error:', e);
-    setSyncStatus('err','離線模式');
-    setPill('offline');
-    loadLocal();
+  let waited = 0;
+  while (!window._fbReady && waited < 5000) {
+    await new Promise(r => setTimeout(r, 100));
+    waited += 100;
   }
-  
+
+  if(window._fbReady) {
+     setSyncStatus('ok','已連線');
+     setPill('ok');
+     await loadAll();
+  } else {
+     console.warn('Firebase connection timeout.');
+     setSyncStatus('err','離線模式');
+     setPill('offline');
+     loadLocal();
+  }
+
+  initYearSelect();
   renderInvCatFilters();
   renderAll();
 }
@@ -783,14 +785,14 @@ async function loadAll() {
 }
 
 async function fbSet(col, id, data) {
-  if(!fbReady){ saveLocal(); return; }
+  if(!window._fbReady){ saveLocal(); return; }
   setSyncStatus('syncing','同步中...');
   const { doc, setDoc, fbDb } = window._invFb;
   await setDoc(doc(fbDb, col, id), data);
   setSyncStatus('ok','已同步'); saveLocal();
 }
 async function fbDel(col, id) {
-  if(!fbReady){ saveLocal(); return; }
+  if(!window._fbReady){ saveLocal(); return; }
   const { doc, deleteDoc, fbDb } = window._invFb;
   await deleteDoc(doc(fbDb, col, id)); saveLocal();
 }
@@ -1212,9 +1214,6 @@ async function saveItem() {
     updatedAt:  Date.now()
   };
   
-  // 我們不再存 curValue 入庫，因為它應該隨時間動態變化，
-  // 顯示時永遠依據 buyPrice 與 buyDate 當下即時計算即可。
-
   const idx = items.findIndex(i=>i.id===id);
   if(idx>=0) items[idx]=it; else items.unshift(it);
   await fbSet('inv_items', id, it);
@@ -1618,7 +1617,7 @@ function exportItemsExcel() {
   if(!items.length){ showToast('目前無器材可匯出','err'); return; }
   const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','折損後現值','日租金(每天)','購入日期','保固到期','備註','市場行情'];
   const rows = items.map(it => {
-    // 匯出時動態計算一次以防萬一
+    // 匯出時動態計算一次
     let curVal = calculateCurValue(it.buyPrice, it.buyDate);
     // 如果折損歸零，匯出直接顯示 0
     if (parseFloat(it.buyPrice) > 0 && curVal <= 0) curVal = 0;
@@ -1633,25 +1632,9 @@ function exportItemsExcel() {
   showToast(`✓ 已匯出 ${items.length} 筆器材`);
 }
 
-/* =============================================
-   FIREBASE SCRIPT LOADING TRICK
-   ============================================= */
-const script = document.createElement('script');
-script.type = 'module';
-script.textContent = `
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-const app = getApp();
-window._fbDb = getFirestore(app);
-window._fbReady = true;
-`;
-document.body.appendChild(script);
-
-// INIT
-window.addEventListener('load', () => {
+window.onload = () => {
   initData();
-});
+};
 </script>
 </body>
 </html>
