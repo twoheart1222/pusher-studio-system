@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>器材庫存 — 公司系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -25,14 +25,14 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 ::-webkit-scrollbar-thumb{ background:#c4bdb6; border-radius:3px; }
 
 /* TOPBAR */
-.topbar{ background:var(--panel); color:#fafaf9; padding:0 24px; height:50px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:300; border-bottom:1px solid rgba(255,255,255,.05); }
+.topbar{ background:var(--panel); color:#fafaf9; padding:10px 24px; min-height:50px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; position:sticky; top:0; z-index:300; border-bottom:1px solid rgba(255,255,255,.05); }
 .topbar-brand{ display:flex; align-items:center; gap:10px; font-size:13px; font-weight:500; color:#e7e5e4; }
 .brand-dot{ width:7px; height:7px; border-radius:50%; background:var(--acc2); }
-.topbar-nav{ display:flex; gap:2px; }
-.nav-tab{ padding:6px 14px; border-radius:var(--r); font-size:12px; font-weight:500; color:#a8a29e; cursor:pointer; transition:.15s; text-decoration:none; border:1px solid transparent; }
+.topbar-nav{ display:flex; gap:2px; flex-wrap:wrap; }
+.nav-tab{ padding:6px 14px; border-radius:var(--r); font-size:12px; font-weight:500; color:#a8a29e; cursor:pointer; transition:.15s; text-decoration:none; border:1px solid transparent; white-space:nowrap; }
 .nav-tab:hover{ color:#e7e5e4; background:rgba(255,255,255,.06); }
 .nav-tab.active{ color:var(--acc2); border-color:rgba(217,119,6,.3); background:rgba(180,83,9,.12); }
-.topbar-actions{ display:flex; gap:7px; align-items:center; }
+.topbar-actions{ display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
 
 /* TOOLBAR */
 .toolbar{ background:var(--panel2); padding:0 24px; height:44px; display:flex; align-items:center; gap:0; position:sticky; top:50px; z-index:290; border-bottom:1px solid rgba(255,255,255,.05); overflow-x:auto; scrollbar-width:none; }
@@ -51,7 +51,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 @keyframes pulse{ 0%,100%{opacity:1}50%{opacity:.4} }
 
 /* BTNS */
-.btn{ display:inline-flex; align-items:center; gap:5px; padding:6px 13px; border-radius:var(--r); border:none; font-size:12px; font-weight:500; cursor:pointer; transition:.15s; font-family:inherit; white-space:nowrap; }
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:6px 13px; border-radius:var(--r); border:none; font-size:12px; font-weight:500; cursor:pointer; transition:.15s; font-family:inherit; white-space:nowrap; }
 .btn-ghost{ background:rgba(255,255,255,.07); color:#d6d3d1; border:1px solid rgba(255,255,255,.12); }
 .btn-ghost:hover{ background:rgba(255,255,255,.14); color:#fafaf9; }
 .btn-ghost-dark{ background:rgba(0,0,0,.04); color:var(--ink2); border:1px solid var(--line); }
@@ -71,8 +71,8 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 /* MAIN */
 .main{ padding:20px 24px; max-width:1400px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
 
-/* KPI ROW */
-.kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+/* KPI ROW (Modified for 6 cards) */
+.kpi-row{ display:grid; grid-template-columns:repeat(6,1fr); gap:14px; }
 .kpi-card{ background:var(--paper); border-radius:10px; padding:16px 18px; box-shadow:var(--shadow-sm); border:1px solid var(--line); position:relative; overflow:hidden; }
 .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; }
 .kpi-card.k-total::before{ background:linear-gradient(90deg,#b45309,#d97706); }
@@ -80,17 +80,21 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .kpi-card.k-out::before{ background:linear-gradient(90deg,#0369a1,#38bdf8); }
 .kpi-card.k-repair::before{ background:linear-gradient(90deg,#dc2626,#f87171); }
 .kpi-card.k-value::before{ background:linear-gradient(90deg,#7c3aed,#a78bfa); }
-.kpi-label{ font-size:10px; color:var(--ink3); letter-spacing:.5px; text-transform:uppercase; margin-bottom:5px; }
+.kpi-card.k-cur-value::before{ background:linear-gradient(90deg,#b45309,#f59e0b); }
+.kpi-label{ font-size:10px; color:var(--ink3); letter-spacing:.5px; text-transform:uppercase; margin-bottom:5px; white-space:nowrap; }
 .kpi-value{ font-size:22px; font-weight:600; font-family:var(--font-mono); letter-spacing:-0.5px; line-height:1; margin-bottom:3px; }
-.kpi-sub{ font-size:10px; color:var(--ink3); }
+.kpi-sub{ font-size:10px; color:var(--ink3); white-space:nowrap; }
+
+/* TWO COL GRID (For Loans & Repairs) */
+.two-col-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
 
 /* PANEL */
 .panel{ background:var(--paper); border-radius:10px; box-shadow:var(--shadow-sm); border:1px solid var(--line); overflow:hidden; }
-.panel-header{ padding:13px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; background:#faf9f7; }
+.panel-header{ padding:13px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; background:#faf9f7; flex-wrap:wrap; gap:10px; }
 .panel-title{ font-size:13px; font-weight:600; color:var(--ink); }
 
 /* INVENTORY TABLE */
-.inv-table-wrap{ overflow-x:auto; }
+.inv-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .inv-table{ width:100%; border-collapse:collapse; min-width:900px; }
 .inv-table th{ padding:8px 14px; font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; text-align:left; background:#faf9f7; border-bottom:1px solid var(--line); white-space:nowrap; }
 .inv-table td{ padding:11px 14px; border-bottom:1px solid var(--line); font-size:12px; vertical-align:middle; }
@@ -107,10 +111,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .cat-收音{ background:rgba(5,150,105,.1); color:#059669; }
 .cat-配件{ background:rgba(190,24,93,.1); color:#be185d; }
 .cat-支撐{ background:rgba(120,113,108,.1); color:#57534e; }
-/* 自訂分類 */
-[class^="cat-"]:not(.cat-攝影機):not(.cat-鏡頭):not(.cat-燈光):not(.cat-收音):not(.cat-配件):not(.cat-支撐) {
-  background: rgba(88,28,135,.1); color: #7c3aed;
-}
+[class^="cat-"]:not(.cat-攝影機):not(.cat-鏡頭):not(.cat-燈光):not(.cat-收音):not(.cat-配件):not(.cat-支撐) { background: rgba(88,28,135,.1); color: #7c3aed; }
 
 .status-dot{ width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px; }
 .status-badge{ display:inline-flex; align-items:center; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:500; white-space:nowrap; }
@@ -129,7 +130,9 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .empty-sub{ font-size:11px; color:var(--ink3); }
 
 /* LOAN LIST */
-.loan-row{ display:grid; grid-template-columns:1fr 130px 120px 110px 120px 100px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
+.loan-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.loan-inner { min-width: 650px; }
+.loan-row{ display:grid; grid-template-columns:1fr 100px 100px 100px 100px 80px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
 .loan-row:last-child{ border-bottom:none; }
 .loan-row:hover{ background:#faf9f7; }
 .loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#faf9f7; }
@@ -138,7 +141,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 /* MODAL */
 .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
 .overlay.open{ display:flex; }
-.modal{ background:var(--paper); border-radius:12px; width:520px; box-shadow:0 20px 60px rgba(0,0,0,.3); overflow:hidden; max-height:90vh; overflow-y:auto; }
+.modal{ background:var(--paper); border-radius:12px; width:520px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,.3); overflow:hidden; max-height:90vh; overflow-y:auto; }
 .modal-wide{ width:600px; }
 .modal-header{ background:var(--panel); color:#fafaf9; padding:15px 20px; display:flex; align-items:center; justify-content:space-between; }
 .modal-title{ font-size:14px; font-weight:600; }
@@ -147,7 +150,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .field{ display:flex; flex-direction:column; gap:5px; }
 .field label{ font-size:11px; font-weight:500; color:var(--ink2); }
 .field input,.field select,.field textarea{ background:#f9f7f4; border:1px solid var(--line); border-radius:var(--r); padding:7px 10px; font-size:12px; font-family:inherit; color:var(--ink); outline:none; transition:.15s; width:100%; box-sizing:border-box; }
-.field input:focus,.field select:focus,.field textarea:focus{ border-color:var(--acc); box-shadow:0 0 0 3px rgba(180,83,9,.08); background:white; }
+.field input:focus,.field select:focus,.field textarea:focus:not([readonly]){ border-color:var(--acc); box-shadow:0 0 0 3px rgba(180,83,9,.08); background:white; }
 .field-row{ display:grid; gap:12px; }
 .field-row.col2{ grid-template-columns:1fr 1fr; }
 .field-row.col3{ grid-template-columns:1fr 1fr 1fr; }
@@ -166,11 +169,26 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .log-date{ font-size:10px; color:var(--ink3); font-family:var(--font-mono); }
 
 /* QR SCANNER */
-#reader { width: 100%; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #000; }
-#reader video { object-fit: cover; }
+#reader { width: 100%; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #000; display:flex; align-items:center; justify-content:center; }
+#reader video { width:100% !important; height:auto !important; object-fit: cover; }
 
-@media(max-width:1100px){ .kpi-row{grid-template-columns:repeat(3,1fr);} }
-@media(max-width:800px){ .kpi-row{grid-template-columns:repeat(2,1fr);} }
+/* ===== RWD MOBILE ===== */
+@media(max-width:1200px){ 
+  .kpi-row{grid-template-columns:repeat(3,1fr);} 
+}
+@media(max-width:900px){ 
+  .two-col-grid { grid-template-columns: 1fr; } 
+  .kpi-row{grid-template-columns:repeat(3,1fr);} 
+}
+@media(max-width:600px){ 
+  .kpi-row{grid-template-columns:1fr 1fr;} 
+  .topbar { padding: 10px; }
+  .topbar-actions { width: 100%; justify-content: flex-start; }
+  .field-row.col2, .field-row.col3 { grid-template-columns: 1fr; }
+  .main { padding: 14px; }
+  .panel-header { flex-direction: column; align-items: flex-start; }
+  .toolbar { position: static; } 
+}
 </style>
 
 <script type="module">
@@ -196,6 +214,8 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 </head>
 <body>
 
+<div class="loading-bar" id="loading-bar"></div>
+
 <div class="topbar">
   <div class="topbar-brand"><div class="brand-dot"></div>公司管理系統</div>
   <div class="topbar-nav">
@@ -212,20 +232,20 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     </span>
     <button class="btn btn-green btn-sm" onclick="openScanner()">📷 掃描借還</button>
     <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
-    <button class="btn btn-ghost btn-sm" onclick="openExcelImport()">📥 Excel 匯入</button>
-    <button class="btn btn-ghost btn-sm" onclick="openLoanModal()">📤 借出器材</button>
-    <button class="btn btn-amber btn-sm" onclick="openItemModal()">＋ 新增器材</button>
+    <button class="btn btn-ghost btn-sm" onclick="openExcelImport()">📥 匯入</button>
+    <button class="btn btn-ghost btn-sm" onclick="openLoanModal()">📤 借出</button>
+    <button class="btn btn-amber btn-sm" onclick="openItemModal()">＋ 新增</button>
     <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
-    <button class="btn btn-ghost" style="color: #fca5a5; border-color: rgba(220,38,38,0.3); padding: 4px 10px;" onclick="logout()">登出</button>
+    <button class="btn btn-ghost btn-sm" style="color: #fca5a5; border-color: rgba(220,38,38,0.3);" onclick="logout()">登出</button>
   </div>
 </div>
 
 <div class="toolbar">
   <div class="tg">
-    <span class="tg-label">狀態篩選</span>
+    <span class="tg-label">狀態</span>
     <button class="view-pill on" onclick="setFilter('status','all',this)">全部</button>
     <button class="view-pill" onclick="setFilter('status','在庫',this)">在庫</button>
-    <button class="view-pill" onclick="setFilter('status','借出',this)">借出中</button>
+    <button class="view-pill" onclick="setFilter('status','借出',this)">借出</button>
     <button class="view-pill" onclick="setFilter('status','維修中',this)">維修中</button>
     <button class="view-pill" onclick="setFilter('status','報廢',this)">報廢</button>
   </div>
@@ -233,12 +253,8 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     </div>
   <div class="tg">
     <span class="tg-label">搜尋</span>
-    <input type="text" id="inv-search" placeholder="器材名稱..." oninput="renderAll()"
-      style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:3px 8px;font-size:11px;color:#d6d3d1;outline:none;font-family:inherit;width:110px;">
-  </div>
-  <div class="tg">
-    <span class="tg-label">Firebase</span>
-    <button class="view-pill" id="fb-status-pill">載入中</button>
+    <input type="text" id="inv-search" placeholder="名稱..." oninput="renderAll()"
+      style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:3px 8px;font-size:11px;color:#d6d3d1;outline:none;font-family:inherit;width:90px;">
   </div>
 </div>
 
@@ -249,7 +265,8 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     <div class="kpi-card k-ok"><div class="kpi-label">可用中</div><div class="kpi-value" id="k-ok" style="color:#059669">—</div><div class="kpi-sub" id="k-ok-sub">狀態在庫</div></div>
     <div class="kpi-card k-out"><div class="kpi-label">借出中</div><div class="kpi-value" id="k-out" style="color:#0369a1">—</div><div class="kpi-sub" id="k-out-sub">等待歸還</div></div>
     <div class="kpi-card k-repair"><div class="kpi-label">維修中</div><div class="kpi-value" id="k-repair" style="color:#dc2626">—</div><div class="kpi-sub" id="k-repair-sub">送修品項</div></div>
-    <div class="kpi-card k-value"><div class="kpi-label">總資產估值</div><div class="kpi-value" id="k-value" style="color:#7c3aed;font-size:14px;">—</div><div class="kpi-sub" id="k-value-sub">現值合計</div></div>
+    <div class="kpi-card k-value"><div class="kpi-label">原始購入總額</div><div class="kpi-value" id="k-value" style="color:#7c3aed;font-size:16px;">—</div><div class="kpi-sub" id="k-value-sub">所有購入價合計</div></div>
+    <div class="kpi-card k-cur-value"><div class="kpi-label">折損後總金額</div><div class="kpi-value" id="k-cur-value" style="color:#b45309;font-size:16px;">—</div><div class="kpi-sub">依年份扣除10%折舊</div></div>
   </div>
 
   <div class="panel">
@@ -267,6 +284,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
             <th>數量</th>
             <th>可用</th>
             <th>購入價</th>
+            <th>折損後現值</th>
             <th>日租金 / 行情</th>
             <th>購入日期</th>
             <th style="text-align:right;">操作</th>
@@ -277,23 +295,27 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+  <div class="two-col-grid">
 
     <div class="panel">
       <div class="panel-header">
         <span class="panel-title">借出紀錄</span>
         <button class="btn btn-ghost-dark btn-xs" onclick="openLoanModal()">＋ 新增借出</button>
       </div>
-      <div class="loan-row loan-header">
-        <div>器材</div>
-        <div>借用人</div>
-        <div>借出日</div>
-        <div>預計歸還</div>
-        <div>連結專案</div>
-        <div></div>
-      </div>
-      <div id="loan-list">
-        <div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">目前無借出紀錄</div></div>
+      <div class="loan-wrap">
+        <div class="loan-inner">
+          <div class="loan-row loan-header">
+            <div>器材</div>
+            <div>借用人</div>
+            <div>借出日</div>
+            <div>預計歸還</div>
+            <div>連結專案</div>
+            <div></div>
+          </div>
+          <div id="loan-list">
+            <div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">目前無借出紀錄</div></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -377,16 +399,21 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       <div class="field-row col2">
         <div class="field">
           <label>購入價格（NT$）</label>
-          <input type="number" id="item-buy-price" placeholder="0" min="0">
+          <input type="number" id="item-buy-price" placeholder="0" min="0" oninput="updateCurValueField()">
         </div>
         <div class="field">
-          <label>現值估算（NT$）</label>
-          <input type="number" id="item-cur-value" placeholder="0" min="0">
-          <span class="field-hint">用於資產估值統計</span>
+          <label>購入日期</label>
+          <input type="date" id="item-buy-date" onchange="updateCurValueField()" oninput="updateCurValueField()">
         </div>
       </div>
       
-      <div class="field-row col2" style="background:rgba(180,83,9,.03); padding:10px; border-radius:6px; border:1px solid rgba(180,83,9,.15);">
+      <div class="field">
+        <label>現值估算（NT$）</label>
+        <input type="number" id="item-cur-value" placeholder="自動計算" readonly style="background:rgba(0,0,0,.03); color:var(--ink3); cursor:not-allowed;">
+        <span class="field-hint" style="color:var(--acc);">※ 系統自動依「購入日期」計算，每年折損 10%（每月攤提）</span>
+      </div>
+      
+      <div class="field-row col2" style="background:rgba(180,83,9,.03); padding:10px; border-radius:6px; border:1px solid rgba(180,83,9,.15); margin-top:8px;">
         <div class="field">
           <label>日租金（NT$／天）</label>
           <input type="number" id="item-day-rate" placeholder="0" min="0" oninput="checkRate()">
@@ -400,24 +427,18 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       
       <div class="field" style="background:#fff; padding:10px; border-radius:6px; border:1px dashed var(--line);">
         <label style="color:var(--acc)">🔍 行情快速查詢</label>
-        <div style="font-size:10px; color:var(--ink3); margin-bottom:6px;">受限於網頁安全機制，系統無法直接抓取外部網站價格。請點擊下方按鈕，系統會帶入「器材名稱」自動在新分頁搜尋行情：</div>
+        <div style="font-size:10px; color:var(--ink3); margin-bottom:6px;">點擊下方按鈕，系統會帶入「器材名稱」自動開新網頁搜尋行情：</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button class="btn btn-ghost-dark btn-sm" onclick="quickSearch('google')">Google 搜尋</button>
+          <button class="btn btn-ghost-dark btn-sm" onclick="quickSearch('google')">Google</button>
           <button class="btn btn-ghost-dark btn-sm" onclick="quickSearch('merry')">旋轉木馬</button>
           <button class="btn btn-ghost-dark btn-sm" onclick="quickSearch('camera')">攝手座</button>
           <button class="btn btn-ghost-dark btn-sm" onclick="quickSearch('lens')">鏡頭銀行</button>
         </div>
       </div>
 
-      <div class="field-row col2">
-        <div class="field">
-          <label>購入日期</label>
-          <input type="date" id="item-buy-date">
-        </div>
-        <div class="field">
-          <label>保固到期</label>
-          <input type="date" id="item-warranty">
-        </div>
+      <div class="field">
+        <label>保固到期</label>
+        <input type="date" id="item-warranty">
       </div>
 
       <div class="field">
@@ -474,7 +495,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
         <label>連動成本計算</label>
         <select id="loan-cost-mode">
           <option value="none">不計費</option>
-          <option value="auto">依日租金自動計算（借還天數 × 日租金）</option>
+          <option value="auto">依日租金自動計算（天數 × 租金）</option>
           <option value="fixed">固定金額</option>
         </select>
       </div>
@@ -506,9 +527,9 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
         請上傳 <strong>.xlsx / .xls</strong> 檔案，第一列為標題列，從第二列開始為資料。<br>
         欄位順序（可部分填寫）：
       </p>
-      <div style="background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-size:10px;font-family:var(--font-mono);color:var(--ink2);line-height:1.8;">
+      <div style="background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-size:10px;font-family:var(--font-mono);color:var(--ink2);line-height:1.8;overflow-x:auto;">
         A: 器材名稱 *&nbsp;&nbsp;&nbsp;B: 類別&nbsp;&nbsp;&nbsp;C: 品牌&nbsp;&nbsp;&nbsp;D: 型號/編號&nbsp;&nbsp;&nbsp;E: 數量<br>
-        F: 狀態&nbsp;&nbsp;&nbsp;G: 購入價&nbsp;&nbsp;&nbsp;H: 現值&nbsp;&nbsp;&nbsp;I: 日租金&nbsp;&nbsp;&nbsp;J: 購入日&nbsp;&nbsp;&nbsp;K: 保固期&nbsp;&nbsp;&nbsp;L: 備註<br>
+        F: 狀態&nbsp;&nbsp;&nbsp;G: 購入價&nbsp;&nbsp;&nbsp;H: 現值(免填自動算)&nbsp;&nbsp;&nbsp;I: 日租金&nbsp;&nbsp;&nbsp;J: 購入日&nbsp;&nbsp;&nbsp;K: 保固期&nbsp;&nbsp;&nbsp;L: 備註<br>
         M: 市場行情(選填)
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -627,16 +648,16 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 </div>
 
 <div class="overlay" id="scanner-overlay" onclick="closeScannerIfBg(event)">
-  <div class="modal" style="width:400px;">
+  <div class="modal" style="width:400px; max-width:95vw;">
     <div class="modal-header">
       <span class="modal-title">📷 掃描器材 QR Code</span>
       <button class="btn btn-ghost btn-xs btn-icon" onclick="closeScanner()">✕</button>
     </div>
-    <div class="modal-body" style="padding:0; background:#000;">
+    <div class="modal-body" style="padding:0; background:#000; position:relative; min-height:250px;">
       <div id="reader"></div>
     </div>
     <div class="modal-footer">
-      <div style="font-size:11px; color:var(--ink3); flex:1;">請允許瀏覽器使用相機權限，並將鏡頭對準器材標籤。</div>
+      <div style="font-size:11px; color:var(--ink3); flex:1;">請將後置鏡頭對準器材上的 QR 條碼。</div>
       <button class="btn btn-ghost-dark" onclick="closeScanner()">取消</button>
     </div>
   </div>
@@ -657,16 +678,44 @@ let filterStatus = 'all';
 let filterCat    = 'all';
 
 /* =============================================
+   ★ 全域 折舊現值計算公式 (每年 10%，精確到月)
+   ============================================= */
+window.calculateCurValue = function(price, dateStr) {
+  let p = parseFloat(price) || 0;
+  if (!p || !dateStr) return p;
+
+  // 支援只填年份的格式，自動補成 01-01
+  let dStr = String(dateStr).trim();
+  if (/^\d{4}$/.test(dStr)) dStr += '-01-01';
+  else if (/^\d{4}[\/\-]\d{1,2}$/.test(dStr)) dStr = dStr.replace(/\//g, '-') + '-01';
+  else dStr = dStr.replace(/\//g, '-');
+
+  let buyDate = new Date(dStr);
+  if (isNaN(buyDate.getTime())) return p;
+
+  let now = new Date();
+  let months = (now.getFullYear() - buyDate.getFullYear()) * 12 + (now.getMonth() - buyDate.getMonth());
+  if (months < 0) months = 0;
+
+  // 每月折損率：10% / 12個月
+  let dep = p * 0.10 * (months / 12);
+  
+  // 計算結果不低於0
+  return Math.max(0, Math.round(p - dep));
+};
+
+// 在 Modal 中即時更新欄位
+window.updateCurValueField = function() {
+  const price = document.getElementById('item-buy-price').value;
+  const date = document.getElementById('item-buy-date').value;
+  const curVal = calculateCurValue(price, date);
+  document.getElementById('item-cur-value').value = curVal;
+};
+
+
+/* =============================================
    FIREBASE
    ============================================= */
-const FB_CONFIG = {
-  apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
-  authDomain: "company-system-6ea1a.firebaseapp.com",
-  projectId: "company-system-6ea1a",
-  storageBucket: "company-system-6ea1a.firebasestorage.app",
-  messagingSenderId: "865462311535",
-  appId: "1:865462311535:web:033e059bc0e86fa902cb9a"
-};
 let fbDb = null, fbReady = false;
 
 async function initData() {
@@ -675,7 +724,6 @@ async function initData() {
     const { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } =
       await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
     
-    // Check if window._fbDb exists from module script
     let waited = 0;
     while (!window._fbDb && waited < 5000) {
       await new Promise(r => setTimeout(r, 100));
@@ -699,7 +747,6 @@ async function initData() {
     loadLocal();
   }
   
-  // 載入分類過濾器
   renderInvCatFilters();
   renderAll();
 }
@@ -776,7 +823,6 @@ function getAllInvCats() {
   return [...DEFAULT_INV_CATS, ...getCustomInvCats()];
 }
 
-// 產生上方的篩選按鈕
 function renderInvCatFilters() {
   const container = document.getElementById('cat-filter-container');
   const allCats = getAllInvCats();
@@ -791,14 +837,12 @@ function renderInvCatFilters() {
   container.innerHTML = html;
 }
 
-// 產生 Modal 裡的下拉選單
 function populateInvCatSelect(currentValue) {
   const sel = document.getElementById('item-cat');
   if (!sel) return;
   const cats = getAllInvCats();
   let opts = cats.map(c => `<option value="${c}">${c}</option>`).join('');
   
-  // 避免現有資料分類被刪除後找不到
   if (currentValue && !cats.includes(currentValue)) {
     opts += `<option value="${currentValue}">${currentValue}</option>`;
   }
@@ -807,7 +851,6 @@ function populateInvCatSelect(currentValue) {
   if (currentValue) sel.value = currentValue;
 }
 
-// 管理介面
 function openInvCatManager() {
   renderInvCatList();
   document.getElementById('inv-cat-overlay').classList.add('open');
@@ -904,22 +947,29 @@ function renderAll() {
    ============================================= */
 function renderKPI() {
   const total  = items.length;
-  // ★ 狀態已改為在庫
   const ok     = items.filter(i=>i.status==='在庫').length;
   const out    = items.filter(i=>i.status==='借出').length;
   const repair = items.filter(i=>i.status==='維修中').length;
-  const value  = items.reduce((a,i)=>(a+(+i.curValue||+i.buyPrice||0)),0);
+  
+  // 原始購入總價
+  const totalValue  = items.reduce((a,i)=>(a+(+i.buyPrice||0)),0);
+  // ★ 動態重新計算每個設備的現有總折舊殘值
+  const curValueTotal = items.reduce((a,i)=> a + calculateCurValue(i.buyPrice, i.buyDate), 0);
 
   document.getElementById('k-total').textContent = total;
   document.getElementById('k-total-sub').textContent = `共 ${total} 件器材`;
+  
   document.getElementById('k-ok').textContent = ok;
   document.getElementById('k-ok-sub').textContent = `${ok} 件可使用`;
+  
   document.getElementById('k-out').textContent = out;
   document.getElementById('k-out-sub').textContent = out ? `${out} 件待歸還` : '無借出';
+  
   document.getElementById('k-repair').textContent = repair;
   document.getElementById('k-repair-sub').textContent = repair ? `${repair} 件送修` : '無維修';
-  document.getElementById('k-value').textContent = value ? 'NT$'+Math.round(value).toLocaleString() : '—';
-  document.getElementById('k-value-sub').textContent = '現值合計';
+  
+  document.getElementById('k-value').textContent = totalValue ? 'NT$'+Math.round(totalValue).toLocaleString() : '—';
+  document.getElementById('k-cur-value').textContent = curValueTotal ? 'NT$'+Math.round(curValueTotal).toLocaleString() : '—';
 }
 
 /* =============================================
@@ -945,7 +995,6 @@ function checkRate() {
   }
 }
 
-// 快速查價按鈕功能
 function quickSearch(site) {
   const name = document.getElementById('item-name').value.trim();
   if(!name) { 
@@ -957,13 +1006,10 @@ function quickSearch(site) {
   if (site === 'google') {
     url = `https://www.google.com/search?q=${encodeURIComponent(name + ' 租借 價格')}`;
   } else if (site === 'merry') {
-    // 旋轉木馬站內搜尋
     url = `https://www.google.com/search?q=site:merrygoround.com.tw+${encodeURIComponent(name)}`;
   } else if (site === 'camera') {
-    // 攝手座站內搜尋
     url = `https://www.google.com/search?q=site:camerarental.com.tw+${encodeURIComponent(name)}`;
   } else if (site === 'lens') {
-    // 鏡頭銀行站內搜尋
     url = `https://www.google.com/search?q=site:lensbank.com.tw+${encodeURIComponent(name)}`;
   }
   
@@ -986,7 +1032,7 @@ function renderTable() {
   document.getElementById('item-count-label').textContent = `共 ${filtered.length} 項`;
   const tbody = document.getElementById('inv-tbody');
   if(!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📷</div><div class="empty-title">查無器材</div><div class="empty-sub">調整篩選條件，或點右上角「新增器材」</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">📷</div><div class="empty-title">查無器材</div><div class="empty-sub">調整篩選條件，或點右上角「新增器材」</div></div></td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(it => {
@@ -994,8 +1040,10 @@ function renderTable() {
     const avail = (+it.qty||1) - activeLoanQty;
     const warrantyExpired = it.warranty && new Date(it.warranty) < new Date();
     
-    // 如果沒有填行情，就不顯示按鈕；有才顯示快速 google 搜尋
     const quickSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(it.name + ' 租金 攝影')}`;
+    
+    // ★ 畫面上動態計算出現在的折舊殘值
+    const curVal = calculateCurValue(it.buyPrice, it.buyDate);
 
     return `<tr>
       <td>
@@ -1008,6 +1056,7 @@ function renderTable() {
       <td class="qty-cell">${it.qty||1}</td>
       <td class="qty-cell ${avail<=0?'qty-low':'qty-avail'}">${avail}</td>
       <td class="price-cell">${it.buyPrice?'NT$'+(+it.buyPrice).toLocaleString():'—'}</td>
+      <td class="price-cell" style="color:#b45309; font-weight:500;">${curVal?'NT$'+curVal.toLocaleString():'—'}</td>
       <td class="price-cell">
         <div style="display:flex; align-items:center;">
           ${it.dayRate?'NT$'+(+it.dayRate).toLocaleString()+'/天':'—'}
@@ -1018,7 +1067,7 @@ function renderTable() {
       <td style="font-size:11px;color:var(--ink3);">${it.buyDate||'—'}</td>
       <td>
         <div class="td-actions">
-          <button class="btn btn-ghost-dark btn-xs" onclick="openQRCode('${it.id}','${it.name.replace(/'/g, "\\'")}')" title="產生 QR Code 供手機掃描">🔲 QR</button>
+          <button class="btn btn-ghost-dark btn-xs" onclick="openQRCode('${it.id}','${it.name.replace(/'/g, "\\'")}')" title="產生 QR Code">🔲 QR</button>
           <button class="btn btn-blue btn-xs" onclick="openLoanModal('${it.id}')">借出</button>
           <button class="btn btn-ghost-dark btn-xs" onclick="openItemModal('${it.id}')">編</button>
           <button class="btn btn-red btn-xs" onclick="deleteItem('${it.id}')">刪</button>
@@ -1044,15 +1093,17 @@ function renderLoans() {
     const proj = projects.find(p=>p.id===l.projId);
     const overdue = l.returnDate && l.returnDate < today;
     return `<div class="loan-row">
-      <div>
-        <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
-        ${l.note?`<div style="font-size:10px;color:var(--ink3);">${l.note}</div>`:''}
+      <div data-label="器材">
+        <div>
+          <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
+          ${l.note?`<div style="font-size:10px;color:var(--ink3);">${l.note}</div>`:''}
+        </div>
       </div>
-      <div style="font-size:12px;">${l.borrower||'—'}</div>
-      <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);">${l.outDate||'—'}</div>
-      <div style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'} ${overdue?'<span class="overdue-tag">逾期</span>':''}</div>
-      <div style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
-      <div style="display:flex;gap:4px;">
+      <div data-label="借用人" style="font-size:12px;">${l.borrower||'—'}</div>
+      <div data-label="借出日" style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);">${l.outDate||'—'}</div>
+      <div data-label="預計歸還" style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'} ${overdue?'<span class="overdue-tag">逾期</span>':''}</div>
+      <div data-label="專案" style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
+      <div style="display:flex;gap:4px;justify-content:flex-end;">
         <button class="btn btn-green btn-xs" onclick="returnLoan('${l.id}')">歸還</button>
         <button class="btn btn-red btn-xs" onclick="deleteLoan('${l.id}')">刪</button>
       </div>
@@ -1103,17 +1154,16 @@ function openItemModal(itemId) {
   document.getElementById('item-brand').value = it ? (it.brand||'') : '';
   document.getElementById('item-code').value  = it ? (it.code||'') : '';
   document.getElementById('item-qty').value   = it ? (it.qty||1) : 1;
-  // ★ 狀態改為在庫
   document.getElementById('item-status').value= it ? (it.status||'在庫') : '在庫';
   document.getElementById('item-buy-price').value  = it ? (it.buyPrice||'') : '';
-  document.getElementById('item-cur-value').value  = it ? (it.curValue||'') : '';
   document.getElementById('item-day-rate').value   = it ? (it.dayRate||'') : '';
   document.getElementById('item-market-rate').value = it ? (it.marketRate||'') : '';
   document.getElementById('item-buy-date').value   = it ? (it.buyDate||'') : '';
   document.getElementById('item-warranty').value   = it ? (it.warranty||'') : '';
   document.getElementById('item-note').value  = it ? (it.note||'') : '';
   
-  checkRate(); // 檢查一次價格警告
+  updateCurValueField(); // 打開時立刻計算並帶入現值
+  checkRate(); 
 
   document.getElementById('item-overlay').classList.add('open');
   setTimeout(()=>document.getElementById('item-name').focus(),100);
@@ -1166,14 +1216,13 @@ async function deleteItem(id) {
    ============================================= */
 function openLoanModal(preItemId) {
   document.getElementById('loan-id').value = '';
-  // 填入器材選單
   const sel = document.getElementById('loan-item-id');
   sel.innerHTML = items.map(it => `<option value="${it.id}" ${it.id===preItemId?'selected':''}>${it.name}${it.brand?' ('+it.brand+')':''}</option>`).join('');
   if(preItemId) sel.value = preItemId;
-  // 填入專案選單
+  
   const psel = document.getElementById('loan-proj-id');
   psel.innerHTML = `<option value="">— 不連結 —</option>` + projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
-  // 預設日期
+  
   const today = new Date().toISOString().slice(0,10);
   document.getElementById('loan-out-date').value = today;
   document.getElementById('loan-return-date').value = '';
@@ -1218,14 +1267,12 @@ async function saveLoan() {
   };
   loans.push(loan);
 
-  // 更新器材狀態為借出
   const it = items.find(i=>i.id===itemId);
   if(it && it.status==='在庫') {
     it.status = '借出';
     await fbSet('inv_items', it.id, it);
   }
 
-  // 連動成本
   if(projId && costMode !== 'none') {
     await createCostEntry(loan, it);
   }
@@ -1269,7 +1316,6 @@ async function returnLoan(id) {
     loan.returned = true;
     loan.actualReturnDate = new Date().toISOString().slice(0,10);
     await fbSet('inv_loans', id, loan);
-    // 若該器材無其他借出，改回在庫
     const stillOut = loans.filter(l=>l.itemId===loan.itemId&&!l.returned&&l.id!==id).length;
     if(item && !stillOut) {
       item.status = '在庫';
@@ -1299,7 +1345,6 @@ function openRepairModal(preItemId) {
   document.getElementById('repair-type').value = '維修';
   document.getElementById('repair-vendor').value = '';
   document.getElementById('repair-cost').value = '';
-  // ★
   document.getElementById('repair-after-status').value = '在庫';
   document.getElementById('repair-note').value = '';
   document.getElementById('repair-overlay').classList.add('open');
@@ -1323,7 +1368,6 @@ async function saveRepair() {
     createdAt: Date.now()
   };
   repairs.push(r);
-  // 更新器材狀態
   const it = items.find(i=>i.id===itemId);
   if(it) {
     it.status = afterStatus;
@@ -1345,7 +1389,7 @@ async function deleteRepair(id) {
 }
 
 /* =============================================
-   QR CODE & SCANNER (手機掃描借還)
+   QR CODE & DIRECT SCANNER (一鍵啟動掃描)
    ============================================= */
 let qrcodeInstance = null;
 
@@ -1360,26 +1404,32 @@ function openQRCode(id, name) {
   document.getElementById('qrcode-overlay').classList.add('open');
 }
 
-function closeQRCode() { 
-  document.getElementById('qrcode-overlay').classList.remove('open'); 
-}
-function closeQRCodeIfBg(e) { 
-  if(e.target === document.getElementById('qrcode-overlay')) closeQRCode(); 
-}
+function closeQRCode() { document.getElementById('qrcode-overlay').classList.remove('open'); }
+function closeQRCodeIfBg(e) { if(e.target === document.getElementById('qrcode-overlay')) closeQRCode(); }
 
-let html5QrcodeScanner = null;
+let html5QrCode = null;
 
 function openScanner() {
   document.getElementById('scanner-overlay').classList.add('open');
-  // 啟動鏡頭
-  html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
-  html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+  
+  html5QrCode = new Html5Qrcode("reader");
+  html5QrCode.start(
+    { facingMode: "environment" }, 
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    onScanSuccess,
+    onScanFailure
+  ).catch(err => {
+    console.error("相機啟動失敗", err);
+    showToast('無法啟動相機，請確認瀏覽器已允許相機權限', 'err');
+  });
 }
 
 function closeScanner() {
-  if (html5QrcodeScanner) {
-    html5QrcodeScanner.clear().catch(err => console.error(err));
-    html5QrcodeScanner = null;
+  if (html5QrCode) {
+    html5QrCode.stop().then(() => {
+      html5QrCode.clear();
+      html5QrCode = null;
+    }).catch(err => console.error(err));
   }
   document.getElementById('scanner-overlay').classList.remove('open');
 }
@@ -1390,30 +1440,25 @@ function closeScannerIfBg(e) {
 function onScanSuccess(decodedText, decodedResult) {
   closeScanner(); // 掃描成功後自動關閉掃描器
   
-  // 比對器材 ID
   const it = items.find(i => i.id === decodedText);
   if (!it) { 
     showToast('找不到該器材！請確認掃描的條碼是否正確', 'err'); 
     return; 
   }
   
-  // 檢查該器材是否正被借出
   const activeLoan = loans.find(l => l.itemId === decodedText && !l.returned);
-  
   if (activeLoan) {
-    // 如果已被借出，詢問是否歸還
     showConfirm(`「${it.name}」目前由 ${activeLoan.borrower||'未知'} 借出中。\n確定要執行【歸還】嗎？`, () => {
       returnLoan(activeLoan.id);
     });
   } else {
-    // 如果在庫中，直接打開借出視窗，並預先選好該器材
     openLoanModal(it.id);
     showToast(`✓ 已辨識器材「${it.name}」，請填寫借用人`);
   }
 }
 
 function onScanFailure(error) {
-  // 掃描過程中持續報錯是正常的（代表還沒掃到），不需要特別處理
+  // 掃描過程中持續報錯是正常的（代表還沒掃到），不需要處理
 }
 
 /* =============================================
@@ -1434,7 +1479,7 @@ function showConfirm(msg, onOk) {
 }
 
 /* =============================================
-   EXCEL IMPORT / EXPORT
+   EXCEL IMPORT / EXPORT (支援自動計算現值與年份解析)
    ============================================= */
 function openExcelImport() {
   document.getElementById('item-import-msg').style.display = 'none';
@@ -1465,7 +1510,6 @@ async function importItemExcel(event) {
       }
 
       const validCats = getAllInvCats();
-      // ★ 狀態已改為在庫
       const validStatuses = ['在庫','借出','維修中','報廢'];
       let added=0, updated=0, skipped=0;
 
@@ -1476,6 +1520,19 @@ async function importItemExcel(event) {
 
         const rawCat = String(row[1]||'').trim();
         const rawStatus = String(row[5]||'').trim();
+        
+        // ★ 自動解析日期格式 (處理只有 2019 或 2019/05 的狀況)
+        let rawDate = String(row[9]||'').trim();
+        let parsedDate = rawDate;
+        if (/^\d{4}$/.test(rawDate)) parsedDate = rawDate + '-01-01';
+        else if (/^\d{4}[\/\-]\d{1,2}$/.test(rawDate)) parsedDate = rawDate.replace(/\//g, '-') + '-01';
+        else parsedDate = rawDate.replace(/\//g, '-');
+
+        const buyPrice = parseFloat(row[6])||0;
+        
+        // ★ 不管使用者填什麼現值，強制套用公式重新計算
+        const curValue = calculateCurValue(buyPrice, parsedDate);
+
         const existing = items.find(it => it.name === name);
         const id = existing ? existing.id : ('item_'+Date.now()+'_'+i);
 
@@ -1487,10 +1544,10 @@ async function importItemExcel(event) {
           code:       String(row[3]||'').trim(),
           qty:        parseInt(row[4])||1,
           status:     validStatuses.includes(rawStatus) ? rawStatus : '在庫',
-          buyPrice:   parseFloat(row[6])||0,
-          curValue:   parseFloat(row[7])||0,
+          buyPrice:   buyPrice,
+          curValue:   curValue,
           dayRate:    parseFloat(row[8])||0,
-          buyDate:    String(row[9]||'').trim(),
+          buyDate:    parsedDate,
           warranty:   String(row[10]||'').trim(),
           note:       String(row[11]||'').trim(),
           marketRate: parseFloat(row[12])||0,
@@ -1529,10 +1586,9 @@ function showImportMsg(text, type) {
 }
 
 function downloadItemTemplate() {
-  const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','現值估算','日租金(每天)','購入日期','保固到期','備註','市場行情(選填)'];
-  // ★ 範本預設值改為「在庫」
-  const sample = ['Sony A7 IV','攝影機','Sony','ILCE-7M4',1,'在庫',90000,70000,1500,'2023-01-15','2025-01-15','含原廠電池x2', 1500];
-  const sample2 = ['Aputure 300d II','燈光','Aputure','300d-II',2,'在庫',45000,35000,800,'2022-06-01','','含燈架', 1000];
+  const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','現值(免填)','日租金(每天)','購入日期','保固到期','備註','市場行情(選填)'];
+  const sample = ['Sony A7 IV','攝影機','Sony','ILCE-7M4',1,'在庫',90000,'',1500,'2023-01-15','2025-01-15','含原廠電池x2', 1500];
+  const sample2 = ['Aputure 300d II','燈光','Aputure','300d-II',2,'在庫',45000,'',800,'2022','','含燈架', 1000];
   const ws = XLSX.utils.aoa_to_sheet([header, sample, sample2]);
   ws['!cols'] = [{wch:22},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:20},{wch:12}];
   const wb = XLSX.utils.book_new();
@@ -1542,8 +1598,12 @@ function downloadItemTemplate() {
 
 function exportItemsExcel() {
   if(!items.length){ showToast('目前無器材可匯出','err'); return; }
-  const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','現值估算','日租金(每天)','購入日期','保固到期','備註','市場行情'];
-  const rows = items.map(it=>[it.name,it.cat||'',it.brand||'',it.code||'',it.qty||1,it.status||'在庫',it.buyPrice||0,it.curValue||0,it.dayRate||0,it.buyDate||'',it.warranty||'',it.note||'',it.marketRate||0]);
+  const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','折損後現值','日租金(每天)','購入日期','保固到期','備註','市場行情'];
+  const rows = items.map(it => {
+    // 匯出時也動態計算一次以防萬一
+    const curVal = calculateCurValue(it.buyPrice, it.buyDate);
+    return [it.name, it.cat||'', it.brand||'', it.code||'', it.qty||1, it.status||'在庫', it.buyPrice||0, curVal, it.dayRate||0, it.buyDate||'', it.warranty||'', it.note||'', it.marketRate||0];
+  });
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
   ws['!cols'] = [{wch:22},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:20},{wch:10}];
   const wb = XLSX.utils.book_new();
