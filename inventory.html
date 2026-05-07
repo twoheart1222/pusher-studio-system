@@ -71,7 +71,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 /* MAIN */
 .main{ padding:20px 24px; max-width:1400px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
 
-/* KPI ROW (Modified for 6 cards) */
+/* KPI ROW (6 cards) */
 .kpi-row{ display:grid; grid-template-columns:repeat(6,1fr); gap:14px; }
 .kpi-card{ background:var(--paper); border-radius:10px; padding:16px 18px; box-shadow:var(--shadow-sm); border:1px solid var(--line); position:relative; overflow:hidden; }
 .kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; }
@@ -85,7 +85,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .kpi-value{ font-size:22px; font-weight:600; font-family:var(--font-mono); letter-spacing:-0.5px; line-height:1; margin-bottom:3px; }
 .kpi-sub{ font-size:10px; color:var(--ink3); white-space:nowrap; }
 
-/* TWO COL GRID (For Loans & Repairs) */
+/* TWO COL GRID */
 .two-col-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
 
 /* PANEL */
@@ -111,6 +111,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .cat-收音{ background:rgba(5,150,105,.1); color:#059669; }
 .cat-配件{ background:rgba(190,24,93,.1); color:#be185d; }
 .cat-支撐{ background:rgba(120,113,108,.1); color:#57534e; }
+/* 自訂分類 */
 [class^="cat-"]:not(.cat-攝影機):not(.cat-鏡頭):not(.cat-燈光):not(.cat-收音):not(.cat-配件):not(.cat-支撐) { background: rgba(88,28,135,.1); color: #7c3aed; }
 
 .status-dot{ width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px; }
@@ -171,6 +172,9 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 /* QR SCANNER */
 #reader { width: 100%; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #000; display:flex; align-items:center; justify-content:center; }
 #reader video { width:100% !important; height:auto !important; object-fit: cover; }
+
+/* 折舊歸零標籤 */
+.depreciated-badge { font-size:9px; background:rgba(220,38,38,.1); color:#dc2626; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:600; vertical-align:middle; }
 
 /* ===== RWD MOBILE ===== */
 @media(max-width:1200px){ 
@@ -409,8 +413,8 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       
       <div class="field">
         <label>現值估算（NT$）</label>
-        <input type="number" id="item-cur-value" placeholder="自動計算" readonly style="background:rgba(0,0,0,.03); color:var(--ink3); cursor:not-allowed;">
-        <span class="field-hint" style="color:var(--acc);">※ 系統自動依「購入日期」計算，每年折損 10%（每月攤提）</span>
+        <input type="number" id="item-cur-value" placeholder="自動計算" readonly style="background:rgba(0,0,0,.03); color:var(--ink); font-weight:600; cursor:not-allowed;">
+        <span class="field-hint" id="cur-value-hint" style="color:var(--acc);">※ 系統自動依「購入日期」計算，每年折損 10%（每月攤提）</span>
       </div>
       
       <div class="field-row col2" style="background:rgba(180,83,9,.03); padding:10px; border-radius:6px; border:1px solid rgba(180,83,9,.15); margin-top:8px;">
@@ -678,13 +682,12 @@ let filterStatus = 'all';
 let filterCat    = 'all';
 
 /* =============================================
-   ★ 全域 折舊現值計算公式 (每年 10%，精確到月)
+   ★ 全域 折舊現值計算公式 (每年 10%，精確到月，歸零防護)
    ============================================= */
 window.calculateCurValue = function(price, dateStr) {
   let p = parseFloat(price) || 0;
   if (!p || !dateStr) return p;
 
-  // 支援只填年份的格式，自動補成 01-01
   let dStr = String(dateStr).trim();
   if (/^\d{4}$/.test(dStr)) dStr += '-01-01';
   else if (/^\d{4}[\/\-]\d{1,2}$/.test(dStr)) dStr = dStr.replace(/\//g, '-') + '-01';
@@ -704,12 +707,23 @@ window.calculateCurValue = function(price, dateStr) {
   return Math.max(0, Math.round(p - dep));
 };
 
-// 在 Modal 中即時更新欄位
+// 在 Modal 中即時更新欄位，並加上紅字歸零提示
 window.updateCurValueField = function() {
   const price = document.getElementById('item-buy-price').value;
   const date = document.getElementById('item-buy-date').value;
   const curVal = calculateCurValue(price, date);
-  document.getElementById('item-cur-value').value = curVal;
+  const inputEl = document.getElementById('item-cur-value');
+  const hintEl = document.getElementById('cur-value-hint');
+  
+  if (parseFloat(price) > 0 && curVal <= 0) {
+    inputEl.value = 0;
+    inputEl.style.color = '#dc2626';
+    hintEl.innerHTML = '<span style="color:#dc2626;font-weight:bold;">※ 殘值已歸零 (已折足)</span>';
+  } else {
+    inputEl.value = curVal;
+    inputEl.style.color = 'var(--ink)';
+    hintEl.innerHTML = '※ 系統自動依「購入日期」計算，每年折損 10%（每月攤提）';
+  }
 };
 
 
@@ -951,9 +965,7 @@ function renderKPI() {
   const out    = items.filter(i=>i.status==='借出').length;
   const repair = items.filter(i=>i.status==='維修中').length;
   
-  // 原始購入總價
   const totalValue  = items.reduce((a,i)=>(a+(+i.buyPrice||0)),0);
-  // ★ 動態重新計算每個設備的現有總折舊殘值
   const curValueTotal = items.reduce((a,i)=> a + calculateCurValue(i.buyPrice, i.buyDate), 0);
 
   document.getElementById('k-total').textContent = total;
@@ -1042,8 +1054,16 @@ function renderTable() {
     
     const quickSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(it.name + ' 租金 攝影')}`;
     
-    // ★ 畫面上動態計算出現在的折舊殘值
+    // ★ 在畫面上動態計算出現在的折舊殘值，並加入 0 元折足標記
     const curVal = calculateCurValue(it.buyPrice, it.buyDate);
+    let curValHtml = '—';
+    if (parseFloat(it.buyPrice) > 0) {
+      if (curVal <= 0) {
+        curValHtml = `<span style="color:#dc2626; font-weight:600;">NT$ 0</span> <span class="depreciated-badge">已折足</span>`;
+      } else {
+        curValHtml = `NT$${curVal.toLocaleString()}`;
+      }
+    }
 
     return `<tr>
       <td>
@@ -1056,7 +1076,7 @@ function renderTable() {
       <td class="qty-cell">${it.qty||1}</td>
       <td class="qty-cell ${avail<=0?'qty-low':'qty-avail'}">${avail}</td>
       <td class="price-cell">${it.buyPrice?'NT$'+(+it.buyPrice).toLocaleString():'—'}</td>
-      <td class="price-cell" style="color:#b45309; font-weight:500;">${curVal?'NT$'+curVal.toLocaleString():'—'}</td>
+      <td class="price-cell" style="color:#b45309; font-weight:500;">${curValHtml}</td>
       <td class="price-cell">
         <div style="display:flex; align-items:center;">
           ${it.dayRate?'NT$'+(+it.dayRate).toLocaleString()+'/天':'—'}
@@ -1183,7 +1203,6 @@ async function saveItem() {
     qty:        +document.getElementById('item-qty').value||1,
     status:     document.getElementById('item-status').value,
     buyPrice:   +document.getElementById('item-buy-price').value||0,
-    curValue:   +document.getElementById('item-cur-value').value||0,
     dayRate:    +document.getElementById('item-day-rate').value||0,
     marketRate: +document.getElementById('item-market-rate').value||0,
     buyDate:    document.getElementById('item-buy-date').value,
@@ -1192,6 +1211,10 @@ async function saveItem() {
     createdAt:  items.find(i=>i.id===id)?.createdAt || Date.now(),
     updatedAt:  Date.now()
   };
+  
+  // 我們不再存 curValue 入庫，因為它應該隨時間動態變化，
+  // 顯示時永遠依據 buyPrice 與 buyDate 當下即時計算即可。
+
   const idx = items.findIndex(i=>i.id===id);
   if(idx>=0) items[idx]=it; else items.unshift(it);
   await fbSet('inv_items', id, it);
@@ -1521,7 +1544,6 @@ async function importItemExcel(event) {
         const rawCat = String(row[1]||'').trim();
         const rawStatus = String(row[5]||'').trim();
         
-        // ★ 自動解析日期格式 (處理只有 2019 或 2019/05 的狀況)
         let rawDate = String(row[9]||'').trim();
         let parsedDate = rawDate;
         if (/^\d{4}$/.test(rawDate)) parsedDate = rawDate + '-01-01';
@@ -1529,9 +1551,6 @@ async function importItemExcel(event) {
         else parsedDate = rawDate.replace(/\//g, '-');
 
         const buyPrice = parseFloat(row[6])||0;
-        
-        // ★ 不管使用者填什麼現值，強制套用公式重新計算
-        const curValue = calculateCurValue(buyPrice, parsedDate);
 
         const existing = items.find(it => it.name === name);
         const id = existing ? existing.id : ('item_'+Date.now()+'_'+i);
@@ -1545,7 +1564,6 @@ async function importItemExcel(event) {
           qty:        parseInt(row[4])||1,
           status:     validStatuses.includes(rawStatus) ? rawStatus : '在庫',
           buyPrice:   buyPrice,
-          curValue:   curValue,
           dayRate:    parseFloat(row[8])||0,
           buyDate:    parsedDate,
           warranty:   String(row[10]||'').trim(),
@@ -1600,8 +1618,11 @@ function exportItemsExcel() {
   if(!items.length){ showToast('目前無器材可匯出','err'); return; }
   const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','折損後現值','日租金(每天)','購入日期','保固到期','備註','市場行情'];
   const rows = items.map(it => {
-    // 匯出時也動態計算一次以防萬一
-    const curVal = calculateCurValue(it.buyPrice, it.buyDate);
+    // 匯出時動態計算一次以防萬一
+    let curVal = calculateCurValue(it.buyPrice, it.buyDate);
+    // 如果折損歸零，匯出直接顯示 0
+    if (parseFloat(it.buyPrice) > 0 && curVal <= 0) curVal = 0;
+    
     return [it.name, it.cat||'', it.brand||'', it.code||'', it.qty||1, it.status||'在庫', it.buyPrice||0, curVal, it.dayRate||0, it.buyDate||'', it.warranty||'', it.note||'', it.marketRate||0];
   });
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
