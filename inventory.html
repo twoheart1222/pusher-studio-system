@@ -1208,12 +1208,13 @@ function renderRentalStats() {
     return;
   }
 
-  // 統計各器材出租次數
+  // 統計各器材出租次數（只計算仍存在於庫存的器材）
   const statsMap = {};
   filtered.forEach(l => {
     const it = items.find(i=>i.id===l.itemId);
-    const name = it ? it.name : '(已刪除器材)';
-    const cat  = it ? (it.cat||'其他') : '其他';
+    if(!it) return; // 器材已刪除，跳過
+    const name = it.name;
+    const cat  = it.cat||'其他';
     if(!statsMap[l.itemId]) statsMap[l.itemId] = { name, cat, count:0, totalQty:0 };
     statsMap[l.itemId].count++;
     statsMap[l.itemId].totalQty += (+l.qty||1);
