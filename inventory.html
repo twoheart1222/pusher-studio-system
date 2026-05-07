@@ -348,11 +348,22 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 
     <div class="panel">
       <div class="panel-header">
-        <span class="panel-title">維修保養紀錄</span>
-        <button class="btn btn-ghost-dark btn-xs" onclick="openRepairModal()">＋ 新增紀錄</button>
+        <span class="panel-title">📊 出租次數統計</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <select id="rental-year-sel" class="t-select" onchange="renderRentalStats()" style="background:#f9f7f4;color:var(--ink);border-color:var(--line);">
+            <option value="all">全部年份</option>
+          </select>
+          <select id="rental-month-sel" class="t-select" onchange="renderRentalStats()" style="background:#f9f7f4;color:var(--ink);border-color:var(--line);">
+            <option value="all">全部月份</option>
+            <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+            <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+            <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+            <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+          </select>
+        </div>
       </div>
-      <div id="repair-list" style="padding:12px 18px;display:flex;flex-direction:column;gap:8px;">
-        <div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">目前無維修紀錄</div></div>
+      <div id="rental-stats-list" style="padding:12px 18px;display:flex;flex-direction:column;gap:6px;">
+        <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">尚無出租紀錄</div></div>
       </div>
     </div>
 
@@ -940,6 +951,7 @@ function deleteCustomInvCat(name) {
    ============================================= */
 function initYearSelect() {
   // Inventory 頁面沒有全局年度篩選下拉選單，所以保留空函數避免報錯
+  initRentalYearSelect();
 }
 
 /* =============================================
@@ -974,7 +986,8 @@ function renderAll() {
   renderKPI();
   renderTable();
   renderLoans();
-  renderRepairs();
+  renderRentalStats();
+  initRentalYearSelect();
 }
 
 /* =============================================
@@ -1153,32 +1166,89 @@ function renderLoans() {
 }
 
 /* =============================================
-   REPAIR LIST
+   RENTAL STATS
    ============================================= */
-function renderRepairs() {
-  const sorted = [...repairs].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,20);
-  const wrap = document.getElementById('repair-list');
-  if(!sorted.length) {
-    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">目前無維修紀錄</div></div>`;
+function initRentalYearSelect() {
+  const sel = document.getElementById('rental-year-sel');
+  if(!sel) return;
+  const currentVal = sel.value;
+  // 從 loans 中收集所有年份
+  const years = new Set();
+  loans.forEach(l => {
+    const d = l.actualReturnDate || (l.returned ? l.returnDate : null) || l.outDate;
+    if(d) years.add(d.slice(0,4));
+  });
+  const sortedYears = [...years].sort((a,b)=>b-a);
+  const opts = `<option value="all">全部年份</option>` + sortedYears.map(y=>`<option value="${y}">${y}年</option>`).join('');
+  sel.innerHTML = opts;
+  if(currentVal && [...years].includes(currentVal)) sel.value = currentVal;
+}
+
+function renderRentalStats() {
+  const wrap = document.getElementById('rental-stats-list');
+  if(!wrap) return;
+
+  const selYear  = document.getElementById('rental-year-sel')?.value  || 'all';
+  const selMonth = document.getElementById('rental-month-sel')?.value || 'all';
+
+  // 只計算「已歸還」的借出紀錄
+  const returned = loans.filter(l => l.returned);
+
+  // 依年月篩選（以歸還日期為準，若無則用借出日）
+  const filtered = returned.filter(l => {
+    const d = l.actualReturnDate || l.returnDate || l.outDate || '';
+    if(!d) return false;
+    if(selYear !== 'all' && d.slice(0,4) !== selYear) return false;
+    if(selMonth !== 'all' && parseInt(d.slice(5,7)) !== parseInt(selMonth)) return false;
+    return true;
+  });
+
+  if(!filtered.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">此區間無出租紀錄</div></div>`;
     return;
   }
-  wrap.innerHTML = sorted.map(r => {
-    const item = items.find(i=>i.id===r.itemId);
-    return `<div class="log-item">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-        <div>
-          <span style="font-weight:500;">${item?item.name:'(已刪除)'}</span>
-          <span style="font-size:10px;color:var(--ink3);margin-left:6px;">${r.type||'維修'}</span>
+
+  // 統計各器材出租次數
+  const statsMap = {};
+  filtered.forEach(l => {
+    const it = items.find(i=>i.id===l.itemId);
+    const name = it ? it.name : '(已刪除器材)';
+    const cat  = it ? (it.cat||'其他') : '其他';
+    if(!statsMap[l.itemId]) statsMap[l.itemId] = { name, cat, count:0, totalQty:0 };
+    statsMap[l.itemId].count++;
+    statsMap[l.itemId].totalQty += (+l.qty||1);
+  });
+
+  // 依次數排序
+  const stats = Object.values(statsMap).sort((a,b)=>b.count-a.count);
+  const maxCount = stats[0]?.count || 1;
+  const totalRentals = filtered.length;
+
+  wrap.innerHTML = `
+    <div style="font-size:10px;color:var(--ink3);margin-bottom:6px;display:flex;justify-content:space-between;">
+      <span>共 <strong style="color:var(--ink);">${stats.length}</strong> 項器材</span>
+      <span>合計出租 <strong style="color:var(--acc);">${totalRentals}</strong> 次</span>
+    </div>
+    ${stats.map(s => {
+      const barW = Math.round((s.count / maxCount) * 100);
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--line);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+          <div style="flex:1;min-width:0;">
+            <span style="font-size:12px;font-weight:500;color:var(--ink);">${s.name}</span>
+            <span class="cat-badge cat-${s.cat}" style="margin-left:5px;font-size:9px;">${s.cat}</span>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <span style="font-size:16px;font-weight:700;font-family:var(--font-mono);color:var(--acc);">${s.count}</span>
+            <span style="font-size:10px;color:var(--ink3);"> 次</span>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          ${r.cost?`<span style="font-size:10px;font-family:var(--font-mono);color:#dc2626;">NT$${(+r.cost).toLocaleString()}</span>`:''}
-          <button class="btn btn-red btn-xs" onclick="deleteRepair('${r.id}')">刪</button>
+        <div style="height:5px;background:var(--line);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${barW}%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:3px;transition:width .4s;"></div>
         </div>
-      </div>
-      <div class="log-date">${r.date||'—'} ${r.vendor?'· '+r.vendor:''}</div>
-      ${r.note?`<div style="font-size:11px;color:var(--ink2);margin-top:3px;">${r.note}</div>`:''}
-    </div>`;
-  }).join('');
+        <div style="font-size:9px;color:var(--ink3);margin-top:2px;">共借出 ${s.totalQty} 件次</div>
+      </div>`;
+    }).join('')}
+  `;
 }
 
 /* =============================================
