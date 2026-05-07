@@ -214,6 +214,27 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     signOut(auth).then(() => { window.location.href = 'login.html'; });
   };
 </script>
+
+<script type="module">
+  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+  try {
+    const app = getApp();
+    const fbDb = getFirestore(app);
+
+    window._invFb = { collection, getDocs, doc, setDoc, deleteDoc, getDoc, fbDb };
+    window._fbReady = true;
+
+    // 觸發初始化程序
+    if (window.initData) {
+      window.initData();
+    }
+  } catch(e) {
+    console.error("Firestore init error:", e);
+  }
+</script>
+
 </head>
 <body>
 
@@ -666,22 +687,6 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   </div>
 </div>
 
-<script type="module">
-  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-  try {
-    const app = getApp();
-    const fbDb = getFirestore(app);
-
-    window._invFb = { collection, getDocs, doc, setDoc, deleteDoc, getDoc, fbDb };
-    window._fbDb = fbDb;
-    window._fbReady = true;
-  } catch(e) {
-    console.error("Firestore init error:", e);
-  }
-</script>
-
 <script>
 /* =============================================
    STATE
@@ -744,7 +749,7 @@ window.updateCurValueField = function() {
 /* =============================================
    FIREBASE
    ============================================= */
-async function initData() {
+window.initData = async function() {
   let waited = 0;
   while (!window._fbReady && waited < 5000) {
     await new Promise(r => setTimeout(r, 100));
@@ -921,6 +926,13 @@ function deleteCustomInvCat(name) {
   saveCustomInvCats(getCustomInvCats().filter(c => c !== name));
   renderInvCatList();
   showToast(`已刪除分類「${name}」`);
+}
+
+/* =============================================
+   TIME FILTERS
+   ============================================= */
+function initYearSelect() {
+  // Inventory 頁面沒有全局年度篩選下拉選單，所以保留空函數避免報錯
 }
 
 /* =============================================
@@ -1617,9 +1629,7 @@ function exportItemsExcel() {
   if(!items.length){ showToast('目前無器材可匯出','err'); return; }
   const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','折損後現值','日租金(每天)','購入日期','保固到期','備註','市場行情'];
   const rows = items.map(it => {
-    // 匯出時動態計算一次
     let curVal = calculateCurValue(it.buyPrice, it.buyDate);
-    // 如果折損歸零，匯出直接顯示 0
     if (parseFloat(it.buyPrice) > 0 && curVal <= 0) curVal = 0;
     
     return [it.name, it.cat||'', it.brand||'', it.code||'', it.qty||1, it.status||'在庫', it.buyPrice||0, curVal, it.dayRate||0, it.buyDate||'', it.warranty||'', it.note||'', it.marketRate||0];
@@ -1632,9 +1642,6 @@ function exportItemsExcel() {
   showToast(`✓ 已匯出 ${items.length} 筆器材`);
 }
 
-window.onload = () => {
-  initData();
-};
 </script>
 </body>
 </html>
