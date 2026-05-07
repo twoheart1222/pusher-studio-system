@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客戶與廠商管理 — 公司系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #eeeae4; --panel: #1c1917; --panel2: #292524;
+  --paper: #fdfcfb; --ink: #1c1917; --ink2: #57534e; --ink3: #a8a29e;
+  --line: #e7e3dc; --acc: #b45309; --acc2: #d97706;
+  --success: #059669; --danger: #dc2626; --info: #0369a1;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+  --r: 6px;
+  --font-body: 'Noto Sans TC','Microsoft JhengHei',sans-serif;
+  --font-mono: 'IBM Plex Mono',monospace;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font-size:13px; line-height:1.55; min-height:100vh; }
+::-webkit-scrollbar{ width:6px; height:6px; }
+::-webkit-scrollbar-thumb{ background:#c4bdb6; border-radius:3px; }
+
+/* TOPBAR */
+.topbar{ background:var(--panel); color:#fafaf9; padding:0 24px; height:50px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:300; border-bottom:1px solid rgba(255,255,255,.05); }
+.topbar-brand{ display:flex; align-items:center; gap:10px; font-size:13px; font-weight:500; color:#e7e5e4; }
+.brand-dot{ width:7px; height:7px; border-radius:50%; background:var(--acc2); }
+.topbar-nav{ display:flex; gap:2px; }
+.nav-tab{ padding:6px 14px; border-radius:var(--r); font-size:12px; font-weight:500; color:#a8a29e; cursor:pointer; transition:.15s; text-decoration:none; border:1px solid transparent; }
+.nav-tab:hover{ color:#e7e5e4; background:rgba(255,255,255,.06); }
+.nav-tab.active{ color:var(--acc2); border-color:rgba(217,119,6,.3); background:rgba(180,83,9,.12); }
+.topbar-actions{ display:flex; gap:7px; align-items:center; }
+
+/* TOOLBAR (Time Filter) */
+.toolbar{ background:var(--panel2); padding:0 24px; height:44px; display:flex; align-items:center; gap:0; position:sticky; top:50px; z-index:290; border-bottom:1px solid rgba(255,255,255,.05); overflow-x:auto; scrollbar-width:none; }
+.toolbar::-webkit-scrollbar{ display:none; }
+.tg{ display:flex; align-items:center; gap:6px; padding:0 16px; border-right:1px solid rgba(255,255,255,.08); height:100%; flex-shrink:0; }
+.tg:last-child{ border-right:none; }
+.tg-label{ font-size:10px; color:#78716c; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+.t-select{ background:rgba(255,255,255,.06); color:#d6d3d1; border:1px solid rgba(255,255,255,.1); border-radius:4px; padding:3px 7px; font-size:11px; cursor:pointer; font-family:inherit; outline:none; }
+.t-select:hover{ border-color:rgba(255,255,255,.22); }
+.view-pill{ padding:3px 10px; border-radius:20px; font-size:10px; font-weight:500; border:1px solid rgba(255,255,255,.12); color:#a8a29e; cursor:pointer; transition:.15s; background:none; font-family:inherit; }
+.view-pill:hover{ color:#e7e5e4; border-color:rgba(255,255,255,.25); }
+.view-pill.on{ color:var(--acc2); border-color:var(--acc2); background:rgba(180,83,9,.15); }
+
+/* BTNS */
+.btn{ display:inline-flex; align-items:center; gap:5px; padding:6px 13px; border-radius:var(--r); border:none; font-size:12px; font-weight:500; cursor:pointer; transition:.15s; font-family:inherit; white-space:nowrap; }
+.btn-ghost{ background:rgba(255,255,255,.07); color:#d6d3d1; border:1px solid rgba(255,255,255,.12); }
+.btn-ghost:hover{ background:rgba(255,255,255,.14); color:#fafaf9; }
+.btn-ghost-dark{ background:rgba(0,0,0,.04); color:var(--ink2); border:1px solid var(--line); }
+.btn-ghost-dark:hover{ background:rgba(0,0,0,.08); color:var(--ink); }
+.btn-amber{ background:var(--acc); color:white; }
+.btn-amber:hover{ background:var(--acc2); }
+.btn-red{ background:rgba(220,38,38,.1); color:#dc2626; border:1px solid rgba(220,38,38,.25); }
+.btn-red:hover{ background:var(--danger); color:white; }
+.btn-sm{ padding:4px 10px; font-size:11px; }
+
+/* MAIN */
+.main{ padding:20px 24px; max-width:1400px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
+
+/* KPI ROW */
+.kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+.kpi-card.k-count::before{ background:linear-gradient(90deg,#ea580c,#fb923c); }
+.kpi-card{ background:var(--paper); border-radius:10px; padding:16px 18px; box-shadow:var(--shadow-sm); border:1px solid var(--line); position:relative; overflow:hidden; }
+.kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; }
+.kpi-card.k-total::before{ background:linear-gradient(90deg,#b45309,#d97706); }
+.kpi-card.k-vendor::before{ background:linear-gradient(90deg,#7c3aed,#a78bfa); }
+.kpi-card.k-rev::before{ background:linear-gradient(90deg,#059669,#34d399); }
+.kpi-card.k-cost::before{ background:linear-gradient(90deg,#dc2626,#f87171); }
+.kpi-label{ font-size:10px; color:var(--ink3); letter-spacing:.5px; text-transform:uppercase; margin-bottom:5px; }
+.kpi-value{ font-size:22px; font-weight:600; font-family:var(--font-mono); letter-spacing:-0.5px; line-height:1; margin-bottom:3px; }
+.kpi-sub{ font-size:10px; color:var(--ink3); }
+
+/* TWO-COL LAYOUT */
+.two-col { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
+
+/* PANEL */
+.panel{ background:var(--paper); border-radius:10px; box-shadow:var(--shadow-sm); border:1px solid var(--line); overflow:hidden; }
+.panel-header{ padding:13px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; background:#faf9f7; }
+.panel-title{ font-size:13px; font-weight:600; color:var(--ink); display: flex; align-items: center; gap: 8px;}
+.panel-sub { font-size: 10px; letter-spacing: 2px; color: var(--ink3); text-transform: uppercase; }
+
+/* SEARCH & FILTERS */
+.search-bar { padding: 10px 14px; background: #faf9f7; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.search-inputs { display: flex; gap: 10px; align-items: center; }
+.search-input { flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); padding: 6px 10px; font-size: 12px; outline: none; transition:.15s; font-family: inherit; }
+.search-input:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(180,83,9,.08); }
+.type-filters { display: flex; gap: 15px; font-size: 12px; color: var(--ink2); align-items: center; padding-left: 2px; }
+.type-filters label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.type-filters input[type="radio"] { accent-color: var(--acc); cursor: pointer; }
+
+/* BADGES */
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 500; }
+.badge-client { background: rgba(180,83,9,.1); color: #b45309; border: 1px solid rgba(180,83,9,.3); }
+.badge-vendor { background: rgba(3,105,161,.1); color: #0369a1; border: 1px solid rgba(3,105,161,.3); }
+.badge-count { background: rgba(5,150,105,.1); color: #059669; border: 1px solid rgba(5,150,105,.3); border-radius: 12px; padding: 1px 7px; font-family: var(--font-mono); }
+.badge-count.zero { background: rgba(120,113,108,.1); color: var(--ink3); border-color: rgba(120,113,108,.25); }
+
+/* LIST */
+.client-list { overflow-y: auto; max-height: calc(100vh - 350px); }
+.client-card { padding: 12px 16px; border-bottom: 1px solid var(--line); cursor: pointer; transition: .12s; display: flex; align-items: flex-start; gap: 12px; }
+.client-card:hover { background: #f5f2ee; }
+.client-card.selected { background: rgba(180,83,9,.05); border-left: 3px solid var(--acc); padding-left: 13px; }
+.client-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; font-weight: 700; text-transform: uppercase; }
+.client-avatar.vendor { background: rgba(3,105,161,.12); color: #0369a1; }
+.client-avatar.client { background: rgba(180,83,9,.12); color: #b45309; }
+.client-info { flex: 1; min-width: 0; }
+.client-name { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+.client-meta { font-size: 11px; color: var(--ink3); line-height: 1.6; }
+
+/* DETAIL PANEL */
+.detail-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 40px; color: var(--ink3); text-align: center; }
+.detail-head { padding: 18px 24px; background: #faf9f7; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: flex-start; }
+.detail-name { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 2px; display: flex; align-items: center; gap: 10px;}
+.detail-meta { font-size: 11px; color: var(--ink3); }
+.detail-body { padding: 20px 24px; }
+
+/* TABS */
+.tab-switch { display: flex; background: #faf9f7; border-bottom: 1px solid var(--line); padding: 0 16px; }
+.tab-btn { padding: 11px 16px; font-size: 12px; font-weight: 500; color: var(--ink3); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; transition: .15s; }
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active { color: var(--acc); border-bottom-color: var(--acc); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* INFO GRID */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.info-item label { display: block; font-size: 10px; color: var(--ink3); text-transform: uppercase; margin-bottom: 4px; }
+.info-item .val { font-size: 13px; color: var(--ink); }
+.info-item .val.empty { color: var(--ink3); font-style: italic; }
+.info-item.full { grid-column: span 2; }
+
+/* STATS in detail */
+.detail-stats { display: flex; gap: 12px; margin-bottom: 20px; }
+.d-stat { flex: 1; background: #f9f7f4; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; text-align: center; }
+.d-stat-val { font-size: 20px; font-weight: 700; color: var(--ink); font-family: var(--font-mono); }
+.d-stat-label { font-size: 10px; color: var(--ink3); margin-top: 3px; }
+
+/* CONNECTED ITEMS */
+.connected-title { font-size: 11px; text-transform: uppercase; color: var(--ink3); margin-bottom: 12px; display: flex; justify-content: space-between; }
+.count-pill { background: rgba(180,83,9,.1); color: var(--acc); padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; }
+.quote-item, .project-item { background: #f9f7f4; border: 1px solid var(--line); border-radius: 7px; padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; transition: .12s; }
+.quote-item:hover { background: #f5f2ee; border-color: #d6cfc5; cursor: pointer; }
+.empty-state { padding: 48px 20px; text-align: center; color: var(--ink3); font-size: 12px; }
+
+/* MODAL */
+.overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
+.overlay.open{ display:flex; }
+.modal{ background:var(--paper); border-radius:12px; width:500px; box-shadow:0 20px 60px rgba(0,0,0,.3); overflow:hidden; max-height:90vh; overflow-y:auto; }
+.modal-header{ background:var(--panel); color:#fafaf9; padding:15px 20px; display:flex; align-items:center; justify-content:space-between; }
+.modal-title{ font-size:14px; font-weight:600; }
+.modal-body{ padding:20px; display:flex; flex-direction:column; gap:13px; }
+.modal-footer{ padding:14px 20px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px; }
+.field{ display:flex; flex-direction:column; gap:5px; }
+.field label{ font-size:11px; font-weight:500; color:var(--ink2); }
+.field input,.field select,.field textarea{ background:#f9f7f4; border:1px solid var(--line); border-radius:var(--r); padding:7px 10px; font-size:12px; font-family:inherit; color:var(--ink); outline:none; transition:.15s; width:100%; }
+.field input:focus,.field select:focus,.field textarea:focus{ border-color:var(--acc); box-shadow:0 0 0 3px rgba(180,83,9,.08); background:white; }
+.field-row{ display:grid; gap:12px; grid-template-columns:1fr 1fr; }
+
+/* IMPORT ZONE */
+.import-zone { background: rgba(5,150,105,.06); border: 1.5px dashed rgba(5,150,105,.3); border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: .15s; margin-bottom: 12px; }
+.import-zone:hover { background: rgba(5,150,105,.12); border-color: #059669; }
+.import-zone-text .t { font-size: 12px; font-weight: 500; color: #059669; }
+.import-zone-text .s { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+.import-msg { padding: 8px 12px; border-radius: 6px; font-size: 11px; display: none; margin-top: 8px; }
+.import-msg.success { background: rgba(5,150,105,.1); color: #059669; display: block; border: 1px solid rgba(5,150,105,.2); }
+.import-msg.error { background: rgba(220,38,38,.1); color: #dc2626; display: block; border: 1px solid rgba(220,38,38,.2); }
+
+.cost-link { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #f9f7f4; border: 1px solid var(--line); border-radius: 7px; margin-bottom: 8px; font-size: 12px; color: var(--ink2); }
+.cost-link a { color: var(--acc); text-decoration: none; font-weight: 500; cursor: pointer; }
+.cost-link a:hover { text-decoration: underline; }
+</style>
+
+<!-- 登入防護腳本 -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
+    authDomain: "company-system-6ea1a.firebaseapp.com",
+    projectId: "company-system-6ea1a"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) window.location.href = 'login.html';
+  });
+
+  window.logout = function() {
+    signOut(auth).then(() => { window.location.href = 'login.html'; });
+  };
+</script>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-dot"></div>
+    公司管理系統
+  </div>
+  <div class="topbar-nav">
+    <a href="index.html" class="nav-tab">報價單</a>
+    <a href="project.html" class="nav-tab">專案進度</a>
+    <a href="cost.html" class="nav-tab">成本計算</a>
+    <a href="inventory.html" class="nav-tab">器材庫存</a>
+    <a href="contacts.html" class="nav-tab active">客戶與廠商管理</a>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-ghost" onclick="document.getElementById('import-modal').classList.add('open')">匯入 Excel</button>
+    <button class="btn btn-ghost" onclick="exportDB()">匯出 Excel</button>
+    <button class="btn btn-amber" onclick="openAddModal()">＋ 新增資料</button>
+    
+    <!-- ★ 登出按鈕放在最後面 -->
+    <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
+    <button class="btn btn-ghost" style="color: #fca5a5; border-color: rgba(220,38,38,0.3); padding: 4px 10px;" onclick="logout()">登出</button>
+  </div>
+</header>
+
+<!-- TOOLBAR (時間篩選器) -->
+<div class="toolbar">
+  <div class="tg">
+    <span class="tg-label">檢視期間</span>
+    <button class="view-pill on" id="vp-all" onclick="setView('all')">全部時間</button>
+    <button class="view-pill" id="vp-year" onclick="setView('year')">年度</button>
+    <button class="view-pill" id="vp-month" onclick="setView('month')">月份</button>
+  </div>
+  <div class="tg" id="tg-year" style="display:none;">
+    <span class="tg-label">年份</span>
+    <select class="t-select" id="sel-year" onchange="onFilterChange()"></select>
+  </div>
+  <div class="tg" id="tg-month" style="display:none;">
+    <span class="tg-label">月份</span>
+    <select class="t-select" id="sel-month" onchange="onFilterChange()">
+      <option value="01">1月</option><option value="02">2月</option>
+      <option value="03">3月</option><option value="04">4月</option>
+      <option value="05">5月</option><option value="06">6月</option>
+      <option value="07">7月</option><option value="08">8月</option>
+      <option value="09">9月</option><option value="10">10月</option>
+      <option value="11">11月</option><option value="12">12月</option>
+    </select>
+  </div>
+</div>
+
+<div class="main">
+  <!-- KPI ROW -->
+  <div class="kpi-row">
+    <div class="kpi-card k-total">
+      <div class="kpi-label">客戶總數</div>
+      <div class="kpi-value" style="color:var(--acc)" id="stat-total">0</div>
+      <div class="kpi-sub">已建檔客戶 (Client)</div>
+    </div>
+    <div class="kpi-card k-vendor" style="--kpi-color:#7c3aed">
+      <div class="kpi-label">廠商總數</div>
+      <div class="kpi-value" style="color:#7c3aed" id="stat-vendors">0</div>
+      <div class="kpi-sub">合作夥伴 (Vendor)</div>
+    </div>
+    <div class="kpi-card k-rev" style="--kpi-color:#059669">
+      <div class="kpi-label">累計成交金額 (報價)</div>
+      <div class="kpi-value" style="color:#059669" id="stat-revenue">$0</div>
+      <div class="kpi-sub" id="stat-rev-count">共 0 筆報價單</div>
+    </div>
+    <div class="kpi-card k-cost" style="--kpi-color:#dc2626">
+      <div class="kpi-label">累計發包成本</div>
+      <div class="kpi-value" style="color:#dc2626" id="stat-cost">$0</div>
+      <div class="kpi-sub">所有廠商專案發包加總</div>
+    </div>
+    <div class="kpi-card k-count">
+      <div class="kpi-label">累積發包數</div>
+      <div class="kpi-value" style="color:#ea580c" id="stat-cost-count">0</div>
+      <div class="kpi-sub">所有廠商發包總筆數</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- LEFT LIST -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">名單列表 (依公司)</span>
+        <span class="panel-sub" id="list-count">載入中…</span>
+      </div>
+      <div class="search-bar">
+        <div class="search-inputs">
+          <input class="search-input" id="search-input" placeholder="搜尋公司名稱、聯絡人…" oninput="renderClientList()">
+          <select id="sort-select" class="search-input" style="flex: 0.5" onchange="renderClientList()">
+            <option value="name">名稱排序</option>
+            <option value="revenue">金額排序</option>
+            <option value="created">建立時間</option>
+          </select>
+        </div>
+        <div class="type-filters">
+          <label><input type="radio" name="filterType" value="all" checked onchange="renderClientList()"> 全部</label>
+          <label><input type="radio" name="filterType" value="client" onchange="renderClientList()"> <span>客戶</span></label>
+          <label><input type="radio" name="filterType" value="vendor" onchange="renderClientList()"> <span>廠商</span></label>
+        </div>
+      </div>
+      <div class="client-list" id="client-list"></div>
+    </div>
+
+    <!-- RIGHT DETAIL PANEL -->
+    <div class="panel" id="detail-panel">
+      <div class="detail-placeholder" id="detail-placeholder">
+        <p style="font-size:14px;color:var(--ink2);margin-bottom:6px;font-weight:500;">請選擇一間公司</p>
+        <p style="font-size:11px;">點擊左側列表即可查看詳細資料與相關連動紀錄</p>
+      </div>
+      
+      <div id="detail-content" style="display:none">
+        <div class="detail-head">
+          <div>
+            <div class="detail-name" id="d-name">
+              <span>公司名稱</span>
+            </div>
+            <!-- 切換聯絡人的下拉選單 -->
+            <div id="d-contact-selector-wrap" style="margin-top:6px;"></div>
+          </div>
+          <div style="display:flex;gap:6px; align-items:flex-start;">
+            <button class="btn btn-ghost-dark btn-sm" onclick="editSelected()">編輯目前聯絡人</button>
+            <button class="btn btn-ghost-dark btn-sm" id="btn-apply-quote" onclick="applyToQuote()">套用到報價單</button>
+            <button class="btn btn-red btn-sm" onclick="deleteSelected()">刪除</button>
+          </div>
+        </div>
+
+        <div class="tab-switch">
+          <button class="tab-btn active" onclick="switchTab('info',this)">基本資料</button>
+          <button class="tab-btn" onclick="switchTab('projects',this)">專案進度</button>
+          <button class="tab-btn" onclick="switchTab('cost',this)">成本連動</button>
+          <button class="tab-btn" onclick="switchTab('quotes',this)" id="tab-btn-quotes">報價單</button>
+        </div>
+
+        <!-- INFO TAB -->
+        <div class="tab-content active" id="tab-info">
+          <div class="detail-body">
+            <div class="detail-stats">
+              <div class="d-stat" id="stat-box-quotes">
+                <div class="d-stat-val" id="ds-quotes">0</div>
+                <div class="d-stat-label">關聯報價單數</div>
+              </div>
+              <div class="d-stat" id="stat-box-cases">
+                <div class="d-stat-val" id="ds-cases">0</div>
+                <div class="d-stat-label">累積發包數</div>
+              </div>
+              <div class="d-stat">
+                <div class="d-stat-val" id="ds-amount">$0</div>
+                <div class="d-stat-label" id="ds-amount-label">累計相關金額</div>
+              </div>
+            </div>
+            <div class="info-grid">
+              <div class="info-item"><label>統一編號</label><div class="val" id="d-taxid"></div></div>
+              <div class="info-item"><label>聯絡人</label><div class="val" id="d-contact"></div></div>
+              <div class="info-item"><label>電話</label><div class="val" id="d-tel"></div></div>
+              <div class="info-item"><label>手機</label><div class="val" id="d-mobile"></div></div>
+              <div class="info-item full"><label>Email</label><div class="val" id="d-email"></div></div>
+              <div class="info-item full"><label>地址</label><div class="val" id="d-addr"></div></div>
+              <div class="info-item full"><label>備註</label><div class="val" id="d-notes"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUOTES TAB -->
+        <div class="tab-content" id="tab-quotes">
+          <div class="detail-body">
+            <div class="connected-title">相關報價單 <span class="count-pill" id="quotes-count-pill">0</span></div>
+            <div id="quotes-list"></div>
+          </div>
+        </div>
+
+        <!-- PROJECTS TAB -->
+        <div class="tab-content" id="tab-projects">
+          <div class="detail-body">
+            <div class="connected-title">參與或隸屬專案 <span class="count-pill" id="projects-count-pill">0</span></div>
+            <div id="projects-list"></div>
+          </div>
+        </div>
+
+        <!-- COST TAB -->
+        <div class="tab-content" id="tab-cost">
+          <div class="detail-body">
+            <div class="connected-title">成本計算連動 (案件發包統計)</div>
+            <p style="font-size:11px;color:var(--ink3);margin-bottom:16px">系統會自動抓取成本頁面中，將此公司列為「客戶」或「發包廠商」的項目。</p>
+            <div class="cost-link">
+              <span>前往成本計算並檢視此公司</span>
+              <a href="cost.html" id="cost-link-btn">開啟成本計算 →</a>
+            </div>
+            <div style="margin-top:16px">
+              <div class="detail-stats">
+                <div class="d-stat"><div class="d-stat-val" id="dc-case-count">0</div><div class="d-stat-label">累積發包數</div></div>
+                <div class="d-stat"><div class="d-stat-val" id="dc-total-cost">$0</div><div class="d-stat-label">總成本/發包金額</div></div>
+                <div class="d-stat"><div class="d-stat-val" id="dc-total-revenue">$0</div><div class="d-stat-label">總報價收入</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="overlay" id="add-modal" onclick="if(event.target===this) this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">新增公司 / 聯絡人</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="document.getElementById('add-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <p style="font-size:11px;color:var(--ink3);margin-bottom:5px;">💡 提示：若要新增同一間公司的其他負責人，請輸入一模一樣的「公司名稱」，系統會自動將他們歸類在一起。</p>
+      <div class="field">
+        <label>對象類型 *</label>
+        <select id="f-type">
+          <option value="client">客戶 (Client) - 發案方</option>
+          <option value="vendor">報價方 / 廠商 (Vendor) - 合作夥伴</option>
+        </select>
+      </div>
+      <div class="field"><label>公司名稱 *</label><input type="text" id="f-name" placeholder="請輸入完整公司名稱"></div>
+      <div class="field-row">
+        <div class="field"><label>統一編號</label><input type="text" id="f-taxid"></div>
+        <div class="field"><label>聯絡人 / 姓名</label><input type="text" id="f-contact" placeholder="若留空將顯示為主要聯絡人"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>電話</label><input type="text" id="f-tel"></div>
+        <div class="field"><label>手機</label><input type="text" id="f-mobile"></div>
+      </div>
+      <div class="field"><label>Email</label><input type="email" id="f-email"></div>
+      <div class="field"><label>地址</label><input type="text" id="f-addr"></div>
+      <div class="field"><label>備註</label><textarea id="f-notes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="document.getElementById('add-modal').classList.remove('open')">取消</button>
+      <button class="btn btn-amber" onclick="saveClient()">儲存並連動</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="overlay" id="import-modal" onclick="if(event.target===this) this.classList.remove('open')">
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <span class="modal-title">匯入 Excel</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="document.getElementById('import-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="import-zone" onclick="document.getElementById('xl-file').click()">
+        <span style="font-size:28px">📂</span>
+        <div class="import-zone-text">
+          <div class="t">點擊選取 Excel 檔案</div>
+          <div class="s">格式：類型(client/vendor) / 名稱 / 統編 / 聯絡人 / 電話 / 手機 / Email / 地址</div>
+        </div>
+      </div>
+      <input type="file" id="xl-file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
+      <div class="import-msg" id="import-msg"></div>
+      <div style="margin-top:12px;display:flex;justify-content:space-between;">
+        <span style="font-size:11px;color:var(--ink3);cursor:pointer;text-decoration:underline;" onclick="downloadTemplate()">⬇ 下載範本</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="document.getElementById('import-modal').classList.remove('open')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase 連線 -->
+<script type="module">
+import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+const app = getApp();
+const db = getFirestore(app);
+
+window._fbDb = db;
+window._fbDoc = doc;
+window._fbGetDoc = getDoc;
+window._fbSetDoc = setDoc;
+window._fbReady = true;
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+let clientDB = [];
+let selectedCompanyName = null; 
+let currentContactId = null;
+
+let currentView = 'all'; // all, year, month
+
+const fmt = n => Number(n||0).toLocaleString('en-US');
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $ = id => document.getElementById(id);
+const fmtDate = ts => ts ? new Date(ts).toLocaleDateString('zh-TW') : '—';
+
+/* =======================================
+   TIME FILTERS
+======================================= */
+function initYearSelect() {
+  const sel = document.getElementById('sel-year');
+  if(!sel) return;
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  let yearSet = new Set();
+
+  // 1. 預留過去 5 年到未來 10 年
+  for(let y = currentYear - 5; y <= currentYear + 10; y++) {
+    yearSet.add(y);
+  }
+
+  // 2. 掃描各類歷史資料的年份，確保無遺漏
+  const scanDate = (dStr) => {
+    if(dStr) {
+      const y = parseInt(dStr.split('-')[0]);
+      if(!isNaN(y)) yearSet.add(y);
+    }
+  };
+  try { JSON.parse(localStorage.getItem('quotesHistory')||'[]').forEach(q => scanDate(q.date)); } catch(e){}
+  try { JSON.parse(localStorage.getItem('cost_projects')||'[]').forEach(p => { scanDate(p.start); scanDate(p.end); }); } catch(e){}
+  try { JSON.parse(localStorage.getItem('cost_items')||'[]').forEach(c => scanDate(c.date)); } catch(e){}
+  try { JSON.parse(localStorage.getItem('costsDB')||'[]').forEach(c => scanDate(c.date)); } catch(e){}
+
+  // 3. 排序 (由大到小) 並產生選項
+  let sortedYears = Array.from(yearSet).sort((a,b) => b - a);
+  sel.innerHTML = '';
+  sortedYears.forEach(y => {
+    const o = document.createElement('option');
+    o.value = String(y);
+    o.textContent = y + '年';
+    if(y === currentYear) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  const mInput = document.getElementById('sel-month');
+  if(mInput && !mInput.value) {
+    mInput.value = String(now.getMonth()+1).padStart(2,'0');
+  }
+}
+
+function setView(v) {
+  currentView = v;
+  ['all','year','month'].forEach(k => {
+    document.getElementById('vp-'+k).classList.toggle('on', k === v);
+  });
+  document.getElementById('tg-year').style.display = (v === 'year' || v === 'month') ? 'flex' : 'none';
+  document.getElementById('tg-month').style.display = v === 'month' ? 'flex' : 'none';
+  onFilterChange();
+}
+
+function onFilterChange() {
+  updateGlobalStats();
+  renderClientList();
+  if(selectedCompanyName) {
+    // Re-render the detail stats for the selected company to apply new dates
+    let companyMembers = clientDB.filter(c => c.name.trim() === selectedCompanyName.trim());
+    if(companyMembers.length > 0) {
+      renderDetailStats(selectedCompanyName, companyMembers[0].type);
+    }
+  }
+}
+
+function filterByDate(arr, dateField) {
+  if (currentView === 'all') return arr;
+  const y = $('sel-year').value;
+  const m = $('sel-month').value;
+  return arr.filter(item => {
+    let d = item[dateField];
+    if (!d) return false;
+    if (currentView === 'year') return d.startsWith(y);
+    if (currentView === 'month') return d.startsWith(y + '-' + m);
+    return true;
+  });
+}
+
+/* =======================================
+   LINKED DATA GETTERS
+======================================= */
+function getLinkedQuotes(companyName) {
+  if(!companyName) return [];
+  try { 
+    let history = JSON.parse(localStorage.getItem('quotesHistory') || '[]');
+    return history.filter(q => (q.clientName || '').trim() === companyName.trim() || (q.client || '').trim() === companyName.trim()); 
+  } catch(e) { return []; }
+}
+function getLinkedProjects(companyName) {
+  if(!companyName) return [];
+  try { 
+    let projs = JSON.parse(localStorage.getItem('cost_projects') || localStorage.getItem('projectsDB') || '[]');
+    return projs.filter(p => (p.client || '').trim() === companyName.trim()); 
+  } catch(e) { return []; }
+}
+function getLinkedCosts(companyName) {
+  if(!companyName) return [];
+  let n = companyName.trim();
+  let matched = [];
+  try { 
+    let legacy = JSON.parse(localStorage.getItem('costsDB') || '[]');
+    matched.push(...legacy.filter(c => (c.client||'').trim()===n || (c.vendor||'').trim()===n || (c.payee||'').trim()===n)); 
+  } catch(e) {}
+  try {
+    let items = JSON.parse(localStorage.getItem('cost_items') || '[]');
+    // Try to match description or note since cost_items don't have explicit vendor field
+    matched.push(...items.filter(c => (c.desc||'').includes(n) || (c.note||'').includes(n) || (c.vendor||'').trim()===n));
+  } catch(e) {}
+  return matched;
+}
+
+/* =======================================
+   LOAD & SAVE
+======================================= */
+async function loadDB() {
+  let waited = 0;
+  while (!window._fbReady && waited < 5000) {
+    await new Promise(r => setTimeout(r, 100));
+    waited += 100;
+  }
+
+  let clients = [], vendors = [];
+  try {
+    const snapC = await window._fbGetDoc(window._fbDoc(window._fbDb, 'databases', 'clientDB'));
+    clients = snapC.exists() ? (snapC.data().list || []) : [];
+  } catch(e) { console.warn(e) }
+  
+  try {
+    const snapV = await window._fbGetDoc(window._fbDoc(window._fbDb, 'databases', 'vendorDB'));
+    vendors = snapV.exists() ? (snapV.data().list || []) : [];
+  } catch(e) { console.warn(e) }
+
+  clientDB = [
+    ...clients.map(c => ({...c, type: 'client'})),
+    ...vendors.map(v => ({...v, type: 'vendor'}))
+  ];
+
+  renderClientList();
+  updateGlobalStats();
+}
+
+async function saveDB() {
+  const clients = clientDB.filter(c => c.type === 'client').map(({type, ...rest}) => rest);
+  const vendors = clientDB.filter(c => c.type === 'vendor').map(({type, ...rest}) => rest);
+  
+  try {
+    await window._fbSetDoc(window._fbDoc(window._fbDb, 'databases', 'clientDB'), {list: clients});
+    await window._fbSetDoc(window._fbDoc(window._fbDb, 'databases', 'vendorDB'), {list: vendors});
+  } catch(e) { 
+    alert('儲存至雲端失敗，請檢查網路連線。');
+  }
+  
+  renderClientList();
+  updateGlobalStats();
+}
+
+/* =======================================
+   STATS
+======================================= */
+function updateGlobalStats() {
+  let groups = {};
+  clientDB.forEach(c => {
+      let name = (c.name || '(未填寫)').trim();
+      if(!groups[name]) groups[name] = { type: c.type, name: name };
+  });
+  
+  let clientCount = 0;
+  let vendorCount = 0;
+  Object.values(groups).forEach(g => {
+      if(g.type === 'vendor') vendorCount++;
+      else clientCount++;
+  });
+
+  let allQuotes = [];
+  let allCosts = [];
+  try { allQuotes = JSON.parse(localStorage.getItem('quotesHistory') || '[]'); } catch(e){}
+  try { 
+    allCosts = [...JSON.parse(localStorage.getItem('cost_items') || '[]'), ...JSON.parse(localStorage.getItem('costsDB') || '[]')]; 
+  } catch(e){}
+
+  let fQuotes = filterByDate(allQuotes, 'date');
+  let fCosts = filterByDate(allCosts, 'date');
+
+  let totalRev = fQuotes.reduce((s, q) => s + (Number(q.total) || 0), 0);
+  let totalCost = fCosts.reduce((s, c) => s + (Number(c.amount) || Number(c.cost) || 0), 0);
+
+  $('stat-total').textContent = clientCount; 
+  $('stat-vendors').textContent = vendorCount;
+  $('stat-revenue').textContent = '$' + fmt(totalRev);
+  $('stat-rev-count').textContent = `共 ${fQuotes.length} 筆報價單`; 
+  $('stat-cost').textContent = '$' + fmt(totalCost);
+  $('stat-cost-count').textContent = fCosts.length; 
+}
+
+/* =======================================
+   RENDER CLIENT LIST (Grouped)
+======================================= */
+function renderClientList() {
+  const q = $('search-input').value.toLowerCase();
+  const sort = $('sort-select').value;
+  const filterType = document.querySelector('input[name="filterType"]:checked').value;
+
+  let filtered = clientDB.filter(c => {
+    const matchName = (c.name||'').toLowerCase().includes(q) || (c.contact||'').toLowerCase().includes(q);
+    return matchName && (filterType === 'all' || c.type === filterType);
+  });
+
+  // Group by company name
+  let groups = {};
+  filtered.forEach(c => {
+    let name = (c.name || '(未命名)').trim();
+    if(!groups[name]) groups[name] = [];
+    groups[name].push(c);
+  });
+
+  let groupList = Object.keys(groups).map(name => {
+    let members = groups[name];
+    let first = members[0];
+    
+    // Stats for the company based on current time filter
+    let quotes = filterByDate(getLinkedQuotes(name), 'date');
+    let costs = filterByDate(getLinkedCosts(name), 'date');
+    let totalRev = quotes.reduce((s,q)=>s+(Number(q.total)||0), 0);
+    let totalCost = costs.reduce((s,c)=>s+(Number(c.amount)||Number(c.cost)||0), 0);
+
+    return {
+      name: name,
+      type: first.type,
+      members: members,
+      created: Math.min(...members.map(m=>m.created||Date.now())),
+      quoteCount: quotes.length,
+      costCount: costs.length,
+      totalRev: totalRev,
+      totalCost: totalCost
+    };
+  });
+
+  if(sort === 'name') groupList.sort((a,b) => a.name.localeCompare(b.name, 'zh-TW'));
+  else if(sort === 'created') groupList.sort((a,b) => b.created - a.created);
+  else if(sort === 'revenue') groupList.sort((a,b) => b.totalRev - a.totalRev);
+
+  $('list-count').textContent = groupList.length + ' 間公司';
+
+  if(groupList.length === 0) {
+    $('client-list').innerHTML = `<div class="empty-state">查無符合的公司資料</div>`;
+    return;
+  }
+
+  $('client-list').innerHTML = groupList.map(grp => {
+    const isVendor = grp.type === 'vendor';
+    const initials = (grp.name||'?').charAt(0).toUpperCase();
+    const isSelected = (selectedCompanyName === grp.name);
+    
+    // If it's a vendor, we care more about cost count. If client, quote count.
+    const displayCount = isVendor ? grp.costCount : grp.quoteCount;
+    const badgeText = isVendor ? `${displayCount} 筆發包` : `${displayCount} 份報價`;
+
+    return `
+    <div class="client-card${isSelected?' selected':''}" onclick="selectCompany('${esc(grp.name)}')">
+      <div class="client-avatar ${isVendor?'vendor':'client'}">${initials}</div>
+      <div class="client-info">
+        <div class="client-name">
+          ${esc(grp.name)}
+          <span class="badge-count${displayCount===0?' zero':''}">${badgeText}</span>
+        </div>
+        <div class="client-meta">
+          ${grp.members.length > 1 ? `👥 共 ${grp.members.length} 位聯絡人` : `👤 ${esc(grp.members[0].contact||'主要聯絡人')}`}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* =======================================
+   SELECT & SHOW DETAIL
+======================================= */
+function selectCompany(name) {
+  selectedCompanyName = name;
+  renderClientList(); // highlight card
+
+  let members = clientDB.filter(c => (c.name||'(未命名)').trim() === name.trim());
+  if(members.length === 0) return;
+
+  $('detail-placeholder').style.display = 'none';
+  $('detail-content').style.display = 'block';
+
+  let typeStr = members[0].type === 'vendor' ? '報價方/廠商' : '客戶';
+  let badgeCls = members[0].type === 'vendor' ? 'badge-vendor' : 'badge-client';
+  
+  $('d-name').innerHTML = `<span>${esc(name)}</span> <span class="badge ${badgeCls}">${typeStr}</span>`;
+  
+  let selHtml = '';
+  if(members.length > 1) {
+    selHtml = `<select class="t-select" style="margin-top:6px; font-size:12px; padding:4px 8px; border:1px solid rgba(0,0,0,.2); color:var(--ink); background:#fff;" onchange="switchContact(this.value)">` +
+      members.map(m => `<option value="${m.id}">${esc(m.contact||'主要聯絡人')} ${m.mobile ? '('+esc(m.mobile)+')' : ''}</option>`).join('') +
+      `</select>`;
+  } else {
+    selHtml = `<div style="font-size:12px; color:var(--ink3); margin-top:6px;">聯絡人：${esc(members[0].contact || '—')}</div>`;
+  }
+  $('d-contact-selector-wrap').innerHTML = selHtml;
+
+  // Render stats for the whole company
+  renderDetailStats(name, members[0].type);
+
+  // Switch to the first contact's basic info
+  switchContact(members[0].id);
+}
+
+function switchContact(id) {
+  currentContactId = parseInt(id);
+  let c = clientDB.find(x => x.id === currentContactId);
+  if(!c) return;
+
+  const setVal = (id, val) => {
+    const el = $(id); el.textContent = val || '—'; el.className = 'val' + (val ? '' : ' empty');
+  };
+  setVal('d-taxid', c.taxid); setVal('d-contact', c.contact);
+  setVal('d-tel', c.tel); setVal('d-mobile', c.mobile);
+  setVal('d-email', c.email); setVal('d-addr', c.addr);
+  setVal('d-notes', c.notes);
+}
+
+function renderDetailStats(companyName, type) {
+  let allQuotes = getLinkedQuotes(companyName);
+  let allProjects = getLinkedProjects(companyName);
+  let allCosts = getLinkedCosts(companyName);
+
+  let quotes = filterByDate(allQuotes, 'date');
+  let projects = filterByDate(allProjects, 'start'); // Using start date to filter projects
+  let costs = filterByDate(allCosts, 'date');
+
+  let totalRev = quotes.reduce((s,q)=>s+(Number(q.total)||0),0);
+  let totalCost = costs.reduce((s,x)=>s+(Number(x.amount)||Number(x.cost)||0),0);
+
+  // Top Info Tab Stats
+  $('ds-quotes').textContent = quotes.length;
+  $('ds-cases').textContent = costs.length;
+  
+  if(type === 'vendor') {
+    $('tab-btn-quotes').style.display = 'none'; 
+    $('btn-apply-quote').textContent = '套用到報價單廠商';
+    $('stat-box-quotes').style.display = 'none';
+    $('ds-amount-label').textContent = '累計發包金額';
+    $('ds-amount').textContent = '$' + fmt(totalCost);
+  } else {
+    $('tab-btn-quotes').style.display = 'block'; 
+    $('btn-apply-quote').textContent = '套用到報價單客戶';
+    $('stat-box-quotes').style.display = 'block';
+    $('ds-amount-label').textContent = '累計報價金額';
+    $('ds-amount').textContent = '$' + fmt(totalRev);
+  }
+
+  // Cost Tab Stats
+  $('dc-case-count').textContent = costs.length;
+  $('dc-total-cost').textContent = '$' + fmt(totalCost);
+  $('dc-total-revenue').textContent = '$' + fmt(totalRev);
+  
+  let margin = totalRev > 0 ? Math.round((totalRev-totalCost)/totalRev*100) : null;
+  let dcMarginEl = document.getElementById('dc-margin');
+  if(dcMarginEl) dcMarginEl.textContent = margin !== null ? margin + '%' : '—';
+
+  // Quotes Tab list
+  $('quotes-count-pill').textContent = quotes.length;
+  $('quotes-list').innerHTML = quotes.length ? quotes.map(q => `
+    <div class="quote-item" onclick="window.open('index.html','_blank')">
+      <div>
+        <div style="font-size:11px;color:var(--acc)">${esc(q.no||'—')}</div>
+        <div style="color:var(--ink)">${esc(q.desc||'—')}</div>
+        <div style="font-size:10px;color:var(--ink3)">${esc(q.date||'—')}</div>
+      </div>
+      <div style="font-weight:bold;font-family:var(--font-mono)">$${fmt(q.total)}</div>
+    </div>`).join('') : '<div class="empty-state" style="padding:20px">此區間尚無紀錄</div>';
+
+  // Projects Tab list
+  $('projects-count-pill').textContent = projects.length;
+  $('projects-list').innerHTML = projects.length ? projects.map(p => `
+    <div class="project-item">
+      <div>
+        <div style="color:var(--ink)">${esc(p.name)}</div>
+        <div style="font-size:11px;color:var(--ink3)">${esc(p.start||'')} - ${esc(p.status||'')}</div>
+      </div>
+    </div>`).join('') : '<div class="empty-state" style="padding:20px">此區間尚無紀錄</div>';
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  $('tab-' + name).classList.add('active');
+}
+
+/* =======================================
+   ADD / EDIT / DELETE / APPLY
+======================================= */
+function openAddModal(id) {
+  $('modal-title').textContent = id ? '編輯聯絡人' : '新增公司/聯絡人';
+  $('edit-id').value = id || '';
+  const c = id ? clientDB.find(x=>x.id===id) : null;
+  
+  // If we are adding a new contact while a company is selected, auto-fill the company name
+  let defaultName = c ? (c.name||'') : (selectedCompanyName || '');
+  let defaultType = c ? (c.type||'client') : 'client';
+  if(!c && selectedCompanyName) {
+      let existing = clientDB.find(x=>x.name===selectedCompanyName);
+      if(existing) defaultType = existing.type;
+  }
+
+  $('f-name').value = defaultName;
+  $('f-type').value = defaultType;
+  
+  ['taxid','contact','tel','mobile','email','addr','notes'].forEach(k => { 
+    $('f-'+k).value = c ? (c[k]||'') : ''; 
+  });
+  
+  $('add-modal').classList.add('open');
+  setTimeout(()=>$('f-name').focus(), 80);
+}
+
+function editSelected() { 
+  if(currentContactId) openAddModal(currentContactId); 
+}
+
+function applyToQuote() {
+  if(!currentContactId) return;
+  localStorage.setItem('applyClient', JSON.stringify(clientDB.find(x=>x.id===currentContactId)));
+  window.location.href = 'index.html'; 
+}
+
+async function saveClient() {
+  const name = $('f-name').value.trim();
+  if(!name) return alert('請填寫公司名稱');
+  const entry = { type: $('f-type').value };
+  ['taxid','contact','tel','mobile','email','addr','notes'].forEach(k => entry[k] = $('f-'+k).value.trim());
+  
+  const editId = parseInt($('edit-id').value);
+  if(editId) { 
+    Object.assign(clientDB.find(c=>c.id===editId), { name, ...entry, updated: Date.now() }); 
+  } else { 
+    clientDB.push({ id: Date.now(), name, ...entry, created: Date.now() }); 
+  }
+  
+  await saveDB();
+  document.getElementById('add-modal').classList.remove('open');
+  selectCompany(name); // Auto-select the company we just saved
+}
+
+async function deleteSelected() {
+  if(!currentContactId) return;
+  let c = clientDB.find(x => x.id === currentContactId);
+  if(!confirm(`確定刪除聯絡人「${c.contact || c.name}」？此操作無法復原。`)) return;
+  
+  clientDB = clientDB.filter(x => x.id !== currentContactId);
+  await saveDB();
+  
+  // Check if company still has other members
+  let remaining = clientDB.filter(x => x.name === selectedCompanyName);
+  if(remaining.length > 0) {
+    selectCompany(selectedCompanyName);
+  } else {
+    selectedCompanyName = null;
+    currentContactId = null;
+    $('detail-placeholder').style.display = 'flex';
+    $('detail-content').style.display = 'none';
+    renderClientList();
+  }
+}
+
+/* =======================================
+   IMPORT / EXPORT
+======================================= */
+function exportDB() {
+  const header = ['類型(client/vendor)', '公司名稱','統編','聯絡人','電話','手機','Email','地址','備註'];
+  const rows = clientDB.map(c => [c.type, c.name, c.taxid, c.contact, c.tel, c.mobile, c.email, c.addr, c.notes]);
+  const ws = XLSX.utils.aoa_to_sheet([header,...rows]);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '資料庫'); XLSX.writeFile(wb, '公司資料庫.xlsx');
+}
+
+function importExcel(event) {
+  const file = event.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const rows = XLSX.utils.sheet_to_json(XLSX.read(data, { type: 'array' }).Sheets[XLSX.read(data, { type: 'array' }).SheetNames[0]], { header:1, defval:'' });
+      for(let i=1;i<rows.length;i++) {
+        const name = String(rows[i][1]||'').trim(); if(!name) continue;
+        const type = String(rows[i][0]||'').toLowerCase().includes('vendor') ? 'vendor' : 'client';
+        const contact = String(rows[i][3]||'').trim();
+        const entry = { type, taxid:String(rows[i][2]||'').trim(), contact:contact, tel:String(rows[i][4]||'').trim(), mobile:String(rows[i][5]||'').trim(), email:String(rows[i][6]||'').trim(), addr:String(rows[i][7]||'').trim(), notes:String(rows[i][8]||'').trim() };
+        
+        // Match exact company name AND contact name to avoid overwriting different contacts in same company
+        const ex = clientDB.find(c => c.name === name && c.contact === contact);
+        if(ex) Object.assign(ex, entry, {updated: Date.now()}); 
+        else clientDB.push({ id: Date.now()+i, name, ...entry, created: Date.now() });
+      }
+      await saveDB(); $('import-msg').className='import-msg success'; $('import-msg').textContent='✅ 匯入成功！';
+    } catch(err) { $('import-msg').className='import-msg error'; $('import-msg').textContent='❌ 失敗：'+err.message; }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function downloadTemplate() {
+  const ws = XLSX.utils.aoa_to_sheet([['類型(client或vendor)', '公司名稱','統編','聯絡人','電話','手機','Email','地址','備註'], ['client', '範例客戶','1234','王小明','02-123','0912','a@b.com','台北',''], ['vendor', '範例廠商','5678','陳大文','02-456','0987','c@d.com','台中','']]);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Sheet1'); XLSX.writeFile(wb, '範本.xlsx');
+}
+
+window.onload = () => {
+  initYearSelect();
+  loadDB();
+};
+</script>
+</body>
+</html>

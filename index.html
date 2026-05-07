@@ -1,0 +1,2603 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>報價單產生器</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=DM+Serif+Display&family=Playfair+Display:wght@400;600;700&family=Lora:wght@400;500;600&family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Spectral:wght@300;400;600&family=Crimson+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+/* ========== ROOT ========== */
+:root {
+  --bg: #eeeae4;
+  --panel: #1c1917;
+  --panel2: #292524;
+  --paper: #fdfcfb;
+  --ink: #1c1917;
+  --ink2: #57534e;
+  --ink3: #a8a29e;
+  --line: #e7e3dc;
+  --acc: #b45309;
+  --acc2: #d97706;
+  --danger: #dc2626;
+  --shadow-lg: 0 8px 12px -2px rgba(0,0,0,.1), 0 24px 56px -8px rgba(0,0,0,.18);
+  --r: 6px;
+  --font-body: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  --font-serif: 'Noto Serif TC', 'PMingLiU', serif;
+  --t-acc: #b45309;
+  --t-head-bg: #1c1917;
+  --t-head-fg: #fdfcfb;
+  --t-line: #c9bfb0;
+  --t-title-color: #1c1917;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--ink); font-size: 13px; line-height: 1.55; min-height: 100vh; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c4bdb6; border-radius: 3px; }
+
+/* ========== TOP BAR ========== */
+.topbar {
+  background: var(--panel); color: #fafaf9;
+  padding: 0 24px; height: 50px;
+  display: flex; justify-content: space-between; align-items: center;
+  position: sticky; top: 0; z-index: 300;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.topbar-brand { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #e7e5e4; }
+.topbar-brand svg { opacity:.6; }
+.topbar-actions { display: flex; gap: 7px; align-items: center; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 13px; border-radius: var(--r); border: none;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: all .15s; font-family: inherit; white-space: nowrap;
+}
+.btn-ghost { background: rgba(255,255,255,.07); color: #d6d3d1; border: 1px solid rgba(255,255,255,.12); }
+.btn-ghost:hover { background: rgba(255,255,255,.14); color: #fafaf9; }
+.btn-amber { background: var(--acc); color: white; }
+.btn-amber:hover { background: var(--acc2); }
+.btn-red { background: rgba(220,38,38,.12); color: #fca5a5; border: 1px solid rgba(220,38,38,.3); }
+.btn-red:hover { background: var(--danger); color: white; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn-green { background: rgba(5,150,105,.15); color: #6ee7b7; border: 1px solid rgba(5,150,105,.4); }
+.btn-green:hover { background: #059669; color: white; }
+
+.topbar-nav { display: flex; gap: 2px; }
+.nav-tab { padding: 6px 14px; border-radius: var(--r); font-size: 12px; font-weight: 500; color: #a8a29e; cursor: pointer; transition: .15s; text-decoration: none; border: 1px solid transparent; }
+.nav-tab:hover { color: #e7e5e4; background: rgba(255,255,255,.06); }
+.nav-tab.active { color: var(--acc2); border-color: rgba(217,119,6,.3); background: rgba(180,83,9,.12); }
+
+/* ========== TOOLBAR ========== */
+.toolbar {
+  background: var(--panel2); padding: 0 24px; height: 42px;
+  display: flex; align-items: center;
+  position: sticky; top: 50px; z-index: 290;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  overflow-x: auto; scrollbar-width: none;
+}
+.toolbar::-webkit-scrollbar { display: none; }
+.tg { display: flex; align-items: center; gap: 5px; padding: 0 13px; border-right: 1px solid rgba(255,255,255,.08); height: 100%; flex-shrink: 0; }
+.tg:last-child { border-right: none; }
+.tg-label { font-size: 10px; color: #78716c; letter-spacing: .5px; text-transform: uppercase; margin-right: 2px; white-space: nowrap; }
+.t-select { background: rgba(255,255,255,.06); color: #d6d3d1; border: 1px solid rgba(255,255,255,.1); border-radius: 4px; padding: 3px 7px; font-size: 11px; cursor: pointer; font-family: inherit; }
+.t-select:hover { border-color: rgba(255,255,255,.2); }
+.theme-pill { padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 500; border: 1px solid rgba(255,255,255,.12); color: #a8a29e; cursor: pointer; transition: .15s; white-space: nowrap; background: none; font-family: inherit; }
+.theme-pill:hover { color: #e7e5e4; border-color: rgba(255,255,255,.25); }
+.theme-pill.on { color: var(--acc2); border-color: var(--acc2); background: rgba(180,83,9,.15); }
+.cswatch { width: 17px; height: 17px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: .15s; flex-shrink: 0; }
+.cswatch:hover { transform: scale(1.2); }
+.cswatch.on { border-color: white; }
+.tax-pill { padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 500; border: 1px solid rgba(255,255,255,.12); color: #a8a29e; cursor: pointer; transition: .15s; background: none; font-family: inherit; }
+.tax-pill:hover { color: #e7e5e4; border-color: rgba(255,255,255,.25); }
+.tax-pill.on { color: #34d399; border-color: #34d399; background: rgba(52,211,153,.12); }
+
+/* ========== CANVAS ========== */
+.canvas { padding: 36px 20px 80px; display: flex; justify-content: center; }
+
+/* ========== PAPER ========== */
+.paper {
+  background: var(--paper); width: 210mm; min-height: 297mm;
+  padding: 14mm 18mm 18mm;
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column;
+  position: relative; isolation: isolate;
+  transition: font-size .2s, font-family .2s;
+  overflow: hidden;
+}
+.paper::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: .6;
+}
+
+/* ========== INPUTS ========== */
+input, textarea {
+  font-family: inherit; font-size: inherit; color: inherit;
+  background: transparent; border: 1px dashed transparent;
+  padding: 3px 5px; border-radius: 3px;
+  outline: none; transition: all .15s; width: 100%;
+}
+input:hover, textarea:hover { border-color: #d6cfc5; background: rgba(180,83,9,.03); }
+input:focus, textarea:focus { border-color: var(--t-acc, var(--acc)); border-style: solid; background: white; box-shadow: 0 0 0 3px rgba(180,83,9,.08); }
+textarea { resize: none; overflow: hidden; }
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+input[type="date"] { cursor: pointer; }
+
+/* ========================================
+   SECTION 1: TOP BANNER (Title + Logo)
+======================================== */
+.doc-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 3px solid var(--t-line, #c9bfb0);
+  position: relative; z-index: 1;
+}
+
+.banner-title-area {}
+.doc-title-text {
+  font-family: var(--title-font, 'DM Serif Display', var(--font-serif));
+  font-size: var(--title-size, 40px); font-weight: var(--title-weight, 400);
+  letter-spacing: var(--title-ls, 10px);
+  color: var(--t-title-color, #1c1917);
+  line-height: 1;
+  border: none; background: transparent; box-shadow: none;
+  padding: 0; width: auto; min-width: 140px;
+}
+.doc-title-text:focus { outline: none; border-bottom: 1.5px solid var(--t-acc, var(--acc)) !important; }
+.doc-sub {
+  font-size: 9px; letter-spacing: 5px; color: var(--ink3);
+  text-transform: uppercase; margin-top: 4px;
+}
+
+.banner-logo-area {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  flex-shrink: 0;
+}
+.logo-box {
+  position: relative;
+  width: 140px; height: 70px;
+  border: 1.5px dashed #c4bdb6; border-radius: 6px;
+  background: #f9f7f4; transition: .15s;
+  flex-shrink: 0;
+}
+.logo-box:hover { border-color: var(--t-acc, var(--acc)); background: #fef9f0; }
+.logo-hint { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; color: #c4bdb6; text-align: center; line-height: 1.5; cursor: pointer; }
+.logo-hint svg { width: 18px; height: 18px; display: block; margin: 0 auto 2px; }
+#logo-input { display: none; }
+.logo-clear { font-size: 9px; color: #a8a29e; cursor: pointer; display: none; }
+.logo-clear:hover { color: var(--danger); }
+.logo-resize-handle {
+  position: absolute; right: -1px; bottom: -1px; width: 14px; height: 14px;
+  cursor: se-resize; background: var(--t-acc, #b45309);
+  border-radius: 2px 0 4px 0; z-index: 10; display: none;
+  align-items: center; justify-content: center; opacity: 0; transition: opacity .15s;
+}
+.logo-box:not(.no-logo):hover .logo-resize-handle { opacity: 1; }
+.logo-box:not(.no-logo) .logo-resize-handle { display: flex; }
+
+/* ========================================
+   SECTION 2: INFO BLOCK (Client | Vendor)
+======================================== */
+.info-block {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border: 1.5px solid var(--t-line, #c9bfb0);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative; z-index: 1;
+}
+
+.info-col { flex: 1; padding: 14px 16px; }
+.info-col-client { border-right: 1.5px solid var(--t-line, #c9bfb0); }
+
+.info-col-eyebrow {
+  font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--t-acc, var(--acc)); font-weight: 700;
+  margin-bottom: 10px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--t-line, #c9bfb0);
+  display: flex; align-items: center; gap: 6px;
+}
+.info-col-eyebrow svg { opacity: .6; }
+
+.entity-name-input {
+  font-size: 15px; font-weight: 700; letter-spacing: .5px;
+  font-family: var(--font-serif);
+  border: none !important; box-shadow: none !important; background: transparent !important;
+  padding: 2px 0 !important; border-radius: 0 !important;
+  border-bottom: 1.5px solid var(--t-line, #c9bfb0) !important;
+  margin-bottom: 10px; width: 100%;
+}
+.entity-name-input:focus { border-bottom-color: var(--t-acc, var(--acc)) !important; }
+.entity-name-input:hover { background: transparent !important; border-color: transparent transparent var(--t-acc,var(--acc)) transparent !important; }
+
+.fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
+.f-row { display: flex; align-items: baseline; gap: 4px; }
+.f-lbl { font-size: 10px; color: var(--ink3); white-space: nowrap; flex-shrink: 0; width: 42px; }
+.f-inp { flex: 1; font-size: 12px; }
+
+.info-col-vendor .entity-name-input { text-align: left; }
+
+.eyebrow-db-btn {
+  margin-left: 5px; cursor: pointer; opacity: .5;
+  display: inline-flex; align-items: center;
+  padding: 1px 4px; border-radius: 3px;
+  transition: .12s;
+}
+.eyebrow-db-btn:hover { opacity: 1; background: rgba(180,83,9,.15); color: var(--t-acc,var(--acc)); }
+
+/* ========== META STRIP ========== */
+.meta-strip {
+  display: flex; gap: 0;
+  background: var(--t-head-bg, #1c1917);
+  border-radius: var(--r); margin-bottom: 18px;
+  overflow: hidden; position: relative; z-index: 1;
+}
+.meta-item { flex: 1; padding: 8px 13px; border-right: 1px solid rgba(255,255,255,.08); }
+.meta-item:last-child { border-right: none; }
+.meta-key { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: #ffffff !important; opacity: 0.85; margin-bottom: 2px; }
+.meta-item input { color: #ffffff !important; font-size: 12px; font-weight: 500; }
+.meta-item input::placeholder { color: rgba(255,255,255,0.6) !important; }
+.meta-item input:hover { background: rgba(255,255,255,.06) !important; border-color: transparent !important; }
+.meta-item input:focus { background: rgba(255,255,255,.1) !important; border-color: rgba(255,255,255,.22) !important; box-shadow: none !important; }
+
+/* ========== TABLE ========== */
+.item-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; position: relative; z-index: 1; overflow: visible; }
+.item-table tbody { position: relative; }
+.item-table thead tr { background: var(--t-head-bg, #1c1917); }
+.item-table th { padding: 9px 7px; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--t-head-fg, white); text-align: left; }
+.item-table th:first-child { border-radius: 4px 0 0 4px; }
+.item-table th:last-child { border-radius: 0 4px 4px 0; }
+.item-table td { padding: 5px 7px; border-bottom: 1px solid #ece9e2; vertical-align: middle; }
+.item-table tbody tr:hover td { background: #faf7f2; }
+.item-table tbody tr:last-child td { border-bottom: none; }
+.th-no { width: 4%; text-align: center; }
+.th-name { width: 42%; }
+.th-qty { width: 9%; text-align: center; }
+.th-unit { width: 9%; text-align: center; }
+.th-price { width: 14%; text-align: right; }
+.th-amt { width: 14%; text-align: right; }
+.th-del { width: 28px; min-width: 28px; padding: 0; }
+.td-no { text-align: center; color: var(--ink3); font-size: 11px; font-family: monospace; }
+.td-qty input, .td-unit input { text-align: center; }
+.td-price input { text-align: right; }
+.td-amt { text-align: right; font-family: monospace; font-size: 12px; font-weight: 500; }
+.item-table td input, .item-table td textarea { text-align: center; }
+.item-table td.td-name input, .item-table td.td-name textarea { text-align: left; }
+.item-table td.td-price input { text-align: right; }
+.item-table td.td-amt { text-align: right; }
+.td-name textarea { min-height: 26px; font-size: 12px; line-height: 1.5; }
+.btn-del-row { background: transparent; border: none; cursor: pointer; color: #d6cfc5; padding: 4px; border-radius: 3px; transition: .15s; display: flex; align-items: center; }
+.btn-del-row:hover { color: var(--danger); background: #fee2e2; }
+
+.td-del-float { width: 28px; min-width: 28px; padding: 0 2px; border: none; text-align: center; vertical-align: middle; }
+.row-del-btn { background: transparent; border: none; cursor: pointer; color: transparent; padding: 3px 4px; border-radius: 3px; transition: color .15s, background .15s; display: inline-flex; align-items: center; line-height: 0; }
+.item-table tbody tr:hover .row-del-btn { color: #d6cfc5; }
+.row-del-btn:hover { color: var(--danger) !important; background: #fee2e2; }
+.btn-add-row { width: 100%; padding: 8px; font-family: inherit; font-size: 11px; color: var(--ink3); background: transparent; border: 1px dashed #d6cfc5; border-radius: var(--r); cursor: pointer; transition: .15s; margin-bottom: 22px; letter-spacing: .5px; }
+.btn-add-row:hover { border-color: var(--t-acc, var(--acc)); color: var(--t-acc, var(--acc)); background: rgba(180,83,9,.04); }
+
+/* ========== SUMMARY ========== */
+.s-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 12px; color: var(--ink2); }
+.s-row.bordered { border-bottom: 1px dashed #ece9e2; }
+.s-val { font-family: monospace; }
+.s-total { margin-top: 8px; padding: 10px 14px; background: var(--t-head-bg, #1c1917); border-radius: var(--r); display: flex; justify-content: space-between; align-items: center; }
+.s-total-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #ffffff !important; opacity: 1 !important; font-weight: bold; }
+.s-total-val { font-size: 18px; font-weight: 700; color: #ffffff !important; font-family: monospace; opacity: 1 !important; }
+
+/* ========== BOTTOM WRAP (notes + summary side by side) ========== */
+.bottom-wrap { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 22px; position: relative; z-index: 1; }
+.notes-side { flex: 2; }
+.notes-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink3); margin-bottom: 7px; }
+.notes-side textarea { font-size: 11px; line-height: 1.8; color: var(--ink2); min-height: 80px; }
+.summary-side { flex: 1; min-width: 220px; }
+.summary-box { width: 100%; }
+
+/* ========== TABLE TOOLBAR ========== */
+.table-toolbar { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; position: relative; z-index: 1; }
+.table-toolbar-label { font-size: 10px; color: var(--ink3); letter-spacing: 1px; text-transform: uppercase; }
+.col-toggle-btn { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 500; border: 1px solid #d6cfc5; color: var(--ink3); background: none; cursor: pointer; font-family: inherit; transition: .15s; }
+.col-toggle-btn:hover { border-color: var(--t-acc,var(--acc)); color: var(--t-acc,var(--acc)); }
+.col-toggle-btn.on { background: rgba(180,83,9,.08); border-color: var(--t-acc,var(--acc)); color: var(--t-acc,var(--acc)); }
+
+/* ========== FOOTER (sign boxes) ========== */
+.doc-footer { margin-top: 12px; padding-top: 18px; border-top: 1px solid #e7e3dc; display: flex; gap: 30px; position: relative; z-index: 1; }
+.sign-box { flex: 1; }
+.sign-box .sign-label { font-size: 10px; letter-spacing: 1px; color: var(--ink2); margin-bottom: 8px; display: block; }
+.sign-area { height: 56px; border-bottom: 1px solid var(--ink2); }
+
+/* ========================================
+   THEMES
+======================================== */
+.paper.t-classic { --t-acc:#b45309; --t-head-bg:#1c1917; --t-head-fg:#fdfcfb; --t-line:#c9bfb0; --t-title-color:#1c1917; }
+.paper.t-navy    { --t-acc:#1e40af; --t-head-bg:#1e3a5f; --t-head-fg:#e0f2fe; --t-line:#93c5fd; --t-title-color:#1e3a5f; }
+.paper.t-forest  { --t-acc:#065f46; --t-head-bg:#064e3b; --t-head-fg:#d1fae5; --t-line:#6ee7b7; --t-title-color:#064e3b; }
+.paper.t-crimson { --t-acc:#9f1239; --t-head-bg:#881337; --t-head-fg:#ffe4e6; --t-line:#fda4af; --t-title-color:#881337; }
+.paper.t-slate   { --t-acc:#475569; --t-head-bg:#334155; --t-head-fg:#f1f5f9; --t-line:#94a3b8; --t-title-color:#1e293b; }
+
+/* ========================================
+   CLIENT DB OVERLAY
+======================================== */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(5px); z-index: 500; display: none; align-items: flex-start; justify-content: center; padding-top: 70px; }
+.overlay.open { display: flex; }
+.db-panel { background: #1c1917; color: #e7e5e4; width: 680px; border-radius: 12px; box-shadow: 0 32px 80px rgba(0,0,0,.55); overflow: hidden; animation: sd .2s ease; display: flex; flex-direction: column; max-height: calc(100vh - 100px); }
+@keyframes sd { from { transform: translateY(-18px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+.db-head { padding: 16px 22px; background: #0c0a09; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,.07); flex-shrink: 0; }
+.db-head h2 { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.db-head-sub { font-size: 10px; letter-spacing: 2px; color: #57534e; text-transform: uppercase; }
+.db-head-actions { display: flex; gap: 7px; align-items: center; }
+.db-toolbar { padding: 12px 20px; background: #141210; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid rgba(255,255,255,.05); flex-shrink: 0; }
+.db-search-input { flex: 1; background: rgba(255,255,255,.06) !important; border: 1px solid rgba(255,255,255,.1) !important; border-style: solid !important; color: #e7e5e4 !important; padding: 7px 11px !important; border-radius: 5px !important; font-size: 12px; }
+.db-search-input::placeholder { color: #57534e; }
+.db-search-input:focus { border-color: var(--acc) !important; background: rgba(255,255,255,.09) !important; box-shadow: 0 0 0 2px rgba(180,83,9,.2) !important; }
+.import-zone { padding: 10px 20px; background: rgba(5,150,105,.06); border-bottom: 1px solid rgba(5,150,105,.15); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.import-zone-icon { font-size: 18px; }
+.import-zone-text { flex: 1; }
+.import-zone-title { font-size: 12px; font-weight: 500; color: #6ee7b7; margin-bottom: 1px; }
+.import-zone-desc { font-size: 10px; color: #57534e; }
+.import-drop { border: 1.5px dashed rgba(52,211,153,.3); border-radius: 6px; padding: 6px 12px; font-size: 11px; color: #34d399; cursor: pointer; transition: .15s; background: rgba(52,211,153,.06); font-family: inherit; white-space: nowrap; }
+.import-drop:hover { border-color: #34d399; background: rgba(52,211,153,.12); }
+#xl-input { display: none; }
+.dl-tpl { font-size: 10px; color: #57534e; cursor: pointer; white-space: nowrap; }
+.dl-tpl:hover { color: #a8a29e; }
+.db-list { flex: 1; overflow-y: auto; }
+.db-empty { padding: 36px; text-align: center; color: #57534e; font-size: 13px; line-height: 1.7; }
+.db-card { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,.05); display: flex; justify-content: space-between; align-items: flex-start; transition: .12s; }
+.db-card:hover { background: rgba(255,255,255,.04); }
+.db-card-info { flex: 1; cursor: pointer; padding-right: 15px; }
+.db-card-name { font-size: 14px; font-weight: 600; color: #fafaf9; margin-bottom: 2px; display: flex; align-items: center; gap: 10px; }
+.db-card-sub { font-size: 11px; color: #78716c; line-height: 1.5; margin-top: 4px; }
+.db-card-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: flex-start; }
+.db-foot { padding: 12px 20px; background: #141210; border-top: 1px solid rgba(255,255,255,.05); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.db-count { font-size: 11px; color: #57534e; }
+.import-msg { padding: 8px 20px; font-size: 11px; text-align: center; display: none; flex-shrink: 0; }
+.import-msg.success { background: rgba(5,150,105,.1); color: #34d399; display: block; border: 1px solid rgba(5,150,105,.2); }
+.import-msg.error { background: rgba(220,38,38,.1); color: #dc2626; display: block; border: 1px solid rgba(220,38,38,.2); }
+
+/* ========================================
+   SAVE MODAL
+======================================== */
+.save-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(5px); z-index: 600; display: none; align-items: center; justify-content: center; }
+.save-overlay.open { display: flex; }
+.save-box { background: #1c1917; color: #e7e5e4; width: 360px; border-radius: 10px; padding: 24px; box-shadow: 0 24px 60px rgba(0,0,0,.55); animation: sd .15s ease; }
+.save-box h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+.sf { margin-bottom: 11px; }
+.sf label { display: block; font-size: 10px; color: #78716c; margin-bottom: 4px; letter-spacing: .5px; }
+.sf input { background: rgba(255,255,255,.07) !important; border: 1px solid rgba(255,255,255,.12) !important; border-style: solid !important; color: #e7e5e4 !important; padding: 7px 10px !important; border-radius: 5px !important; font-size: 13px; width: 100%; }
+.sf input:focus { border-color: var(--acc) !important; background: rgba(255,255,255,.1) !important; box-shadow: 0 0 0 2px rgba(180,83,9,.2) !important; }
+.save-actions { display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end; }
+
+/* ========== SPACING OVERLAY ========== */
+.sp-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.sp-label { font-size:11px; color:#a8a29e; width:110px; flex-shrink:0; }
+.sp-range { flex:1; accent-color:var(--acc); cursor:pointer; }
+.sp-val { font-size:11px; color:#e7e5e4; width:38px; text-align:right; font-family:monospace; flex-shrink:0; }
+
+/* ========== CUSTOM COL CHIP ========== */
+.custom-col-chip { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:12px; font-size:10px; background:rgba(180,83,9,.12); border:1px solid rgba(180,83,9,.35); color:var(--t-acc,var(--acc)); cursor:default; }
+.custom-col-chip-del { cursor:pointer; opacity:.6; font-size:11px; }
+.custom-col-chip-del:hover { opacity:1; color:var(--danger); }
+
+/* ========== FIELD STYLE OVERLAY ========== */
+.field-style-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(5px); z-index: 700; display: none; align-items: flex-start; justify-content: center; padding-top: 80px; }
+.field-style-overlay.open { display: flex; }
+.fs-panel { background: #1c1917; color: #e7e5e4; width: 500px; border-radius: 10px; box-shadow: 0 32px 80px rgba(0,0,0,.55); overflow: hidden; animation: sd .18s ease; }
+.fs-head { padding: 14px 20px; background: #0c0a09; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,.07); }
+.fs-head h3 { font-size: 13px; font-weight: 500; }
+.fs-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.fs-row { display: flex; align-items: center; gap: 10px; }
+.fs-target-label { font-size: 11px; color: #a8a29e; width: 100px; flex-shrink: 0; }
+.fs-row select { background: rgba(255,255,255,.07); color: #e7e5e4; border: 1px solid rgba(255,255,255,.12); border-radius: 4px; padding: 4px 8px; font-size: 11px; font-family: inherit; cursor: pointer; }
+.fs-row select:focus { outline: none; border-color: var(--acc); }
+.fs-divider { height: 1px; background: rgba(255,255,255,.06); margin: 4px 0; }
+
+/* ========== INLINE FIELD STYLE TOOLBAR ========== */
+#inline-toolbar { position: fixed; z-index: 800; background: #0c0a09; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,.55); display: none; align-items: center; gap: 2px; padding: 4px 6px; pointer-events: auto; animation: itb .12s ease; white-space: nowrap; }
+@keyframes itb { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+#inline-toolbar.visible { display: flex; }
+.itb-sep { width: 1px; height: 18px; background: rgba(255,255,255,.1); margin: 0 3px; flex-shrink:0; }
+.itb-label { font-size: 9px; color: #57534e; letter-spacing: .5px; text-transform: uppercase; padding: 0 3px; }
+.itb-select { background: rgba(255,255,255,.07); color: #d6d3d1; border: 1px solid rgba(255,255,255,.1); border-radius: 4px; padding: 2px 5px; font-size: 10px; cursor: pointer; font-family: inherit; max-width: 110px; }
+.itb-select:focus { outline: none; border-color: var(--acc); }
+.itb-btn { background: rgba(255,255,255,.06); color: #a8a29e; border: 1px solid rgba(255,255,255,.08); border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer; font-family: inherit; transition: .12s; line-height: 1.4; }
+.itb-btn:hover { background: rgba(255,255,255,.14); color: #fafaf9; }
+.itb-btn.on { background: rgba(180,83,9,.18); border-color: var(--acc); color: var(--acc2); }
+.itb-color { width: 18px; height: 18px; border-radius: 3px; border: 1px solid rgba(255,255,255,.2); cursor: pointer; padding: 0; background: none; }
+.itb-color-input { width: 0; height: 0; opacity: 0; position: absolute; pointer-events:none; }
+.itb-close { background: none; border: none; color: #57534e; cursor: pointer; font-size: 13px; padding: 1px 3px; line-height:1; }
+.itb-close:hover { color: #fca5a5; }
+
+/* ========== TABLE COLUMN DRAG/RESIZE ========== */
+.item-table th { position: relative; user-select: none; }
+.col-resize-handle { position: absolute; right: 0; top: 10%; bottom: 10%; width: 4px; cursor: col-resize; background: rgba(255,255,255,.18); border-radius: 2px; transition: background .15s, width .15s; z-index: 2; }
+.col-resize-handle:hover { background: var(--acc2); width: 5px; }
+.col-resize-handle.dragging { background: var(--acc2); width: 5px; }
+.drag-dot { position: absolute; left: 5px; top: 50%; transform: translateY(-50%); font-size: 10px; color: rgba(255,255,255,.3); line-height: 1; pointer-events: none; transition: color .15s; user-select: none; }
+.item-table th[draggable="true"]:hover .drag-dot { color: rgba(255,255,255,.75); }
+.item-table th[draggable="true"] { cursor: grab; padding-left: 18px !important; }
+.item-table th[draggable="true"]:active { cursor: grabbing; }
+.item-table th.drag-over { background: rgba(180,83,9,.25) !important; outline: 2px dashed var(--acc2); outline-offset: -2px; }
+.item-table th.dragging-col { opacity: .35; background: rgba(255,255,255,.04) !important; }
+.col-order-hint { font-size: 9px; color: #57534e; letter-spacing: .5px; padding: 0 4px; white-space: nowrap; }
+.th-input { background: transparent; border: none; color: inherit; font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit; font-family: inherit; padding: 0; margin: 0; width: 100%; outline: none; cursor: text; text-align: inherit; }
+.th-input:hover { background: rgba(255,255,255,.08); border-radius: 3px; }
+.th-input:focus { background: rgba(255,255,255,.12); border-radius: 3px; box-shadow: 0 0 0 2px rgba(180,83,9,.5); }
+.th-input::placeholder { color: rgba(255,255,255,.25); font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+@media print {
+  @page { size: A4; margin: 0; }
+  body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .topbar, .toolbar, .btn-add-row, .th-del, .td-del, .td-del-float, .row-del-btn, .overlay, .save-overlay, .field-style-overlay, .table-toolbar, #inline-toolbar, .col-resize-handle, .drag-dot, .logo-resize-handle { display: none !important; }
+  .canvas { padding: 0; display: block; }
+  .paper { box-shadow: none; width: 210mm; min-height: 297mm; padding: 12mm 16mm; margin: 0; }
+  input, textarea { border: none !important; background: transparent !important; box-shadow: none !important; resize: none; }
+  input::placeholder, textarea::placeholder { color: transparent; }
+  .meta-item input, .meta-item input:focus { color: #ffffff !important; background: transparent !important; }
+  textarea { overflow: visible !important; white-space: pre-wrap !important; }
+  .td-name textarea { min-height: unset !important; white-space: pre-wrap !important; overflow: visible !important; display: block !important; width: 100% !important; }
+  .item-table textarea { display: none !important; }
+  .print-cell-text { display: block !important; white-space: pre-wrap !important; word-break: break-word !important; font-size: inherit !important; font-family: inherit !important; line-height: inherit !important; padding: 0 !important; margin: 0 !important; width: 100% !important; height: auto !important; text-align: left; }
+  .item-table td input, .item-table td textarea { text-align: center !important; }
+  .item-table td.td-name input, .item-table td.td-name textarea { text-align: left !important; }
+  .item-table td.td-price input { text-align: right !important; }
+  .item-table td.td-amt { text-align: right !important; }
+  .item-table td { vertical-align: top !important; padding-top: 4px !important; padding-bottom: 4px !important; height: auto !important; overflow: visible !important; }
+  .item-table td input { white-space: pre-wrap !important; word-break: break-word !important; overflow: visible !important; }
+  .item-table { table-layout: fixed !important; width: 100% !important; }
+  .item-table th, .item-table td { word-wrap: break-word !important; overflow-wrap: break-word !important; overflow: visible !important; }
+  .item-table tbody tr { page-break-inside: avoid; height: auto !important; }
+  .sign-size-row { display: none !important; }
+  .sign-images img { border: none !important; background: transparent !important; }
+  .sign-upload-btn { display: none !important; }
+  #meta-toggle-bar { display: none !important; }
+  .sign-img-del { display: none !important; }
+  .logo-hint { display: none !important; }
+  .logo-clear { display: none !important; }
+  .banner-logo-area { pointer-events: none; }
+  .logo-box { border: none !important; background: transparent !important; }
+  .logo-box.no-logo { display: none !important; }
+  .info-block { border-color: #ccc !important; }
+  .info-col-client { border-color: #ccc !important; }
+  .sign-area { height: 56px; border-bottom: 1px solid #333; }
+  .th-input { pointer-events: none; padding-left: 0 !important; }
+  #wm-layer { display: block !important; pointer-events: none !important; }
+  #wm-layer[style*="display: none"] { display: none !important; }
+}
+</style>
+
+<!-- 加入登入防護腳本 -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
+    authDomain: "company-system-6ea1a.firebaseapp.com",
+    projectId: "company-system-6ea1a"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) window.location.href = 'login.html';
+  });
+
+  window.logout = function() {
+    signOut(auth).then(() => { window.location.href = 'login.html'; });
+  };
+</script>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    報價單產生器
+  </div>
+  <div class="topbar-nav">
+    <a href="index.html" class="nav-tab active">報價單</a>
+    <a href="project.html" class="nav-tab">專案進度</a>
+    <a href="cost.html" class="nav-tab">成本計算</a>
+    <a href="inventory.html" class="nav-tab">器材庫存</a>
+    <a href="contacts.html" class="nav-tab">客戶與廠商管理</a>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-ghost" onclick="openDB()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      客戶資料庫
+    </button>
+    <button class="btn btn-ghost" onclick="openVendorDB()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+      報價方資料庫
+    </button>
+    <button class="btn btn-ghost" onclick="saveCurrentClient()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+      儲存客戶
+    </button>
+    <button class="btn btn-ghost" onclick="saveCurrentVendor()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+      儲存報價方
+    </button>
+    <button class="btn btn-ghost" onclick="loadSample()">範例</button>
+    <button class="btn btn-red btn-sm" onclick="clearAll()">清空</button>
+    <button class="btn btn-amber" onclick="window.print()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+      列印 / PDF
+    </button>
+    <!-- ★ 登出按鈕放在最後面 -->
+    <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
+    <button class="btn btn-ghost" style="color: #fca5a5; border-color: rgba(220,38,38,0.3); padding: 4px 10px;" onclick="logout()">登出</button>
+  </div>
+</header>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <div class="tg">
+    <span class="tg-label">紙張</span>
+    <select class="t-select" onchange="setPaperBg(this.value)">
+      <option value="#fdfcfb">純白</option>
+      <option value="#faf8f4" selected>米白</option>
+      <option value="#f5f0e8">暖米</option>
+      <option value="#f0f4f8">冷白</option>
+      <option value="#f3f4f6">淡灰</option>
+      <option value="#e8f5e9">薄荷</option>
+      <option value="#fce4ec">淡粉</option>
+    </select>
+  </div>
+  <div class="tg">
+    <span class="tg-label">字級</span>
+    <select class="t-select" onchange="setPaperStyle('fontSize',this.value+'px')">
+      <option value="11">11px</option>
+      <option value="12">12px</option>
+      <option value="13" selected>13px</option>
+      <option value="14">14px</option>
+      <option value="15">15px</option>
+      <option value="16">16px</option>
+    </select>
+  </div>
+  <div class="tg">
+    <span class="tg-label">字體</span>
+    <select class="t-select" onchange="setPaperStyle('fontFamily',this.value)">
+      <option value="'Noto Sans TC','Microsoft JhengHei',sans-serif">黑體 Noto Sans</option>
+      <option value="'Noto Serif TC','PMingLiU',serif">明體 Noto Serif</option>
+      <option value="'IBM Plex Sans','Microsoft JhengHei',sans-serif">IBM Plex Sans</option>
+      <option value="'IBM Plex Mono',monospace">IBM Plex Mono</option>
+      <option value="'Lora',serif">Lora</option>
+      <option value="'Spectral',serif">Spectral</option>
+      <option value="'Crimson Pro',serif">Crimson Pro</option>
+      <option value="'Source Serif 4',serif">Source Serif 4</option>
+      <option value="'Playfair Display',serif">Playfair Display</option>
+    </select>
+  </div>
+  <div class="tg">
+    <span class="tg-label">行高</span>
+    <select class="t-select" onchange="setPaperStyle('lineHeight',this.value)">
+      <option value="1.3">1.3 緊湊</option>
+      <option value="1.4">1.4</option>
+      <option value="1.55" selected>1.55 標準</option>
+      <option value="1.7">1.7</option>
+      <option value="1.85">1.85 寬鬆</option>
+      <option value="2.0">2.0</option>
+    </select>
+  </div>
+  <div class="tg">
+    <span class="tg-label">浮水印</span>
+    <button class="theme-pill" onclick="document.getElementById('wm-input').click()">
+      ＋ 上傳圖片
+    </button>
+    <button class="theme-pill" id="wm-setting-btn" onclick="openWatermark()" style="display:none">⚙ 設定</button>
+    <button class="theme-pill" id="wm-clear-btn" onclick="clearWatermark()" style="display:none;color:#fca5a5;border-color:rgba(220,38,38,.4)">✕ 移除</button>
+    <input type="file" id="wm-input" accept="image/*" style="display:none" onchange="handleWatermark(event)">
+  </div>
+  <div class="tg">
+    <span class="tg-label">主色</span>
+    <div class="cswatch on" style="background:#b45309" onclick="setAccent('#b45309',this)"></div>
+    <div class="cswatch" style="background:#1e40af" onclick="setAccent('#1e40af',this)"></div>
+    <div class="cswatch" style="background:#065f46" onclick="setAccent('#065f46',this)"></div>
+    <div class="cswatch" style="background:#9f1239" onclick="setAccent('#9f1239',this)"></div>
+    <div class="cswatch" style="background:#6d28d9" onclick="setAccent('#6d28d9',this)"></div>
+    <div class="cswatch" style="background:#475569" onclick="setAccent('#475569',this)"></div>
+    <div class="cswatch" id="custom-accent-swatch" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid rgba(255,255,255,.3);position:relative;overflow:hidden;" title="自訂顏色" onclick="document.getElementById('custom-accent-input').click()">
+      <input type="color" id="custom-accent-input" value="#b45309" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;" oninput="setAccentCustom(this.value)">
+    </div>
+    <span style="font-size:9px;color:#78716c;letter-spacing:.3px;white-space:nowrap;">自訂</span>
+  </div>
+  <div class="tg">
+    <span class="tg-label">稅金</span>
+    <button class="tax-pill on" onclick="setTax('included',this)">稅金內含</button>
+    <button class="tax-pill" onclick="setTax('extra',this)">外加 5%</button>
+    <button class="tax-pill" onclick="setTax('exempt',this)">免稅</button>
+    <button class="tax-pill" id="meta-toggle-pill" onclick="toggleMeta()" title="顯示／隱藏 報價單號、日期、有效期限" style="margin-left:6px;border-left:1px solid rgba(255,255,255,.1);padding-left:12px">
+      <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:inline;vertical-align:-2px;margin-right:3px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      單號／日期
+    </button>
+  </div>
+</div>
+
+<!-- CANVAS -->
+<main class="canvas">
+  <div class="paper t-classic" id="paper">
+    <!-- 浮水印層 -->
+    <div id="wm-layer" style="
+      display:none;
+      position:absolute;
+      inset:0;
+      z-index:2;
+      pointer-events:none;
+      overflow:hidden;
+      border-radius:inherit;
+    ">
+      <img id="wm-img" src="" alt="" style="
+        position:absolute;
+        top:50%; left:50%;
+        transform:translate(-50%,-50%) rotate(var(--wm-rotate,0deg));
+        width:var(--wm-size,60%);
+        height:auto;
+        opacity:var(--wm-opacity,0.12);
+        object-fit:contain;
+        pointer-events:none;
+        user-select:none;
+      ">
+    </div>
+
+    <!-- ① TOP BANNER: 報價單名稱 + LOGO -->
+    <div class="doc-banner">
+      <div class="banner-title-area">
+        <input type="text" class="doc-title-text" id="doc-title" value="報價單">
+        <div class="doc-sub">Quotation</div>
+      </div>
+      <div class="banner-logo-area">
+        <div class="logo-box no-logo" id="logo-box" title="點擊上傳 LOGO（最大 2MB），右下角可拖拉調整大小">
+          <div class="logo-hint" id="logo-hint" onclick="document.getElementById('logo-input').click()" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            上傳 LOGO
+          </div>
+          <img id="logo-img" src="" alt="" onclick="document.getElementById('logo-input').click()" style="width:100%;height:100%;object-fit:contain;display:none;cursor:pointer;">
+          <div class="logo-resize-handle" id="logo-resize-handle" title="拖拉縮放大小">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="white"><path d="M1 7L7 1M4 7L7 4M7 7L7 7" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <span class="logo-clear" id="logo-clear" onclick="clearLogo()">✕ 移除</span>
+        <input type="file" id="logo-input" accept="image/*" onchange="handleLogo(event)">
+      </div>
+    </div>
+
+    <!-- ② INFO BLOCK: 報價對象 | 報價方 -->
+    <div class="info-block">
+      <!-- LEFT: 報價對象 -->
+      <div class="info-col info-col-client">
+        <div class="info-col-eyebrow">
+          <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          報價對象 · Client
+        </div>
+        <input type="text" class="entity-name-input" id="c-name" placeholder="客戶公司名稱 / 姓名" value="王大明 先生">
+        <div class="fields-grid">
+          <div class="f-row"><span class="f-lbl">統編</span><input type="text" class="f-inp" id="c-taxid" placeholder="選填"></div>
+          <div class="f-row"><span class="f-lbl">聯絡人</span><input type="text" class="f-inp" id="c-contact" placeholder="選填"></div>
+          <div class="f-row"><span class="f-lbl">電話</span><input type="text" class="f-inp" id="c-tel" placeholder="選填"></div>
+          <div class="f-row"><span class="f-lbl">手機</span><input type="text" class="f-inp" id="c-mobile" placeholder="選填"></div>
+          <div class="f-row" style="grid-column:span 2"><span class="f-lbl">Email</span><input type="text" class="f-inp" id="c-email" placeholder="選填"></div>
+          <div class="f-row" style="grid-column:span 2"><span class="f-lbl">地址</span><input type="text" class="f-inp" id="c-addr" placeholder="選填"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: 報價方 -->
+      <div class="info-col info-col-vendor">
+        <div class="info-col-eyebrow" style="justify-content:flex-end">
+          報價方 · Vendor
+          <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        </div>
+        <input type="text" class="entity-name-input" id="my-name" value="數位設計科技有限公司" placeholder="我方公司名稱">
+        <div class="fields-grid">
+          <div class="f-row"><span class="f-lbl">統編</span><input type="text" class="f-inp" id="my-taxid" placeholder="選填"></div>
+          <div class="f-row"><span class="f-lbl">聯絡人</span><input type="text" class="f-inp" id="my-contact" placeholder="選填"></div>
+          <div class="f-row"><span class="f-lbl">電話</span><input type="text" class="f-inp" id="my-tel" placeholder="選填"></div>
+          <div class="f-row"><span class="f-lbl">手機</span><input type="text" class="f-inp" id="my-mobile" placeholder="選填"></div>
+          <div class="f-row" style="grid-column:span 2"><span class="f-lbl">Email</span><input type="text" class="f-inp" id="my-email" placeholder="選填"></div>
+          <div class="f-row" style="grid-column:span 2"><span class="f-lbl">地址</span><input type="text" class="f-inp" id="my-addr" placeholder="選填"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ META STRIP - hidden by default, toggled from topbar button -->
+    <div class="meta-strip" id="meta-strip" style="display:none;margin-bottom:18px;position:relative;z-index:1;"></div>
+
+    <!-- ④ ITEM TABLE -->
+    <div class="table-toolbar">
+      <span class="table-toolbar-label">表格欄位</span>
+      <button class="col-toggle-btn" id="col-toggle-unit" onclick="toggleCol('unit',this)">+ 單位欄</button>
+      <button class="col-toggle-btn" id="col-toggle-remark" onclick="toggleCol('remark',this)">+ 備註欄</button>
+      <button class="col-toggle-btn" id="col-toggle-discount" onclick="toggleCol('discount',this)">+ 折扣欄</button>
+      <button class="col-toggle-btn" onclick="openAddCol()">＋ 自訂欄位</button>
+      <div id="custom-col-chips" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center"></div>
+      <span class="col-order-hint">⇄ 拖曳表頭可排序欄位</span>
+    </div>
+    <table class="item-table" id="item-table">
+      <thead><tr id="thead-row">
+        <th class="th-no">#</th>
+        <th class="th-name" draggable="true"><input class="th-input" placeholder="項目名稱 ／ 規格說明" value="項目名稱 ／ 規格說明" data-default="項目名稱 ／ 規格說明"></th>
+        <th class="th-qty" style="text-align:center" draggable="true"><input class="th-input" style="text-align:center" placeholder="數量" value="數量" data-default="數量"></th>
+        <th class="th-unit col-unit" style="text-align:center;display:none" draggable="true"><input class="th-input" style="text-align:center" placeholder="單位" value="單位" data-default="單位"></th>
+        <th class="th-price" style="text-align:right" draggable="true"><input class="th-input" style="text-align:right" placeholder="單價" value="單價" data-default="單價"></th>
+        <th class="th-discount col-discount" style="text-align:center;display:none" draggable="true"><input class="th-input" style="text-align:center" placeholder="折扣" value="折扣" data-default="折扣"></th>
+        <th class="th-amt" style="text-align:right" draggable="true"><input class="th-input" style="text-align:right" placeholder="小計" value="小計" data-default="小計"></th>
+        <th class="th-remark col-remark" style="display:none" draggable="true"><input class="th-input" placeholder="備註" value="備註" data-default="備註"></th>
+        <th class="th-del"></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <button class="btn-add-row" onclick="addRow()">＋ 新增項目</button>
+
+    <!-- ⑤ SUMMARY + NOTES side by side -->
+    <div class="bottom-wrap">
+      <div class="notes-side">
+        <div class="notes-label">備註 ／ 付款條件</div>
+        <textarea oninput="ar(this)" placeholder="備註、匯款資訊…">1. 匯款資訊：玉山銀行 (808) 帳號：1234-567-890123
+2. 專案啟動需支付 50% 訂金，尾款交付後付清。
+3. 確認無誤後，請簽章回傳以利立案。</textarea>
+      </div>
+      <div class="summary-side">
+        <div class="summary-box">
+          <div class="s-row bordered"><span id="lbl-sub">銷售金額</span><span class="s-val" id="v-sub">—</span></div>
+          <div class="s-row bordered" id="tax-row"><span id="lbl-tax">營業稅 (5%)</span><span class="s-val" id="v-tax">—</span></div>
+          <div class="s-total"><span class="s-total-label">Total</span><span class="s-total-val" id="v-total">$ 0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑥ FOOTER: sign boxes -->
+    <div class="doc-footer" id="doc-footer">
+      <div class="sign-box" id="sign-box-client">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span class="sign-label" style="margin-bottom:0">客戶確認簽章</span>
+          <button class="sign-upload-btn" onclick="addSignImage('client')" style="font-size:9px;padding:2px 7px;background:rgba(180,83,9,.08);border:1px solid rgba(180,83,9,.3);color:var(--t-acc,var(--acc));border-radius:3px;cursor:pointer;font-family:inherit;white-space:nowrap">＋ 上傳圖章</button>
+        </div>
+        <div class="sign-images" id="sign-images-client" style="display:flex;flex-wrap:wrap;gap:8px;min-height:56px;border-bottom:1px solid var(--ink2);padding-bottom:4px;align-items:flex-end"></div>
+      </div>
+      <div class="sign-box" id="sign-box-vendor">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span class="sign-label" style="margin-bottom:0">公司蓋章 ／ 負責人簽名</span>
+          <button class="sign-upload-btn" onclick="addSignImage('vendor')" style="font-size:9px;padding:2px 7px;background:rgba(180,83,9,.08);border:1px solid rgba(180,83,9,.3);color:var(--t-acc,var(--acc));border-radius:3px;cursor:pointer;font-family:inherit;white-space:nowrap">＋ 上傳圖章</button>
+        </div>
+        <div class="sign-images" id="sign-images-vendor" style="display:flex;flex-wrap:wrap;gap:8px;min-height:56px;border-bottom:1px solid var(--ink2);padding-bottom:4px;align-items:flex-end"></div>
+      </div>
+    </div>
+
+  </div><!-- /paper -->
+</main>
+
+<!-- ====== INLINE FIELD STYLE TOOLBAR ====== -->
+<div id="inline-toolbar">
+  <span class="itb-label">字體</span>
+  <select class="itb-select" id="itb-font" onchange="itbApply()">
+    <option value="">（繼承）</option>
+    <option value="'Noto Sans TC','Microsoft JhengHei',sans-serif">黑體</option>
+    <option value="'Noto Serif TC','PMingLiU',serif">明體</option>
+    <option value="'IBM Plex Sans',sans-serif">IBM Plex</option>
+    <option value="'IBM Plex Mono',monospace">Mono</option>
+    <option value="'Lora',serif">Lora</option>
+    <option value="'Spectral',serif">Spectral</option>
+    <option value="'Crimson Pro',serif">Crimson</option>
+    <option value="'Playfair Display',serif">Playfair</option>
+    <option value="'DM Serif Display',serif">DM Serif</option>
+  </select>
+  <div class="itb-sep"></div>
+  <span class="itb-label">字級</span>
+  <select class="itb-select" id="itb-size" style="max-width:62px" onchange="itbApply()">
+    <option value="">—</option>
+    <option value="9px">9</option><option value="10px">10</option>
+    <option value="11px">11</option><option value="12px">12</option>
+    <option value="13px">13</option><option value="14px">14</option>
+    <option value="15px">15</option><option value="16px">16</option>
+    <option value="18px">18</option><option value="20px">20</option>
+    <option value="24px">24</option><option value="28px">28</option>
+    <option value="32px">32</option><option value="36px">36</option>
+    <option value="40px">40</option>
+  </select>
+  <div class="itb-sep"></div>
+  <button class="itb-btn" id="itb-bold" onclick="itbToggle('bold')" title="粗體"><b>B</b></button>
+  <button class="itb-btn" id="itb-italic" onclick="itbToggle('italic')" title="斜體" style="font-style:italic">I</button>
+  <div class="itb-sep"></div>
+  <span class="itb-label">對齊</span>
+  <button class="itb-btn" id="itb-left" onclick="itbAlign('left')" title="靠左">&#8678;</button>
+  <button class="itb-btn" id="itb-center" onclick="itbAlign('center')" title="置中">&#9635;</button>
+  <button class="itb-btn" id="itb-right" onclick="itbAlign('right')" title="靠右">&#8680;</button>
+  <div class="itb-sep"></div>
+  <span class="itb-label">色彩</span>
+  <button class="itb-color" id="itb-color-btn" title="文字顏色" onclick="document.getElementById('itb-color-input').click()" style="background:#1c1917;width:20px;height:20px;border-radius:3px;border:1px solid rgba(255,255,255,.2)"></button>
+  <input type="color" class="itb-color-input" id="itb-color-input" oninput="itbColor(this.value)" value="#1c1917">
+  <div class="itb-sep"></div>
+  <select class="itb-select" id="itb-lh" style="max-width:70px" onchange="itbApply()" title="行高">
+    <option value="">行高</option>
+    <option value="1.2">1.2</option><option value="1.3">1.3</option>
+    <option value="1.4">1.4</option><option value="1.55">1.55</option>
+    <option value="1.7">1.7</option><option value="1.85">1.85</option>
+    <option value="2.0">2.0</option>
+  </select>
+  <div class="itb-sep"></div>
+  <span class="itb-label">字距</span>
+  <select class="itb-select" id="itb-ls" style="max-width:70px" onchange="itbApply()" title="字距">
+    <option value="">—</option>
+    <option value="-0.5px">-0.5</option>
+    <option value="0px">0</option>
+    <option value="0.5px">0.5</option>
+    <option value="1px">1</option>
+    <option value="1.5px">1.5</option>
+    <option value="2px">2px</option>
+    <option value="3px">3px</option>
+    <option value="4px">4px</option>
+    <option value="5px">5px</option>
+    <option value="8px">8px</option>
+    <option value="10px">10px</option>
+  </select>
+  <div class="itb-sep"></div>
+  <button class="itb-btn" onclick="itbReset()" title="還原預設">↺</button>
+  <button class="itb-close" onclick="hideITB()">✕</button>
+</div>
+
+<!-- ====== SPACING OVERLAY ====== -->
+<div class="field-style-overlay" id="sp-overlay" onclick="if(event.target===this)closeSpacing()">
+  <div class="fs-panel" style="width:420px">
+    <div class="fs-head">
+      <h3>⇕ 間距調整</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeSpacing()">✕</button>
+    </div>
+    <div class="fs-body">
+      <div class="sp-row">
+        <span class="sp-label">紙張內距</span>
+        <input type="range" class="sp-range" min="6" max="30" value="14" id="sp-padding" oninput="applySpacing()">
+        <span class="sp-val" id="sp-padding-val">14mm</span>
+      </div>
+      <div class="sp-row">
+        <span class="sp-label">區塊間距</span>
+        <input type="range" class="sp-range" min="4" max="32" value="16" id="sp-section" oninput="applySpacing()">
+        <span class="sp-val" id="sp-section-val">16px</span>
+      </div>
+      <div class="sp-row">
+        <span class="sp-label">資訊欄 padding</span>
+        <input type="range" class="sp-range" min="6" max="28" value="14" id="sp-infocol" oninput="applySpacing()">
+        <span class="sp-val" id="sp-infocol-val">14px</span>
+      </div>
+      <div class="sp-row">
+        <span class="sp-label">表格列高</span>
+        <input type="range" class="sp-range" min="2" max="20" value="5" id="sp-row" oninput="applySpacing()">
+        <span class="sp-val" id="sp-row-val">5px</span>
+      </div>
+      <div class="sp-row">
+        <span class="sp-label">底部簽章高度</span>
+        <input type="range" class="sp-range" min="30" max="120" value="56" id="sp-sign" oninput="applySpacing()">
+        <span class="sp-val" id="sp-sign-val">56px</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <button class="btn btn-ghost btn-sm" onclick="resetSpacing()">重設</button>
+        <button class="btn btn-amber btn-sm" onclick="closeSpacing()">完成</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== CUSTOM COLUMN OVERLAY ====== -->
+<div class="field-style-overlay" id="addcol-overlay" onclick="if(event.target===this)closeAddCol()">
+  <div class="fs-panel" style="width:380px">
+    <div class="fs-head">
+      <h3>＋ 新增自訂欄位</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeAddCol()">✕</button>
+    </div>
+    <div class="fs-body">
+      <div class="fs-row">
+        <span class="fs-target-label">欄位標題</span>
+        <input type="text" id="addcol-name" placeholder="例：備注、型號、顏色…" style="background:rgba(255,255,255,.07);color:#e7e5e4;border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:5px 9px;font-size:12px;font-family:inherit;flex:1">
+      </div>
+      <div class="fs-row">
+        <span class="fs-target-label">欄位寬度</span>
+        <select id="addcol-width" style="background:rgba(255,255,255,.07);color:#e7e5e4;border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:5px 9px;font-size:12px;font-family:inherit;">
+          <option value="8%">窄 (8%)</option>
+          <option value="12%" selected>標準 (12%)</option>
+          <option value="18%">寬 (18%)</option>
+          <option value="24%">很寬 (24%)</option>
+        </select>
+      </div>
+      <div class="fs-row">
+        <span class="fs-target-label">對齊方式</span>
+        <select id="addcol-align" style="background:rgba(255,255,255,.07);color:#e7e5e4;border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:5px 9px;font-size:12px;font-family:inherit;">
+          <option value="left">靠左</option>
+          <option value="center">置中</option>
+          <option value="right">靠右</option>
+        </select>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+        <button class="btn btn-ghost btn-sm" onclick="closeAddCol()">取消</button>
+        <button class="btn btn-amber" onclick="confirmAddCol()">新增</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== FIELD STYLE OVERLAY ====== -->
+<div class="field-style-overlay" id="fs-overlay" onclick="if(event.target===this)closeFieldStyle()">
+  <div class="fs-panel">
+    <div class="fs-head">
+      <h3>✦ 欄位字型設定</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeFieldStyle()">✕</button>
+    </div>
+    <div class="fs-body">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+        <span style="font-size:10px;color:#78716c;align-self:center">快速選取：</span>
+        <button class="col-toggle-btn" style="font-size:10px" onclick="$('fs-target').value='.doc-title-text';this.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">報價單標題</button>
+        <button class="col-toggle-btn" style="font-size:10px" onclick="$('fs-target').value='.entity-name-input';this.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">公司名稱</button>
+        <button class="col-toggle-btn" style="font-size:10px" onclick="$('fs-target').value='.meta-item input';this.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">單號列</button>
+        <button class="col-toggle-btn" style="font-size:10px" onclick="$('fs-target').value='.item-table td input,.item-table td textarea';this.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">表格欄位</button>
+        <button class="col-toggle-btn" style="font-size:10px" onclick="$('fs-target').value='.notes-side textarea';this.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on'));this.classList.add('on')">備註</button>
+      </div>
+      <div class="fs-row">
+        <span class="fs-target-label">套用對象</span>
+        <select id="fs-target">
+          <option value=".paper input,.paper textarea">全部輸入欄位</option>
+          <option value=".doc-title-text">報價單標題</option>
+          <option value=".entity-name-input">公司／客戶名稱</option>
+          <option value=".meta-item input">單號／日期列</option>
+          <option value=".item-table td input,.item-table td textarea">表格內欄位</option>
+          <option value=".notes-side textarea">備註文字</option>
+          <option value=".f-inp">資訊欄位</option>
+        </select>
+      </div>
+      <div class="fs-divider"></div>
+      <div class="fs-row">
+        <span class="fs-target-label">字體</span>
+        <select id="fs-font">
+          <option value="">（繼承）</option>
+          <option value="'Noto Sans TC','Microsoft JhengHei',sans-serif">黑體 Noto Sans TC</option>
+          <option value="'Noto Serif TC','PMingLiU',serif">明體 Noto Serif TC</option>
+          <option value="'IBM Plex Sans',sans-serif">IBM Plex Sans</option>
+          <option value="'IBM Plex Mono',monospace">IBM Plex Mono</option>
+          <option value="'Lora',serif">Lora</option>
+          <option value="'Spectral',serif">Spectral</option>
+          <option value="'Crimson Pro',serif">Crimson Pro</option>
+          <option value="'Source Serif 4',serif">Source Serif 4</option>
+          <option value="'Playfair Display',serif">Playfair Display</option>
+          <option value="'DM Serif Display',serif">DM Serif Display</option>
+        </select>
+      </div>
+      <div class="fs-row">
+        <span class="fs-target-label">字級</span>
+        <select id="fs-size">
+          <option value="">（繼承）</option>
+          <option value="9px">9px</option>
+          <option value="10px">10px</option>
+          <option value="11px">11px</option>
+          <option value="12px">12px</option>
+          <option value="13px">13px</option>
+          <option value="14px">14px</option>
+          <option value="15px">15px</option>
+          <option value="16px">16px</option>
+          <option value="18px">18px</option>
+          <option value="20px">20px</option>
+          <option value="24px">24px</option>
+          <option value="28px">28px</option>
+          <option value="32px">32px</option>
+          <option value="36px">36px</option>
+          <option value="40px">40px</option>
+        </select>
+      </div>
+      <div class="fs-row">
+        <span class="fs-target-label">字重</span>
+        <select id="fs-weight">
+          <option value="">（繼承）</option>
+          <option value="300">300 細</option>
+          <option value="400">400 標準</option>
+          <option value="500">500 中</option>
+          <option value="600">600 半粗</option>
+          <option value="700">700 粗</option>
+        </select>
+      </div>
+      <div class="fs-row">
+        <span class="fs-target-label">行高</span>
+        <select id="fs-lh">
+          <option value="">（繼承）</option>
+          <option value="1.2">1.2</option>
+          <option value="1.3">1.3</option>
+          <option value="1.4">1.4</option>
+          <option value="1.55">1.55</option>
+          <option value="1.7">1.7</option>
+          <option value="1.85">1.85</option>
+          <option value="2.0">2.0</option>
+          <option value="2.2">2.2</option>
+        </select>
+      </div>
+      <div class="fs-row">
+        <span class="fs-target-label">字距</span>
+        <select id="fs-ls">
+          <option value="">（繼承）</option>
+          <option value="0">0</option>
+          <option value="0.5px">0.5px</option>
+          <option value="1px">1px</option>
+          <option value="2px">2px</option>
+          <option value="3px">3px</option>
+          <option value="5px">5px</option>
+          <option value="8px">8px</option>
+          <option value="10px">10px</option>
+        </select>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px">
+        <button class="btn btn-ghost btn-sm" onclick="closeFieldStyle()">取消</button>
+        <button class="btn btn-amber" onclick="applyFieldStyle()">套用</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== CLIENT DB OVERLAY ====== -->
+<div class="overlay" id="db-overlay" onclick="closeDBifBg(event)">
+  <div class="db-panel">
+    <div class="db-head">
+      <h2>
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+        客戶資料庫
+        <span class="db-head-sub">Client Database</span>
+      </h2>
+      <div class="db-head-actions">
+        <button class="btn btn-ghost btn-sm" onclick="saveCurrentClient()">＋ 儲存目前客戶</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeDB()">✕</button>
+      </div>
+    </div>
+
+    <!-- Excel 匯入區 -->
+    <div class="import-zone">
+      <div class="import-zone-icon">📊</div>
+      <div class="import-zone-text">
+        <div class="import-zone-title">匯入 Excel 客戶資料</div>
+        <div class="import-zone-desc">支援 .xlsx / .xls 格式，欄位順序：姓名、統編、聯絡人、電話、手機、Email、地址</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+        <button class="import-drop" onclick="document.getElementById('xl-input').click()">
+          📂 選擇 Excel 檔案
+        </button>
+        <span class="dl-tpl" onclick="downloadTemplate()">⬇ 下載範本</span>
+      </div>
+      <input type="file" id="xl-input" accept=".xlsx,.xls" onchange="importExcel(event)">
+    </div>
+
+    <div class="import-msg" id="import-msg"></div>
+
+    <div class="db-toolbar">
+      <input type="text" class="db-search-input" id="db-search" placeholder="搜尋姓名、電話、手機、Email…" oninput="renderDB()">
+    </div>
+
+    <div class="db-list" id="db-list"></div>
+
+    <div class="db-foot">
+      <span class="db-count" id="db-count"></span>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-ghost btn-sm" onclick="exportDB()">⬇ 匯出 Excel</button>
+        <button class="btn btn-red btn-sm" onclick="clearDB()">清空全部</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SAVE MODAL ====== -->
+<div class="save-overlay" id="save-overlay" onclick="closeSaveIfBg(event)">
+  <div class="save-box">
+    <h3>💾 儲存客戶資料</h3>
+    <input type="hidden" id="sv-id">
+    <div class="sf"><label>客戶名稱（必填）</label><input type="text" id="sv-name" placeholder="王大明 先生"></div>
+    <div class="sf"><label>統一編號</label><input type="text" id="sv-taxid"></div>
+    <div class="sf"><label>聯絡人</label><input type="text" id="sv-contact"></div>
+    <div class="sf"><label>電話</label><input type="text" id="sv-tel"></div>
+    <div class="sf"><label>手機</label><input type="text" id="sv-mobile"></div>
+    <div class="sf"><label>Email</label><input type="text" id="sv-email"></div>
+    <div class="sf"><label>地址</label><input type="text" id="sv-addr"></div>
+    <div class="save-actions">
+      <button class="btn btn-ghost" onclick="closeSave()">取消</button>
+      <button class="btn btn-amber" onclick="confirmSave()">確認儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== VENDOR DB OVERLAY ====== -->
+<div class="overlay" id="vdb-overlay" onclick="closeVendorDBifBg(event)">
+  <div class="db-panel">
+    <div class="db-head">
+      <h2>
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        報價方資料庫
+        <span class="db-head-sub">Vendor Database</span>
+      </h2>
+      <div class="db-head-actions">
+        <button class="btn btn-ghost btn-sm" onclick="saveCurrentVendor()">＋ 儲存目前報價方</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeVendorDB()">✕</button>
+      </div>
+    </div>
+    <div class="import-zone">
+      <div class="import-zone-icon">🏢</div>
+      <div class="import-zone-text">
+        <div class="import-zone-title">匯入 Excel 報價方資料</div>
+        <div class="import-zone-desc">支援 .xlsx / .xls 格式，欄位順序：公司名稱、統編、聯絡人、電話、手機、Email、地址</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+        <button class="import-drop" onclick="document.getElementById('vxl-input').click()">📂 選擇 Excel 檔案</button>
+        <span class="dl-tpl" onclick="downloadVendorTemplate()">⬇ 下載範本</span>
+      </div>
+      <input type="file" id="vxl-input" accept=".xlsx,.xls" onchange="importVendorExcel(event)" style="display:none">
+    </div>
+    <div class="import-msg" id="vimport-msg"></div>
+    <div class="db-toolbar">
+      <input type="text" class="db-search-input" id="vdb-search" placeholder="搜尋公司名稱、電話、手機、Email…" oninput="renderVendorDB()">
+    </div>
+    <div class="db-list" id="vdb-list"></div>
+    <div class="db-foot">
+      <span class="db-count" id="vdb-count"></span>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-ghost btn-sm" onclick="exportVendorDB()">⬇ 匯出 Excel</button>
+        <button class="btn btn-red btn-sm" onclick="clearVendorDB()">清空全部</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== VENDOR SAVE MODAL ====== -->
+<div class="save-overlay" id="vsave-overlay" onclick="closeVSaveIfBg(event)">
+  <div class="save-box">
+    <h3>💾 儲存報價方資料</h3>
+    <input type="hidden" id="vsv-id">
+    <div class="sf"><label>公司名稱（必填）</label><input type="text" id="vsv-name" placeholder="數位設計科技有限公司"></div>
+    <div class="sf"><label>統一編號</label><input type="text" id="vsv-taxid"></div>
+    <div class="sf"><label>聯絡人</label><input type="text" id="vsv-contact"></div>
+    <div class="sf"><label>電話</label><input type="text" id="vsv-tel"></div>
+    <div class="sf"><label>手機</label><input type="text" id="vsv-mobile"></div>
+    <div class="sf"><label>Email</label><input type="text" id="vsv-email"></div>
+    <div class="sf"><label>地址</label><input type="text" id="vsv-addr"></div>
+    <div class="save-actions">
+      <button class="btn btn-ghost" onclick="closeVSave()">取消</button>
+      <button class="btn btn-amber" onclick="confirmVendorSave()">確認儲存</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+/* ===== State ===== */
+let items = [];
+let taxMode = 'included';
+let clientDB = [];
+let vendorDB = [];
+let colState = { unit: false, remark: false, discount: false };
+
+/* ===== Init ===== */
+window.onload = async () => {
+  loadSample();
+
+  const loadingEl = document.createElement('div');
+  loadingEl.id = 'fb-loading';
+  loadingEl.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#1c1917;color:#e7e5e4;text-align:center;padding:8px 20px;font-size:12px;font-family:sans-serif;border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.35);pointer-events:none;';
+  loadingEl.textContent = '☁️ 背景正在同步雲端資料庫…';
+  document.body.appendChild(loadingEl);
+
+  // 初始化 LOGO 拖拉調整大小的功能
+  const lb = document.getElementById('logo-box');
+  const lrh = document.getElementById('logo-resize-handle');
+  if(lrh && lb) {
+    lrh.addEventListener('mousedown', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      const startX = e.clientX; const startY = e.clientY;
+      const startW = lb.offsetWidth; const startH = lb.offsetHeight;
+      function onMove(ev) {
+        lb.style.width = Math.max(60, startW + ev.clientX - startX) + 'px';
+        lb.style.height = Math.max(30, startH + ev.clientY - startY) + 'px';
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  let waited = 0;
+  while (!window._fbDb && waited < 5000) {
+    await new Promise(r => setTimeout(r, 100));
+    waited += 100;
+  }
+
+  try {
+    await Promise.all([loadDBFromStorage(), loadVendorDBFromStorage()]);
+    loadingEl.style.background = '#059669';
+    loadingEl.textContent = '✅ 雲端資料同步完成';
+    if(document.getElementById('db-overlay').classList.contains('open')) renderDB();
+    if(document.getElementById('vdb-overlay').classList.contains('open')) renderVendorDB();
+    setTimeout(() => loadingEl.remove(), 1800);
+  } catch(e) {
+    loadingEl.style.background = '#dc2626';
+    loadingEl.textContent = '⚠️ 雲端連線失敗，請檢查網路或資料庫權限';
+    console.error('Firebase Error:', e);
+    setTimeout(() => loadingEl.remove(), 3000);
+  }
+
+  // 接收來自 contacts.html 的「套用」指令
+  try {
+    const applyStr = localStorage.getItem('applyClient');
+    if (applyStr) {
+      const c = JSON.parse(applyStr);
+      if (c.type === 'vendor') {
+        document.getElementById('my-name').value = c.name || '';
+        document.getElementById('my-taxid').value = c.taxid || '';
+        document.getElementById('my-contact').value = c.contact || '';
+        document.getElementById('my-tel').value = c.tel || '';
+        document.getElementById('my-mobile').value = c.mobile || '';
+        document.getElementById('my-email').value = c.email || '';
+        document.getElementById('my-addr').value = c.addr || '';
+      } else {
+        document.getElementById('c-name').value = c.name || '';
+        document.getElementById('c-taxid').value = c.taxid || '';
+        document.getElementById('c-contact').value = c.contact || '';
+        document.getElementById('c-tel').value = c.tel || '';
+        document.getElementById('c-mobile').value = c.mobile || '';
+        document.getElementById('c-email').value = c.email || '';
+        document.getElementById('c-addr').value = c.addr || '';
+      }
+      // 填入後刪除該暫存，避免每次重整都覆蓋
+      localStorage.removeItem('applyClient'); 
+    }
+  } catch (err) {
+    console.error("Failed to apply client info", err);
+  }
+};
+
+/* ===== Print handling ===== */
+window.addEventListener('beforeprint', () => {
+  document.querySelectorAll('.item-table td').forEach(td => {
+    const inp = td.querySelector('input, textarea');
+    if (inp) {
+      const align = inp.style.textAlign || window.getComputedStyle(inp).textAlign || 'center';
+      td.style.textAlign = align;
+    }
+  });
+  document.querySelectorAll('.item-table textarea').forEach(ta => {
+    if (ta.dataset.printDiv) return;
+    const div = document.createElement('div');
+    div.className = 'print-cell-text';
+    div.textContent = ta.value;
+    ta.dataset.printDiv = '1';
+    ta.parentNode.insertBefore(div, ta);
+  });
+  document.querySelectorAll('textarea:not(.item-table textarea)').forEach(ta => {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+    ta.style.overflow = 'visible';
+  });
+  const ms = $('meta-strip');
+  if(ms) ms.style.display = metaOpen ? 'flex' : 'none';
+});
+
+window.addEventListener('afterprint', () => {
+  document.querySelectorAll('.item-table .print-cell-text').forEach(div => div.remove());
+  document.querySelectorAll('.item-table textarea[data-print-div]').forEach(ta => {
+    delete ta.dataset.printDiv;
+  });
+  document.querySelectorAll('textarea').forEach(ta => {
+    ta.style.overflow = '';
+    ar(ta);
+  });
+  const ms = $('meta-strip');
+  if(ms) ms.style.display = metaOpen ? 'flex' : 'none';
+});
+
+/* ===== Helpers ===== */
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n).toLocaleString('en-US');
+function ar(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+function genNo() {
+  const d=new Date();
+  $('q-no').value=`QT-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-001`;
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ===== Paper background ===== */
+function setPaperBg(color) {
+  $('paper').style.setProperty('--paper', color);
+  $('paper').style.background = color;
+}
+
+/* ===== Watermark ===== */
+function handleWatermark(e) {
+  const f = e.target.files[0]; if (!f) return;
+  if (f.size > 5 * 1024 * 1024) { alert('圖片超過 5MB'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    $('wm-img').src = ev.target.result;
+    $('wm-layer').style.display = 'block';
+    $('wm-setting-btn').style.display = '';
+    $('wm-clear-btn').style.display = '';
+    applyWatermark();
+  };
+  reader.readAsDataURL(f);
+  e.target.value = '';
+}
+function applyWatermark() {
+  const opacity = $('wm-opacity').value;
+  const size    = $('wm-size').value;
+  const rotate  = $('wm-rotate').value;
+  $('wm-opacity-val').textContent = opacity + '%';
+  $('wm-size-val').textContent    = size + '%';
+  $('wm-rotate-val').textContent  = rotate + '°';
+  const p = $('paper');
+  p.style.setProperty('--wm-opacity', opacity / 100);
+  p.style.setProperty('--wm-size',    size + '%');
+  p.style.setProperty('--wm-rotate',  rotate + 'deg');
+}
+function clearWatermark() {
+  $('wm-img').src = '';
+  $('wm-layer').style.display = 'none';
+  $('wm-setting-btn').style.display = 'none';
+  $('wm-clear-btn').style.display   = 'none';
+  $('wm-input').value = '';
+}
+function openWatermark()  { $('wm-overlay').classList.add('open'); }
+function closeWatermark() { $('wm-overlay').classList.remove('open'); }
+
+/* ===== Meta toggle ===== */
+let metaOpen = false;
+function toggleMeta() {
+  metaOpen = !metaOpen;
+  const strip = $('meta-strip');
+  const btn   = $('meta-toggle-pill');
+  if(metaOpen) {
+    if(!strip.querySelector('.meta-item')) {
+      strip.innerHTML = `
+        <div class="meta-item"><div class="meta-key">報價單號</div><input type="text" id="q-no"></div>
+        <div class="meta-item"><div class="meta-key">報價日期</div><input type="date" id="q-date"></div>
+        <div class="meta-item"><div class="meta-key">有效期限</div><input type="text" id="q-valid" placeholder="如：30 天"></div>`;
+      genNo();
+      $('q-date').valueAsDate = new Date();
+      ['q-no','q-date','q-valid'].forEach(id=>{
+        $(id).addEventListener('input', ()=>{});
+        $(id).addEventListener('change', ()=>{});
+      });
+    }
+    strip.style.display = 'flex';
+    if(btn) { btn.classList.add('on'); }
+  } else {
+    strip.style.display = 'none';
+    if(btn) { btn.classList.remove('on'); }
+  }
+}
+
+/* ===== Sign image upload ===== */
+const signInputs = {};
+function addSignImage(side) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.style.display = 'none';
+  inp.onchange = function(e) {
+    const f = e.target.files[0]; if(!f) return;
+    if(f.size > 3*1024*1024){ alert('圖片超過 3MB'); return; }
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      addSignImageToContainer(side, ev.target.result);
+    };
+    reader.readAsDataURL(f);
+    document.body.removeChild(inp);
+  };
+  document.body.appendChild(inp);
+  inp.click();
+}
+
+function addSignImageToContainer(side, src) {
+  const container = $('sign-images-'+side);
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:relative;display:inline-block;vertical-align:bottom;';
+  
+  const img = document.createElement('img');
+  img.src = src;
+  img.className = 'sign-img';
+  img.style.cssText = 'width:80px;height:auto;object-fit:contain;border:1px dashed #d6cfc5;border-radius:4px;background:#f9f7f4;display:block;user-select:none;';
+  
+  const handle = document.createElement('div');
+  handle.className = 'sign-resize-handle';
+  handle.style.cssText = 'position:absolute;right:-1px;bottom:-1px;width:14px;height:14px;cursor:se-resize;background:var(--t-acc,#b45309);border-radius:2px 0 4px 0;opacity:0;transition:opacity .15s;z-index:2;display:flex;align-items:center;justify-content:center;';
+  handle.innerHTML = '<svg width="8" height="8" viewBox="0 0 8 8" fill="white"><path d="M1 7L7 1M4 7L7 4M7 7L7 7" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg>';
+  handle.title = '拖曳調整大小';
+
+  wrapper.onmouseenter = () => { handle.style.opacity = '1'; delBtn.style.opacity = '1'; };
+  wrapper.onmouseleave = () => { handle.style.opacity = '0'; delBtn.style.opacity = '0'; };
+
+  const delBtn = document.createElement('div');
+  delBtn.className = 'sign-img-del';
+  delBtn.style.cssText = 'position:absolute;top:-7px;right:-7px;width:16px;height:16px;background:#dc2626;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;z-index:3;';
+  delBtn.innerHTML = '<svg width="8" height="8" viewBox="0 0 10 10" fill="white"><path d="M2 2l6 6M8 2l-6 6" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  delBtn.title = '移除';
+  delBtn.onclick = () => container.removeChild(wrapper);
+
+  handle.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = img.offsetWidth;
+    function onMove(ev) {
+      const newW = Math.max(24, startW + ev.clientX - startX);
+      img.style.width = newW + 'px';
+      img.style.height = 'auto';
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  wrapper.appendChild(img);
+  wrapper.appendChild(handle);
+  wrapper.appendChild(delBtn);
+  container.appendChild(wrapper);
+}
+
+/* ===== Theme / Style ===== */
+function setTheme(cls, btn) {
+  $('paper').className='paper '+cls;
+  document.querySelectorAll('.theme-pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+function setPaperStyle(p,v){ $('paper').style[p]=v; }
+
+const accentPresets = {
+  '#b45309': { acc:'#b45309', headBg:'#1c1917', headFg:'#fdfcfb', line:'#c9bfb0', titleColor:'#1c1917' },
+  '#1e40af': { acc:'#1e40af', headBg:'#1e3a5f', headFg:'#e0f2fe', line:'#93c5fd', titleColor:'#1e3a5f' },
+  '#065f46': { acc:'#065f46', headBg:'#064e3b', headFg:'#d1fae5', line:'#6ee7b7', titleColor:'#064e3b' },
+  '#9f1239': { acc:'#9f1239', headBg:'#881337', headFg:'#ffe4e6', line:'#fda4af', titleColor:'#881337' },
+  '#6d28d9': { acc:'#6d28d9', headBg:'#3b0764', headFg:'#ede9fe', line:'#a78bfa', titleColor:'#3b0764' },
+  '#475569': { acc:'#475569', headBg:'#334155', headFg:'#f1f5f9', line:'#94a3b8', titleColor:'#1e293b' },
+};
+function applyAccentScheme(color) {
+  const p = $('paper');
+  const preset = accentPresets[color];
+  if (preset) {
+    p.style.setProperty('--t-acc', preset.acc);
+    p.style.setProperty('--t-head-bg', preset.headBg);
+    p.style.setProperty('--t-head-fg', preset.headFg);
+    p.style.setProperty('--t-line', preset.line);
+    p.style.setProperty('--t-title-color', preset.titleColor);
+  } else {
+    p.style.setProperty('--t-acc', color);
+    p.style.setProperty('--t-head-bg', color);
+    p.style.setProperty('--t-head-fg', '#ffffff');
+    p.style.setProperty('--t-line', color + '80');
+    p.style.setProperty('--t-title-color', color);
+  }
+}
+function setAccent(color, sw){
+  applyAccentScheme(color);
+  document.querySelectorAll('.cswatch').forEach(s=>s.classList.remove('on'));
+  sw.classList.add('on');
+}
+function setAccentCustom(color){
+  applyAccentScheme(color);
+  document.querySelectorAll('.cswatch').forEach(s=>s.classList.remove('on'));
+  $('custom-accent-swatch').classList.add('on');
+  $('custom-accent-swatch').style.background = color;
+}
+
+/* ===== Tax ===== */
+function setTax(mode,btn){
+  taxMode=mode;
+  document.querySelectorAll('.tax-pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  recalc();
+}
+
+/* ===== Logo ===== */
+function handleLogo(e){
+  const f=e.target.files[0]; if(!f) return;
+  if(f.size>2*1024*1024){alert('圖片超過 2MB');return;}
+  const r=new FileReader();
+  r.onload=ev=>{
+    $('logo-img').src=ev.target.result;
+    $('logo-img').style.display='block';
+    $('logo-hint').style.display='none';
+    $('logo-clear').style.display='block';
+    $('logo-box').classList.remove('no-logo');
+  };
+  r.readAsDataURL(f);
+}
+function clearLogo(){
+  $('logo-img').src=''; $('logo-img').style.display='none';
+  $('logo-hint').style.display=''; $('logo-clear').style.display='none';
+  $('logo-input').value='';
+  $('logo-box').classList.add('no-logo');
+  // 重置大小
+  $('logo-box').style.width = '140px';
+  $('logo-box').style.height = '70px';
+}
+
+/* ===== Spacing overlay ===== */
+function openSpacing() { $('sp-overlay').classList.add('open'); }
+function closeSpacing() { $('sp-overlay').classList.remove('open'); }
+function applySpacing() {
+  const paper = $('paper');
+  const pad = $('sp-padding').value;
+  const sec = $('sp-section').value;
+  const ic  = $('sp-infocol').value;
+  const rw  = $('sp-row').value;
+  const sg  = $('sp-sign').value;
+  $('sp-padding-val').textContent = pad+'mm';
+  $('sp-section-val').textContent = sec+'px';
+  $('sp-infocol-val').textContent = ic+'px';
+  $('sp-row-val').textContent     = rw+'px';
+  $('sp-sign-val').textContent    = sg+'px';
+  paper.style.padding = `${pad}mm ${pad}mm`;
+  document.querySelectorAll('.info-block').forEach(el=>el.style.marginBottom=sec+'px');
+  document.querySelectorAll('.meta-strip').forEach(el=>el.style.marginBottom=sec+'px');
+  document.querySelectorAll('.info-col').forEach(el=>el.style.padding=`${ic}px`);
+  document.querySelectorAll('.item-table td').forEach(el=>el.style.padding=`${rw}px 7px`);
+  document.querySelectorAll('.item-table th').forEach(el=>el.style.padding=`${rw+4}px 7px`);
+  document.querySelectorAll('.sign-area').forEach(el=>el.style.height=sg+'px');
+}
+function resetSpacing(){
+  ['sp-padding','sp-section','sp-infocol','sp-row','sp-sign'].forEach(id=>{
+    const defaults = {'sp-padding':14,'sp-section':16,'sp-infocol':14,'sp-row':5,'sp-sign':56};
+    $(id).value = defaults[id];
+  });
+  applySpacing();
+  $('paper').style.padding = '';
+  document.querySelectorAll('.info-block,.meta-strip').forEach(el=>el.style.marginBottom='');
+  document.querySelectorAll('.info-col').forEach(el=>el.style.padding='');
+  document.querySelectorAll('.item-table td,.item-table th').forEach(el=>el.style.padding='');
+  document.querySelectorAll('.sign-area').forEach(el=>el.style.height='');
+}
+
+/* ===== Custom columns ===== */
+let customCols = []; // [{id, name, width, align}]
+function openAddCol(){ $('addcol-name').value=''; $('addcol-overlay').classList.add('open'); setTimeout(()=>$('addcol-name').focus(),80); }
+function closeAddCol(){ $('addcol-overlay').classList.remove('open'); }
+function confirmAddCol(){
+  const name = $('addcol-name').value.trim();
+  if(!name){ alert('請輸入欄位標題'); return; }
+  const col = { id:'cc_'+Date.now(), name, width:$('addcol-width').value, align:$('addcol-align').value };
+  customCols.push(col);
+  renderCustomColChips();
+  renderTable();
+  closeAddCol();
+}
+function removeCustomCol(id){
+  customCols = customCols.filter(c=>c.id!==id);
+  renderCustomColChips();
+  renderTable();
+}
+function renderCustomColChips(){
+  const box = $('custom-col-chips');
+  box.innerHTML = customCols.map(c=>`
+    <span class="custom-col-chip">
+      ${esc(c.name)}
+      <span class="custom-col-chip-del" onclick="removeCustomCol('${c.id}')">✕</span>
+    </span>`).join('');
+}
+
+/* ===== Column toggles ===== */
+function toggleCol(col, btn) {
+  colState[col] = !colState[col];
+  btn.classList.toggle('on', colState[col]);
+  
+  let label = '';
+  if(col === 'unit') label = '單位欄';
+  if(col === 'remark') label = '備註欄';
+  if(col === 'discount') label = '折扣欄';
+  btn.textContent = (colState[col] ? '− ' : '+ ') + label;
+  
+  document.querySelectorAll('.col-' + col).forEach(el => {
+    el.style.display = colState[col] ? '' : 'none';
+  });
+}
+
+/* ===== Field style overlay ===== */
+function openFieldStyle() { $('fs-overlay').classList.add('open'); }
+function closeFieldStyle() { $('fs-overlay').classList.remove('open'); }
+function applyFieldStyle() {
+  const target = $('fs-target').value;
+  const font = $('fs-font').value;
+  const size = $('fs-size').value;
+  const weight = $('fs-weight').value;
+  const lh = $('fs-lh').value;
+  const ls = $('fs-ls').value;
+  const isTitleTarget = target.includes('doc-title-text');
+  const paper = $('paper');
+  document.querySelectorAll(target).forEach(el => {
+    if (font) el.style.fontFamily = font;
+    if (size) el.style.fontSize = size;
+    if (weight) el.style.fontWeight = weight;
+    if (lh) el.style.lineHeight = lh;
+    if (ls) el.style.letterSpacing = ls;
+  });
+  if (isTitleTarget) {
+    if (font) paper.style.setProperty('--title-font', font);
+    if (size) paper.style.setProperty('--title-size', size);
+    if (weight) paper.style.setProperty('--title-weight', weight);
+    if (ls) paper.style.setProperty('--title-ls', ls);
+  }
+  closeFieldStyle();
+}
+
+/* ===== Items ===== */
+function renderTable(){
+  const thead = $('thead-row');
+  thead.querySelectorAll('.th-custom').forEach(el=>el.remove());
+  const thDel = thead.querySelector('.th-del');
+  customCols.forEach(col=>{
+    const th = document.createElement('th');
+    th.className = 'th-custom';
+    th.setAttribute('draggable','true');
+    th.style.cssText = `width:${col.width};text-align:${col.align}`;
+    const inp = document.createElement('input');
+    inp.className = 'th-input';
+    inp.style.textAlign = col.align;
+    inp.value = col.name;
+    inp.placeholder = col.name;
+    inp.setAttribute('data-default', col.name);
+    inp.addEventListener('input', function(){ col.name = this.value || this.getAttribute('data-default'); });
+    th.appendChild(inp);
+    thead.insertBefore(th, thDel);
+  });
+
+  const tb=$('tbody'); tb.innerHTML='';
+  items.forEach((it,i)=>{
+    const tr=document.createElement('tr');
+    const customCells = customCols.map(col=>`
+      <td class="td-custom" style="text-align:${col.align}">
+        <input type="text" value="${esc(it[col.id]||'')}" placeholder="${esc(col.name)}"
+          oninput="upd(${it.id},'${col.id}',this.value)" style="text-align:${col.align}">
+      </td>`).join('');
+    tr.innerHTML=`
+      <td class="td-no">${i+1}</td>
+      <td class="td-name"><textarea rows="1" oninput="upd(${it.id},'name',this.value);ar(this)" placeholder="項目名稱／規格">${it.name}</textarea></td>
+      <td><input type="number" min="0" value="${it.qty}" oninput="upd(${it.id},'qty',this.value)" style="text-align:center"></td>
+      <td class="col-unit" style="display:${colState.unit?'':'none'}"><input type="text" value="${it.unit}" placeholder="式" oninput="upd(${it.id},'unit',this.value)" style="text-align:center"></td>
+      <td class="td-price"><input type="number" min="0" value="${it.price}" oninput="upd(${it.id},'price',this.value)" style="text-align:right"></td>
+      <td class="col-discount" style="display:${colState.discount?'':'none'}"><input type="text" value="${it.discount||''}" placeholder="0%" oninput="upd(${it.id},'discount',this.value)" style="text-align:center"></td>
+      <td class="td-amt" id="a-${it.id}">${fmt(calcAmt(it))}</td>
+      <td class="col-remark" style="display:${colState.remark?'':'none'}"><input type="text" value="${it.remark||''}" placeholder="備註" oninput="upd(${it.id},'remark',this.value)"></td>
+      ${customCells}`;
+    const tdDel = document.createElement('td');
+    tdDel.className = 'td-del-float';
+    const delBtn = document.createElement('button');
+    delBtn.className = 'row-del-btn';
+    delBtn.title = '刪除此列';
+    delBtn.innerHTML = `<svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>`;
+    delBtn.addEventListener('click', ()=>delRow(it.id));
+    tdDel.appendChild(delBtn);
+    tr.appendChild(tdDel);
+    tb.appendChild(tr);
+    const ta=tr.querySelector('textarea'); if(ta) ar(ta);
+  });
+  recalc();
+  afterRender();
+}
+function calcAmt(it){
+  const base = it.qty * it.price;
+  if(!it.discount) return base;
+  const d = String(it.discount).trim();
+  if(d === '') return base;
+  const pct = d.endsWith('%');
+  const num = parseFloat(d);
+  if(isNaN(num)) return base;
+  if(pct){
+    return Math.round(base * (1 - num/100));
+  } else {
+    if(num > 0 && num <= 100) return Math.round(base * (1 - num/100));
+    return base;
+  }
+}
+function upd(id,f,v){
+  const it=items.find(i=>i.id===id); if(!it) return;
+  it[f]=(f==='qty'||f==='price')?Number(v)||0:v;
+  if(f==='qty'||f==='price'||f==='discount') $(`a-${id}`).innerText=fmt(calcAmt(it));
+  recalc();
+}
+function addRow(){ items.push({id:Date.now(),name:'',qty:1,unit:'式',price:0}); renderTable(); }
+function delRow(id){
+  if(items.length<=1){alert('請至少保留一個項目');return;}
+  items=items.filter(i=>i.id!==id); renderTable();
+}
+
+/* ===== Recalc ===== */
+function recalc(){
+  const sub=items.reduce((s,it)=>s+calcAmt(it),0);
+  let tax=0,total=sub,subLabel='銷售金額',taxLabel='',showTax=false;
+  if(taxMode==='included'){
+    tax=Math.round(sub/1.05*0.05); taxLabel='內含稅 (5%)'; subLabel='含稅金額'; showTax=true;
+  } else if(taxMode==='extra'){
+    tax=Math.round(sub*0.05); total=sub+tax; taxLabel='加計稅 (5%)'; subLabel='未稅金額'; showTax=true;
+  }
+  $('lbl-sub').innerText=subLabel; $('v-sub').innerText=fmt(sub);
+  $('lbl-tax').innerText=taxLabel; $('v-tax').innerText=fmt(tax);
+  $('v-total').innerText='$ '+fmt(total);
+  $('tax-row').style.display=showTax?'flex':'none';
+}
+
+/* ===== Sample / Clear ===== */
+function loadSample(){
+  // 1. 重置開關按鈕與顯示狀態
+  colState = { unit: false, remark: false, discount: false };
+  document.querySelectorAll('.col-unit, .col-remark, .col-discount').forEach(el => el.style.display = 'none');
+  
+  const btnU = document.getElementById('col-toggle-unit');
+  if(btnU) { btnU.classList.remove('on'); btnU.textContent = '+ 單位欄'; }
+  const btnR = document.getElementById('col-toggle-remark');
+  if(btnR) { btnR.classList.remove('on'); btnR.textContent = '+ 備註欄'; }
+  const btnD = document.getElementById('col-toggle-discount');
+  if(btnD) { btnD.classList.remove('on'); btnD.textContent = '+ 折扣欄'; }
+
+  // 2. 清空自訂欄位
+  customCols = [];
+  renderCustomColChips();
+
+  // 3. 還原表頭順序與寬度
+  colOrder = COL_DEFS.map(c => c.key);
+  COL_DEFS.forEach(c => colWidths[c.key] = c.defaultW);
+  const thead = document.getElementById('thead-row');
+  if(thead) {
+    colOrder.forEach(key => {
+      const def = COL_DEFS.find(c => c.key === key);
+      if(def) {
+        const th = thead.querySelector(`.${def.thClass}`);
+        if(th) {
+          th.style.width = def.defaultW;
+          thead.appendChild(th);
+        }
+      }
+    });
+  }
+
+  // 4. 載入範例資料
+  items=[
+    {id:1,name:'企業官方網站設計與開發\n— RWD 響應式設計，含首頁、關於、服務、聯絡表單',qty:1,unit:'式',price:45000},
+    {id:2,name:'後台內容管理系統 (CMS)\n— 提供客戶自行更新最新消息與產品資訊',qty:1,unit:'式',price:25000},
+    {id:3,name:'主機代管費用（第一年）',qty:1,unit:'年',price:6000},
+  ];
+  $('my-name').value='數位設計科技有限公司';
+  $('my-taxid').value='12345678';
+  $('my-contact').value='陳經理';
+  $('my-tel').value='(02) 2345-6789';
+  $('my-mobile').value='0912-345-678';
+  $('my-email').value='service@example.com';
+  $('my-addr').value='台北市信義區信義路五段7號';
+  renderTable();
+}
+
+function clearAll(){
+  if(!confirm('確定清空所有資料？')) return;
+  colState = { unit: false, remark: false, discount: false };
+  items=[{id:Date.now(),name:'',qty:1,unit:'式',price:0}];
+  ['c-name','c-taxid','c-contact','c-tel','c-mobile','c-email','c-addr'].forEach(id=>$(id).value='');
+  ['my-name','my-taxid','my-contact','my-tel','my-mobile','my-email','my-addr'].forEach(id=>$(id).value='');
+  if($('q-no')) genNo();
+  
+  // 更新按鈕UI
+  const btnU = document.getElementById('col-toggle-unit');
+  if(btnU) { btnU.classList.remove('on'); btnU.textContent = '+ 單位欄'; }
+  const btnR = document.getElementById('col-toggle-remark');
+  if(btnR) { btnR.classList.remove('on'); btnR.textContent = '+ 備註欄'; }
+  const btnD = document.getElementById('col-toggle-discount');
+  if(btnD) { btnD.classList.remove('on'); btnD.textContent = '+ 折扣欄'; }
+
+  renderTable();
+}
+
+/* ===========================
+   INLINE FIELD STYLE TOOLBAR
+=========================== */
+let itbTarget = null; // currently focused element
+
+function showITB(el, event) {
+  itbTarget = el;
+  const tb = document.getElementById('inline-toolbar');
+  const cs = window.getComputedStyle(el);
+  const ff = el.style.fontFamily || '';
+  const fs = el.style.fontSize || '';
+  const fw = el.style.fontWeight || '';
+  const fi = el.style.fontStyle || '';
+  const ta = el.style.textAlign || '';
+  const lh = el.style.lineHeight || '';
+  const fc = el.style.color || '';
+
+  const fontSel = document.getElementById('itb-font');
+  fontSel.value = '';
+  for(let o of fontSel.options) { if(ff && ff.includes(o.value.split(',')[0].replace(/'/g,''))) { fontSel.value = o.value; break; } }
+  
+  const sizeSel = document.getElementById('itb-size');
+  sizeSel.value = fs || '';
+  
+  document.getElementById('itb-lh').value = lh || '';
+
+  const ls = el.style.letterSpacing || '';
+  const lsSel = document.getElementById('itb-ls');
+  lsSel.value = ls || '';
+  if(lsSel.value !== (ls||'')) lsSel.value = '';
+
+  document.getElementById('itb-bold').classList.toggle('on', fw === '700' || fw === 'bold');
+  document.getElementById('itb-italic').classList.toggle('on', fi === 'italic');
+
+  ['left','center','right'].forEach(a => {
+    document.getElementById('itb-' + a).classList.toggle('on', ta === a);
+  });
+
+  const colorBtn = document.getElementById('itb-color-btn');
+  if(fc) colorBtn.style.background = fc;
+
+  tb.classList.add('visible');
+  const rect = el.getBoundingClientRect();
+  const tbRect = tb.getBoundingClientRect();
+  let top = rect.top - tbRect.height - 8 + window.scrollY;
+  let left = rect.left + window.scrollX;
+  if(top < 60) top = rect.bottom + 6 + window.scrollY;
+  if(left + 600 > window.innerWidth) left = window.innerWidth - 620;
+  if(left < 4) left = 4;
+  tb.style.top = top + 'px';
+  tb.style.left = left + 'px';
+}
+
+function hideITB() {
+  document.getElementById('inline-toolbar').classList.remove('visible');
+  itbTarget = null;
+}
+
+function itbApply() {
+  if(!itbTarget) return;
+  const font = document.getElementById('itb-font').value;
+  const size = document.getElementById('itb-size').value;
+  const lh   = document.getElementById('itb-lh').value;
+  const ls   = document.getElementById('itb-ls').value;
+  if(font) itbTarget.style.fontFamily = font;
+  if(size) itbTarget.style.fontSize = size;
+  if(lh)   itbTarget.style.lineHeight = lh;
+  if(ls)   itbTarget.style.letterSpacing = ls;
+}
+
+function itbToggle(prop) {
+  if(!itbTarget) return;
+  if(prop === 'bold') {
+    const isBold = itbTarget.style.fontWeight === '700' || itbTarget.style.fontWeight === 'bold';
+    itbTarget.style.fontWeight = isBold ? '400' : '700';
+    document.getElementById('itb-bold').classList.toggle('on', !isBold);
+  } else if(prop === 'italic') {
+    const isItalic = itbTarget.style.fontStyle === 'italic';
+    itbTarget.style.fontStyle = isItalic ? 'normal' : 'italic';
+    document.getElementById('itb-italic').classList.toggle('on', !isItalic);
+  }
+}
+
+function itbAlign(a) {
+  if(!itbTarget) return;
+  itbTarget.style.textAlign = a;
+  ['left','center','right'].forEach(x => document.getElementById('itb-'+x).classList.toggle('on', x===a));
+}
+
+function itbColor(c) {
+  if(!itbTarget) return;
+  itbTarget.style.color = c;
+  document.getElementById('itb-color-btn').style.background = c;
+}
+
+function itbReset() {
+  if(!itbTarget) return;
+  ['fontFamily','fontSize','fontWeight','fontStyle','textAlign','lineHeight','color','letterSpacing'].forEach(p => itbTarget.style[p] = '');
+  hideITB();
+}
+
+function attachITBListeners() {
+  document.querySelectorAll('.paper input, .paper textarea').forEach(el => {
+    if(el._itbAttached) return;
+    el._itbAttached = true;
+    el.addEventListener('focus', function(e) {
+      setTimeout(() => showITB(el, e), 80);
+    });
+  });
+  document.querySelectorAll('.th-input').forEach(el => {
+    if(el._itbAttached) return;
+    el._itbAttached = true;
+    el.addEventListener('focus', function(e) {
+      setTimeout(() => showITB(el, e), 80);
+    });
+    el.addEventListener('mousedown', e => e.stopPropagation());
+    el.addEventListener('dragstart', e => e.preventDefault());
+  });
+}
+
+document.addEventListener('mousedown', function(e) {
+  const tb = document.getElementById('inline-toolbar');
+  if(!tb.contains(e.target) && !e.target.closest('.paper input, .paper textarea')) {
+    hideITB();
+  }
+}, true);
+
+/* ===========================
+   TABLE COLUMN RESIZE & DRAG
+=========================== */
+
+const COL_DEFS = [
+  { key: 'no',       label: '#',             thClass: 'th-no',       fixed: true,  defaultW: '4%'  },
+  { key: 'name',     label: '項目名稱',       thClass: 'th-name',     fixed: false, defaultW: '43%' },
+  { key: 'qty',      label: '數量',           thClass: 'th-qty',      fixed: false, defaultW: '9%'  },
+  { key: 'unit',     label: '單位',           thClass: 'th-unit',     fixed: false, defaultW: '9%', toggleKey: 'unit' },
+  { key: 'price',    label: '單價',           thClass: 'th-price',    fixed: false, defaultW: '14%' },
+  { key: 'discount', label: '折扣',           thClass: 'th-discount', fixed: false, defaultW: '9%', toggleKey: 'discount' },
+  { key: 'amt',      label: '小計',           thClass: 'th-amt',      fixed: false, defaultW: '14%' },
+  { key: 'remark',   label: '備註',           thClass: 'th-remark',   fixed: false, defaultW: '12%', toggleKey: 'remark'  },
+  { key: 'del',      label: '',              thClass: 'th-del',      fixed: true,  defaultW: '5%'  },
+];
+
+let colOrder = COL_DEFS.map(c => c.key);
+let colWidths = {}; 
+COL_DEFS.forEach(c => colWidths[c.key] = c.defaultW);
+
+let dragSrcKey = null;
+
+function initColResizeAndDrag() {
+  const thead = document.getElementById('thead-row');
+  if(!thead) return;
+
+  const ths = thead.querySelectorAll('th');
+  ths.forEach(th => {
+    const key = getKeyFromTh(th);
+    if(!key) return;
+
+    const def = COL_DEFS.find(c => c.key === key);
+    if(def && !def.fixed) {
+      th.setAttribute('draggable', 'true');
+      if(!th.querySelector('.drag-dot')) {
+        const dot = document.createElement('span');
+        dot.className = 'drag-dot';
+        dot.textContent = '⠿';
+        th.insertBefore(dot, th.firstChild);
+      }
+      const newTh = th.cloneNode(true);
+      th.parentNode.replaceChild(newTh, th);
+      const activeTh = newTh;
+      activeTh.addEventListener('dragstart', onColDragStart);
+      activeTh.addEventListener('dragover', onColDragOver);
+      activeTh.addEventListener('dragleave', onColDragLeave);
+      activeTh.addEventListener('drop', onColDrop);
+      activeTh.addEventListener('dragend', onColDragEnd);
+
+      const inp = activeTh.querySelector('.th-input');
+      if(inp) {
+        inp.addEventListener('mousedown', e => e.stopPropagation());
+        inp.addEventListener('dragstart', e => e.preventDefault());
+        if(!inp._itbAttached) {
+          inp._itbAttached = true;
+          inp.addEventListener('focus', function(e) { setTimeout(() => showITB(inp, e), 80); });
+        }
+      }
+
+      let handle = activeTh.querySelector('.col-resize-handle');
+      if(!handle) {
+        handle = document.createElement('div');
+        handle.className = 'col-resize-handle';
+        activeTh.appendChild(handle);
+      }
+      handle.addEventListener('mousedown', (e) => startResize(e, activeTh, key));
+      handle.setAttribute('draggable', 'false');
+      handle.addEventListener('dragstart', e => e.preventDefault());
+    } else {
+      th.removeAttribute('draggable');
+      let handle = th.querySelector('.col-resize-handle');
+      if(!handle) {
+        handle = document.createElement('div');
+        handle.className = 'col-resize-handle';
+        th.appendChild(handle);
+      }
+      handle.addEventListener('mousedown', (e) => startResize(e, th, key));
+      handle.setAttribute('draggable', 'false');
+      handle.addEventListener('dragstart', e => e.preventDefault());
+    }
+  });
+}
+
+function getKeyFromTh(th) {
+  for(const def of COL_DEFS) {
+    if(th.classList.contains(def.thClass)) return def.key;
+  }
+  if(th.classList.contains('th-custom')) {
+    const inp = th.querySelector('.th-input');
+    return 'custom_' + (inp ? inp.getAttribute('data-default') : th.textContent.trim());
+  }
+  return null;
+}
+
+function startResize(e, th, key) {
+  e.preventDefault(); e.stopPropagation();
+  const startX = e.clientX;
+  const startW = th.offsetWidth;
+  const handle = th.querySelector('.col-resize-handle');
+  handle.classList.add('dragging');
+
+  function onMove(ev) {
+    const newW = Math.max(30, startW + ev.clientX - startX);
+    th.style.width = newW + 'px';
+    colWidths[key] = newW + 'px';
+  }
+  function onUp() {
+    handle.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+function onColDragStart(e) {
+  dragSrcKey = getKeyFromTh(this);
+  this.classList.add('dragging-col');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragSrcKey);
+}
+function onColDragOver(e) {
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  this.classList.add('drag-over');
+}
+function onColDragLeave() { this.classList.remove('drag-over'); }
+function onColDrop(e) {
+  e.preventDefault();
+  const destKey = getKeyFromTh(this);
+  this.classList.remove('drag-over');
+  if(!dragSrcKey || dragSrcKey === destKey) return;
+  
+  const srcIdx = colOrder.indexOf(dragSrcKey);
+  const dstIdx = colOrder.indexOf(destKey);
+  if(srcIdx === -1 || dstIdx === -1) return;
+
+  colOrder.splice(srcIdx, 1);
+  colOrder.splice(dstIdx, 0, dragSrcKey);
+
+  reorderThead();
+  reorderTbody();
+}
+function onColDragEnd() {
+  this.classList.remove('dragging-col');
+  document.querySelectorAll('.item-table th').forEach(th => th.classList.remove('drag-over'));
+  dragSrcKey = null;
+}
+
+function reorderThead() {
+  const thead = document.getElementById('thead-row');
+  const ths = Array.from(thead.querySelectorAll('th'));
+  
+  const thMap = {};
+  ths.forEach(th => {
+    const k = getKeyFromTh(th);
+    if(k) thMap[k] = th;
+  });
+
+  colOrder.forEach(key => {
+    const th = thMap[key];
+    if(th) thead.appendChild(th);
+  });
+
+  initColResizeAndDrag();
+}
+
+function reorderTbody() {
+  const tbody = document.getElementById('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  
+  rows.forEach(tr => {
+    const tds = Array.from(tr.querySelectorAll('td'));
+  });
+  
+  renderTable();
+}
+
+const _origRenderTable = renderTable;
+const _renderTableOrig = window.renderTable;
+
+function afterRender() {
+  setTimeout(() => {
+    initColResizeAndDrag();
+    attachITBListeners();
+  }, 0);
+}
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    initColResizeAndDrag();
+    attachITBListeners();
+  }, 200);
+});
+
+/* ===========================
+   DB RENDER HELPERS
+=========================== */
+function renderSubText(v) {
+  let html = '';
+  if(v.taxid) html += '統編: '+esc(v.taxid)+'　';
+  if(v.tel) html += '☎ '+esc(v.tel)+'　';
+  if(v.mobile) html += '📱 '+esc(v.mobile)+'　';
+  if(v.email) html += '✉ '+esc(v.email);
+  if(v.addr) html += '<br>📍 '+esc(v.addr);
+  return html;
+}
+
+window.changeContact = function(sel, type) {
+  const card = sel.closest('.db-card');
+  const id = parseInt(sel.value);
+  card.setAttribute('data-id', id);
+  const db = type === 'client' ? clientDB : vendorDB;
+  const item = db.find(x => x.id === id);
+  if(item) {
+     card.querySelector('.db-card-sub').innerHTML = renderSubText(item);
+  }
+}
+
+/* ===========================
+   CLIENT DATABASE
+=========================== */
+async function loadDBFromStorage(){
+  try{
+    const snap = await window._fbGetDoc(window._fbDoc(window._fbDb,'databases','clientDB'));
+    clientDB = snap.exists() ? (snap.data().list || []) : [];
+  } catch(e){ console.warn('loadClientDB error',e); clientDB=[]; }
+}
+async function saveDBToStorage(){
+  try{
+    await window._fbSetDoc(window._fbDoc(window._fbDb,'databases','clientDB'),{list: clientDB});
+  } catch(e){ console.warn('saveClientDB error',e); }
+}
+
+function openDB(){
+  $('db-search').value='';
+  $('import-msg').className='import-msg';
+  renderDB();
+  $('db-overlay').classList.add('open');
+  setTimeout(()=>$('db-search').focus(),100);
+}
+function closeDB(){ $('db-overlay').classList.remove('open'); }
+function closeDBifBg(e){ if(e.target===$('db-overlay')) closeDB(); }
+
+function renderDB(){
+  const q=$('db-search').value.toLowerCase();
+  const list=$('db-list');
+  const filtered=clientDB.filter(c=>
+    (c.name||'').toLowerCase().includes(q)||
+    (c.tel||'').toLowerCase().includes(q)||
+    (c.mobile||'').toLowerCase().includes(q)||
+    (c.email||'').toLowerCase().includes(q)||
+    (c.contact||'').toLowerCase().includes(q)
+  );
+  $('db-count').innerText=`共 ${clientDB.length} 筆，顯示 ${filtered.length} 筆`;
+  if(filtered.length===0){
+    list.innerHTML=`<div class="db-empty">${clientDB.length===0
+      ?'尚無客戶資料。<br>可手動「儲存客戶」，或從右上角匯入 Excel。'
+      :'找不到符合的客戶。'}</div>`;
+    return;
+  }
+
+  // 群組化 (根據公司名稱)
+  const groups = {};
+  filtered.forEach(c => {
+     const key = (c.name || '(未填寫公司名稱)').trim();
+     if(!groups[key]) groups[key] = [];
+     groups[key].push(c);
+  });
+
+  let html = '';
+  for(let cname in groups) {
+     const arr = groups[cname];
+     const first = arr[0];
+     let selectHtml = '';
+     if(arr.length > 1) {
+         selectHtml = `<select class="t-select" style="margin:6px 0;width:100%;max-width:280px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);" onchange="changeContact(this, 'client')" onclick="event.stopPropagation()">` +
+             arr.map(x => `<option value="${x.id}">聯絡人: ${esc(x.contact||'無')} ${x.mobile ? '('+esc(x.mobile)+')' : ''}</option>`).join('') +
+             `</select>`;
+     } else {
+         selectHtml = `<div style="font-size:11px;color:#a8a29e;margin:4px 0;">聯絡人：${esc(first.contact||'無')}</div>`;
+     }
+
+     html += `
+     <div class="db-card" data-id="${first.id}">
+       <div class="db-card-info" onclick="applyClientFromCard(this)">
+         <div class="db-card-name">${esc(cname)}</div>
+         ${selectHtml}
+         <div class="db-card-sub">${renderSubText(first)}</div>
+       </div>
+       <div class="db-card-actions">
+         <button class="btn btn-ghost btn-sm" onclick="editClientFromCard(this, event)">編輯</button>
+         <button class="btn btn-ghost btn-sm" onclick="applyClientFromCard(this, event)">套用</button>
+         <button class="btn btn-red btn-sm" onclick="deleteClientFromCard(this, event)">刪除</button>
+       </div>
+     </div>`;
+  }
+  list.innerHTML = html;
+}
+
+function applyClientFromCard(btn, e) {
+  if(e) e.stopPropagation();
+  const id = parseInt(btn.closest('.db-card').getAttribute('data-id'));
+  const c=clientDB.find(x=>x.id===id); if(!c) return;
+  $('c-name').value=c.name||'';
+  $('c-taxid').value=c.taxid||'';
+  $('c-contact').value=c.contact||'';
+  $('c-tel').value=c.tel||'';
+  $('c-mobile').value=c.mobile||'';
+  $('c-email').value=c.email||'';
+  $('c-addr').value=c.addr||'';
+  closeDB();
+}
+
+function editClientFromCard(btn, e) {
+  if(e) e.stopPropagation();
+  const id = parseInt(btn.closest('.db-card').getAttribute('data-id'));
+  const c=clientDB.find(x=>x.id===id); if(!c) return;
+  $('sv-id').value = c.id;
+  $('sv-name').value = c.name || '';
+  $('sv-taxid').value = c.taxid || '';
+  $('sv-contact').value = c.contact || '';
+  $('sv-tel').value = c.tel || '';
+  $('sv-mobile').value = c.mobile || '';
+  $('sv-email').value = c.email || '';
+  $('sv-addr').value = c.addr || '';
+  closeDB();
+  $('save-overlay').classList.add('open');
+  setTimeout(()=>$('sv-name').focus(),100);
+}
+
+function deleteClientFromCard(btn, e){
+  if(e) e.stopPropagation();
+  const id = parseInt(btn.closest('.db-card').getAttribute('data-id'));
+  if(!confirm('確定刪除此聯絡人資料？')) return;
+  clientDB = clientDB.filter(c=>c.id!==id);
+  saveDBToStorage(); renderDB();
+}
+
+function clearDB(){
+  if(!confirm('確定清空整個客戶資料庫？')) return;
+  clientDB=[]; saveDBToStorage(); renderDB();
+}
+
+function saveCurrentClient(){
+  $('sv-id').value=''; // 新增模式
+  $('sv-name').value=$('c-name').value;
+  $('sv-taxid').value=$('c-taxid').value;
+  $('sv-contact').value=$('c-contact').value;
+  $('sv-tel').value=$('c-tel').value;
+  $('sv-mobile').value=$('c-mobile').value;
+  $('sv-email').value=$('c-email').value;
+  $('sv-addr').value=$('c-addr').value;
+  closeDB();
+  $('save-overlay').classList.add('open');
+  setTimeout(()=>$('sv-name').focus(),100);
+}
+function confirmSave(){
+  const id = $('sv-id').value;
+  const name=$('sv-name').value.trim();
+  if(!name){alert('請輸入客戶名稱');return;}
+  const data={taxid:$('sv-taxid').value,contact:$('sv-contact').value,tel:$('sv-tel').value,mobile:$('sv-mobile').value,email:$('sv-email').value,addr:$('sv-addr').value};
+  
+  if(id) {
+    const existing = clientDB.find(c => c.id === parseInt(id));
+    if(existing) {
+      Object.assign(existing, {name, ...data, updated:Date.now()});
+    }
+  } else {
+    clientDB.push({id:Date.now(),name,...data,created:Date.now()});
+  }
+  
+  saveDBToStorage(); closeSave();
+  alert(`✅ 已儲存「${name}」`);
+}
+function closeSave(){ $('save-overlay').classList.remove('open'); }
+function closeSaveIfBg(e){ if(e.target===$('save-overlay')) closeSave(); }
+
+/* ===========================
+   VENDOR DATABASE
+=========================== */
+async function loadVendorDBFromStorage(){
+  try{
+    const snap = await window._fbGetDoc(window._fbDoc(window._fbDb,'databases','vendorDB'));
+    vendorDB = snap.exists() ? (snap.data().list || []) : [];
+  } catch(e){ console.warn('loadVendorDB error',e); vendorDB=[]; }
+}
+async function saveVendorDBToStorage(){
+  try{
+    await window._fbSetDoc(window._fbDoc(window._fbDb,'databases','vendorDB'),{list: vendorDB});
+  } catch(e){ console.warn('saveVendorDB error',e); }
+}
+
+function openVendorDB(){
+  $('vdb-search').value='';
+  $('vimport-msg').className='import-msg';
+  renderVendorDB();
+  $('vdb-overlay').classList.add('open');
+  setTimeout(()=>$('vdb-search').focus(),100);
+}
+function closeVendorDB(){ $('vdb-overlay').classList.remove('open'); }
+function closeVendorDBifBg(e){ if(e.target===$('vdb-overlay')) closeVendorDB(); }
+
+function renderVendorDB(){
+  const q=$('vdb-search').value.toLowerCase();
+  const list=$('vdb-list');
+  const filtered=vendorDB.filter(v=>
+    (v.name||'').toLowerCase().includes(q)||
+    (v.tel||'').toLowerCase().includes(q)||
+    (v.mobile||'').toLowerCase().includes(q)||
+    (v.email||'').toLowerCase().includes(q)||
+    (v.contact||'').toLowerCase().includes(q)
+  );
+  $('vdb-count').innerText=`共 ${vendorDB.length} 筆，顯示 ${filtered.length} 筆`;
+  if(filtered.length===0){
+    list.innerHTML=`<div class="db-empty">${vendorDB.length===0
+      ?'尚無報價方資料。<br>可手動「儲存目前報價方」，或從右上角匯入 Excel。'
+      :'找不到符合的報價方。'}</div>`;
+    return;
+  }
+
+  const groups = {};
+  filtered.forEach(c => {
+     const key = (c.name || '(未填寫公司名稱)').trim();
+     if(!groups[key]) groups[key] = [];
+     groups[key].push(c);
+  });
+
+  let html = '';
+  for(let cname in groups) {
+     const arr = groups[cname];
+     const first = arr[0];
+     let selectHtml = '';
+     if(arr.length > 1) {
+         selectHtml = `<select class="t-select" style="margin:6px 0;width:100%;max-width:280px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);" onchange="changeContact(this, 'vendor')" onclick="event.stopPropagation()">` +
+             arr.map(x => `<option value="${x.id}">聯絡人: ${esc(x.contact||'無')} ${x.mobile ? '('+esc(x.mobile)+')' : ''}</option>`).join('') +
+             `</select>`;
+     } else {
+         selectHtml = `<div style="font-size:11px;color:#a8a29e;margin:4px 0;">聯絡人：${esc(first.contact||'無')}</div>`;
+     }
+
+     html += `
+     <div class="db-card" data-id="${first.id}">
+       <div class="db-card-info" onclick="applyVendorFromCard(this)">
+         <div class="db-card-name">${esc(cname)}</div>
+         ${selectHtml}
+         <div class="db-card-sub">${renderSubText(first)}</div>
+       </div>
+       <div class="db-card-actions">
+         <button class="btn btn-ghost btn-sm" onclick="editVendorFromCard(this, event)">編輯</button>
+         <button class="btn btn-ghost btn-sm" onclick="applyVendorFromCard(this, event)">套用</button>
+         <button class="btn btn-red btn-sm" onclick="deleteVendorFromCard(this, event)">刪除</button>
+       </div>
+     </div>`;
+  }
+  list.innerHTML = html;
+}
+
+function applyVendorFromCard(btn, e){
+  if(e) e.stopPropagation();
+  const id = parseInt(btn.closest('.db-card').getAttribute('data-id'));
+  const v=vendorDB.find(x=>x.id===id); if(!v) return;
+  $('my-name').value=v.name||'';
+  $('my-taxid').value=v.taxid||'';
+  $('my-contact').value=v.contact||'';
+  $('my-tel').value=v.tel||'';
+  $('my-mobile').value=v.mobile||'';
+  $('my-email').value=v.email||'';
+  $('my-addr').value=v.addr||'';
+  closeVendorDB();
+}
+
+function editVendorFromCard(btn, e){
+  if(e) e.stopPropagation();
+  const id = parseInt(btn.closest('.db-card').getAttribute('data-id'));
+  const v=vendorDB.find(x=>x.id===id); if(!v) return;
+  $('vsv-id').value = v.id;
+  $('vsv-name').value = v.name || '';
+  $('vsv-taxid').value = v.taxid || '';
+  $('vsv-contact').value = v.contact || '';
+  $('vsv-tel').value = v.tel || '';
+  $('vsv-mobile').value = v.mobile || '';
+  $('vsv-email').value = v.email || '';
+  $('vsv-addr').value = v.addr || '';
+  closeVendorDB();
+  $('vsave-overlay').classList.add('open');
+  setTimeout(()=>$('vsv-name').focus(),100);
+}
+
+function deleteVendorFromCard(btn, e){
+  if(e) e.stopPropagation();
+  const id = parseInt(btn.closest('.db-card').getAttribute('data-id'));
+  if(!confirm('確定刪除此聯絡人資料？')) return;
+  vendorDB=vendorDB.filter(v=>v.id!==id);
+  saveVendorDBToStorage(); renderVendorDB();
+}
+
+function clearVendorDB(){
+  if(!confirm('確定清空整個報價方資料庫？')) return;
+  vendorDB=[]; saveVendorDBToStorage(); renderVendorDB();
+}
+
+function saveCurrentVendor(){
+  $('vsv-id').value = '';
+  $('vsv-name').value=$('my-name').value;
+  $('vsv-taxid').value=$('my-taxid').value;
+  $('vsv-contact').value=$('my-contact').value;
+  $('vsv-tel').value=$('my-tel').value;
+  $('vsv-mobile').value=$('my-mobile').value;
+  $('vsv-email').value=$('my-email').value;
+  $('vsv-addr').value=$('my-addr').value;
+  closeVendorDB();
+  $('vsave-overlay').classList.add('open');
+  setTimeout(()=>$('vsv-name').focus(),100);
+}
+function confirmVendorSave(){
+  const id = $('vsv-id').value;
+  const name=$('vsv-name').value.trim();
+  if(!name){alert('請輸入公司名稱');return;}
+  const data={taxid:$('vsv-taxid').value,contact:$('vsv-contact').value,tel:$('vsv-tel').value,mobile:$('vsv-mobile').value,email:$('vsv-email').value,addr:$('vsv-addr').value};
+  
+  if(id) {
+    const existing = vendorDB.find(v => v.id === parseInt(id));
+    if(existing) {
+      Object.assign(existing, {name, ...data, updated:Date.now()});
+    }
+  } else {
+    vendorDB.push({id:Date.now(),name,...data,created:Date.now()});
+  }
+
+  saveVendorDBToStorage(); closeVSave();
+  alert(`✅ 已儲存「${name}」`);
+}
+function closeVSave(){ $('vsave-overlay').classList.remove('open'); }
+function closeVSaveIfBg(e){ if(e.target===$('vsave-overlay')) closeVSave(); }
+
+function importVendorExcel(event){
+  const file=event.target.files[0]; if(!file) return;
+  const msg=$('vimport-msg');
+  msg.className='import-msg';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){ msg.className='import-msg error'; msg.innerText='❌ 檔案中沒有資料（需要至少 2 列，含標題列）'; return; }
+      let added=0,updated=0,skipped=0;
+      for(let i=1;i<rows.length;i++){
+        const row=rows[i];
+        const name=String(row[0]||'').trim();
+        if(!name){ skipped++; continue; }
+        const entry={taxid:String(row[1]||'').trim(),contact:String(row[2]||'').trim(),tel:String(row[3]||'').trim(),mobile:String(row[4]||'').trim(),email:String(row[5]||'').trim(),addr:String(row[6]||'').trim()};
+        const existing=vendorDB.find(v=>v.name===name);
+        if(existing){ Object.assign(existing,entry,{updated:Date.now()}); updated++; }
+        else { vendorDB.push({id:Date.now()+i,name,...entry,created:Date.now()}); added++; }
+      }
+      saveVendorDBToStorage(); renderVendorDB();
+      msg.className='import-msg success';
+      msg.innerText=`✅ 匯入完成：新增 ${added} 筆、更新 ${updated} 筆${skipped?'、略過空白 '+skipped+' 筆':''}`;
+    }catch(err){ msg.className='import-msg error'; msg.innerText='❌ 讀取失敗：'+err.message; }
+    event.target.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function exportVendorDB(){
+  if(vendorDB.length===0){alert('報價方資料庫是空的');return;}
+  const header=['公司名稱','統編','聯絡人','電話','手機','Email','地址'];
+  const rows=vendorDB.map(v=>[v.name,v.taxid,v.contact,v.tel,v.mobile,v.email,v.addr]);
+  const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
+  ws['!cols']=[{wch:20},{wch:12},{wch:14},{wch:16},{wch:16},{wch:28},{wch:36}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'報價方資料庫');
+  XLSX.writeFile(wb,'報價方資料庫.xlsx');
+}
+
+function downloadVendorTemplate(){
+  const header=['公司名稱','統編','聯絡人','電話','手機','Email','地址'];
+  const sample=['數位設計科技有限公司','12345678','陳經理','(02) 2345-6789','0912-345-678','service@example.com','台北市信義區信義路五段7號'];
+  const ws=XLSX.utils.aoa_to_sheet([header,sample]);
+  ws['!cols']=[{wch:20},{wch:12},{wch:14},{wch:16},{wch:16},{wch:28},{wch:36}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'報價方資料');
+  XLSX.writeFile(wb,'報價方資料庫範本.xlsx');
+}
+
+/* ===========================
+   EXCEL IMPORT / EXPORT (Client)
+=========================== */
+function importExcel(event){
+  const file=event.target.files[0];
+  if(!file){ return; }
+  const msg=$('import-msg');
+  msg.className='import-msg';
+
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      if(rows.length<2){
+        msg.className='import-msg error';
+        msg.innerText='❌ 檔案中沒有資料（需要至少 2 列，含標題列）';
+        return;
+      }
+
+      let added=0, updated=0, skipped=0;
+      for(let i=1;i<rows.length;i++){
+        const row=rows[i];
+        const name=String(row[0]||'').trim();
+        if(!name){ skipped++; continue; }
+        const entry={
+          taxid:   String(row[1]||'').trim(),
+          contact: String(row[2]||'').trim(),
+          tel:     String(row[3]||'').trim(),
+          mobile:  String(row[4]||'').trim(),
+          email:   String(row[5]||'').trim(),
+          addr:    String(row[6]||'').trim(),
+        };
+        const existing=clientDB.find(c=>c.name===name);
+        if(existing){
+          Object.assign(existing,entry,{updated:Date.now()});
+          updated++;
+        } else {
+          clientDB.push({id:Date.now()+i,name,...entry,created:Date.now()});
+          added++;
+        }
+      }
+      saveDBToStorage();
+      renderDB();
+      msg.className='import-msg success';
+      msg.innerText=`✅ 匯入完成：新增 ${added} 筆、更新 ${updated} 筆${skipped?'、略過空白 '+skipped+' 筆':''}`;
+    } catch(err){
+      msg.className='import-msg error';
+      msg.innerText='❌ 讀取失敗：'+err.message;
+    }
+    event.target.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function exportDB(){
+  if(clientDB.length===0){alert('資料庫是空的');return;}
+  const header=['姓名','統編','聯絡人','電話','手機','Email','地址'];
+  const rows=clientDB.map(c=>[c.name,c.taxid,c.contact,c.tel,c.mobile,c.email,c.addr]);
+  const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
+  ws['!cols']=[{wch:20},{wch:12},{wch:14},{wch:16},{wch:16},{wch:28},{wch:36}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'客戶資料庫');
+  XLSX.writeFile(wb,'客戶資料庫.xlsx');
+}
+
+function downloadTemplate(){
+  const header=['姓名','統編','聯絡人','電話','手機','Email','地址'];
+  const sample=['範例公司 / 王小明','12345678','王小明','02-2345-6789','0912-345-678','wang@example.com','台北市信義區XX路1號'];
+  const ws=XLSX.utils.aoa_to_sheet([header,sample]);
+  ws['!cols']=[{wch:20},{wch:12},{wch:14},{wch:16},{wch:16},{wch:28},{wch:36}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'客戶資料');
+  XLSX.writeFile(wb,'客戶資料庫範本.xlsx');
+}
+</script>
+
+<script type="module">
+import { getFirestore, doc, getDoc, setDoc, initializeFirestore, persistentLocalCache } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+const app = getApp();
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache()
+});
+
+window._fbDb = db;
+window._fbDoc = doc;
+window._fbGetDoc = getDoc;
+window._fbSetDoc = setDoc;
+window._fbReady = true;
+
+window.onload(); // 手動觸發因為 type="module" 會延遲執行
+</script>
+</body>
+</html>

@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>器材庫存 — 公司系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #eeeae4; --panel: #1c1917; --panel2: #292524;
+  --paper: #fdfcfb; --ink: #1c1917; --ink2: #57534e; --ink3: #a8a29e;
+  --line: #e7e3dc; --acc: #b45309; --acc2: #d97706;
+  --success: #059669; --danger: #dc2626; --info: #0369a1;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+  --r: 6px;
+  --font-body: 'Noto Sans TC','Microsoft JhengHei',sans-serif;
+  --font-mono: 'IBM Plex Mono',monospace;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font-size:13px; line-height:1.55; min-height:100vh; }
+::-webkit-scrollbar{ width:6px; height:6px; }
+::-webkit-scrollbar-thumb{ background:#c4bdb6; border-radius:3px; }
+
+/* TOPBAR */
+.topbar{ background:var(--panel); color:#fafaf9; padding:0 24px; height:50px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:300; border-bottom:1px solid rgba(255,255,255,.05); }
+.topbar-brand{ display:flex; align-items:center; gap:10px; font-size:13px; font-weight:500; color:#e7e5e4; }
+.brand-dot{ width:7px; height:7px; border-radius:50%; background:var(--acc2); }
+.topbar-nav{ display:flex; gap:2px; }
+.nav-tab{ padding:6px 14px; border-radius:var(--r); font-size:12px; font-weight:500; color:#a8a29e; cursor:pointer; transition:.15s; text-decoration:none; border:1px solid transparent; }
+.nav-tab:hover{ color:#e7e5e4; background:rgba(255,255,255,.06); }
+.nav-tab.active{ color:var(--acc2); border-color:rgba(217,119,6,.3); background:rgba(180,83,9,.12); }
+.topbar-actions{ display:flex; gap:7px; align-items:center; }
+
+/* TOOLBAR */
+.toolbar{ background:var(--panel2); padding:0 24px; height:44px; display:flex; align-items:center; gap:0; position:sticky; top:50px; z-index:290; border-bottom:1px solid rgba(255,255,255,.05); overflow-x:auto; scrollbar-width:none; }
+.toolbar::-webkit-scrollbar{ display:none; }
+.tg{ display:flex; align-items:center; gap:6px; padding:0 16px; border-right:1px solid rgba(255,255,255,.08); height:100%; flex-shrink:0; }
+.tg:last-child{ border-right:none; }
+.tg-label{ font-size:10px; color:#78716c; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+.t-select{ background:rgba(255,255,255,.06); color:#d6d3d1; border:1px solid rgba(255,255,255,.1); border-radius:4px; padding:3px 7px; font-size:11px; cursor:pointer; font-family:inherit; outline:none; }
+.t-select:hover{ border-color:rgba(255,255,255,.22); }
+.view-pill{ padding:3px 10px; border-radius:20px; font-size:10px; font-weight:500; border:1px solid rgba(255,255,255,.12); color:#a8a29e; cursor:pointer; transition:.15s; background:none; font-family:inherit; white-space:nowrap; }
+.view-pill:hover{ color:#e7e5e4; border-color:rgba(255,255,255,.25); }
+.view-pill.on{ color:var(--acc2); border-color:var(--acc2); background:rgba(180,83,9,.15); }
+.sync-dot{ width:6px; height:6px; border-radius:50%; background:#78716c; transition:.3s; }
+.sync-dot.ok{ background:#059669; }
+.sync-dot.syncing{ background:#d97706; animation:pulse .8s infinite; }
+@keyframes pulse{ 0%,100%{opacity:1}50%{opacity:.4} }
+
+/* BTNS */
+.btn{ display:inline-flex; align-items:center; gap:5px; padding:6px 13px; border-radius:var(--r); border:none; font-size:12px; font-weight:500; cursor:pointer; transition:.15s; font-family:inherit; white-space:nowrap; }
+.btn-ghost{ background:rgba(255,255,255,.07); color:#d6d3d1; border:1px solid rgba(255,255,255,.12); }
+.btn-ghost:hover{ background:rgba(255,255,255,.14); color:#fafaf9; }
+.btn-ghost-dark{ background:rgba(0,0,0,.04); color:var(--ink2); border:1px solid var(--line); }
+.btn-ghost-dark:hover{ background:rgba(0,0,0,.08); color:var(--ink); }
+.btn-amber{ background:var(--acc); color:white; }
+.btn-amber:hover{ background:var(--acc2); }
+.btn-green{ background:rgba(5,150,105,.12); color:#059669; border:1px solid rgba(5,150,105,.3); }
+.btn-green:hover{ background:#059669; color:white; }
+.btn-blue{ background:rgba(3,105,161,.12); color:#0369a1; border:1px solid rgba(3,105,161,.3); }
+.btn-blue:hover{ background:#0369a1; color:white; }
+.btn-red{ background:rgba(220,38,38,.1); color:#dc2626; border:1px solid rgba(220,38,38,.25); }
+.btn-red:hover{ background:var(--danger); color:white; }
+.btn-sm{ padding:4px 10px; font-size:11px; }
+.btn-xs{ padding:3px 8px; font-size:10px; }
+.btn-icon{ padding:5px; border-radius:4px; }
+
+/* MAIN */
+.main{ padding:20px 24px; max-width:1400px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
+
+/* KPI ROW */
+.kpi-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+.kpi-card{ background:var(--paper); border-radius:10px; padding:16px 18px; box-shadow:var(--shadow-sm); border:1px solid var(--line); position:relative; overflow:hidden; }
+.kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; }
+.kpi-card.k-total::before{ background:linear-gradient(90deg,#b45309,#d97706); }
+.kpi-card.k-ok::before{ background:linear-gradient(90deg,#059669,#34d399); }
+.kpi-card.k-out::before{ background:linear-gradient(90deg,#0369a1,#38bdf8); }
+.kpi-card.k-repair::before{ background:linear-gradient(90deg,#dc2626,#f87171); }
+.kpi-card.k-value::before{ background:linear-gradient(90deg,#7c3aed,#a78bfa); }
+.kpi-label{ font-size:10px; color:var(--ink3); letter-spacing:.5px; text-transform:uppercase; margin-bottom:5px; }
+.kpi-value{ font-size:22px; font-weight:600; font-family:var(--font-mono); letter-spacing:-0.5px; line-height:1; margin-bottom:3px; }
+.kpi-sub{ font-size:10px; color:var(--ink3); }
+
+/* PANEL */
+.panel{ background:var(--paper); border-radius:10px; box-shadow:var(--shadow-sm); border:1px solid var(--line); overflow:hidden; }
+.panel-header{ padding:13px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; background:#faf9f7; }
+.panel-title{ font-size:13px; font-weight:600; color:var(--ink); }
+
+/* INVENTORY TABLE */
+.inv-table-wrap{ overflow-x:auto; }
+.inv-table{ width:100%; border-collapse:collapse; min-width:900px; }
+.inv-table th{ padding:8px 14px; font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; text-align:left; background:#faf9f7; border-bottom:1px solid var(--line); white-space:nowrap; }
+.inv-table td{ padding:11px 14px; border-bottom:1px solid var(--line); font-size:12px; vertical-align:middle; }
+.inv-table tr:last-child td{ border-bottom:none; }
+.inv-table tr:hover td{ background:#faf9f7; }
+.item-name{ font-weight:500; color:var(--ink); }
+.item-code{ font-size:10px; color:var(--ink3); font-family:var(--font-mono); }
+.cat-badge{ display:inline-flex; align-items:center; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:500; white-space:nowrap; }
+
+/* 預設分類顏色 */
+.cat-攝影機{ background:rgba(180,83,9,.1); color:#b45309; }
+.cat-鏡頭{ background:rgba(3,105,161,.1); color:#0369a1; }
+.cat-燈光{ background:rgba(124,58,237,.1); color:#7c3aed; }
+.cat-收音{ background:rgba(5,150,105,.1); color:#059669; }
+.cat-配件{ background:rgba(190,24,93,.1); color:#be185d; }
+.cat-支撐{ background:rgba(120,113,108,.1); color:#57534e; }
+/* 自訂分類 */
+[class^="cat-"]:not(.cat-攝影機):not(.cat-鏡頭):not(.cat-燈光):not(.cat-收音):not(.cat-配件):not(.cat-支撐) {
+  background: rgba(88,28,135,.1); color: #7c3aed;
+}
+
+.status-dot{ width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px; }
+.status-badge{ display:inline-flex; align-items:center; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:500; white-space:nowrap; }
+.s-在庫{ background:rgba(5,150,105,.1); color:#059669; }
+.s-借出{ background:rgba(3,105,161,.1); color:#0369a1; }
+.s-維修中{ background:rgba(220,38,38,.1); color:#dc2626; }
+.s-報廢{ background:rgba(120,113,108,.1); color:#78716c; }
+.qty-cell{ font-family:var(--font-mono); font-size:12px; }
+.qty-avail{ color:var(--success); font-weight:500; }
+.qty-low{ color:var(--danger); }
+.price-cell{ font-family:var(--font-mono); font-size:11px; color:var(--ink2); display:flex; flex-direction:column; }
+.td-actions{ display:flex; gap:4px; justify-content:flex-end; white-space:nowrap; }
+.empty-state{ padding:48px 20px; text-align:center; }
+.empty-icon{ font-size:32px; margin-bottom:10px; opacity:.4; }
+.empty-title{ font-size:13px; font-weight:500; color:var(--ink2); margin-bottom:4px; }
+.empty-sub{ font-size:11px; color:var(--ink3); }
+
+/* LOAN LIST */
+.loan-row{ display:grid; grid-template-columns:1fr 130px 120px 110px 120px 100px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
+.loan-row:last-child{ border-bottom:none; }
+.loan-row:hover{ background:#faf9f7; }
+.loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#faf9f7; }
+.overdue-tag{ font-size:9px; background:rgba(220,38,38,.1); color:#dc2626; padding:1px 6px; border-radius:20px; font-weight:500; }
+
+/* MODAL */
+.overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
+.overlay.open{ display:flex; }
+.modal{ background:var(--paper); border-radius:12px; width:520px; box-shadow:0 20px 60px rgba(0,0,0,.3); overflow:hidden; max-height:90vh; overflow-y:auto; }
+.modal-wide{ width:600px; }
+.modal-header{ background:var(--panel); color:#fafaf9; padding:15px 20px; display:flex; align-items:center; justify-content:space-between; }
+.modal-title{ font-size:14px; font-weight:600; }
+.modal-body{ padding:20px; display:flex; flex-direction:column; gap:13px; }
+.modal-footer{ padding:14px 20px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px; }
+.field{ display:flex; flex-direction:column; gap:5px; }
+.field label{ font-size:11px; font-weight:500; color:var(--ink2); }
+.field input,.field select,.field textarea{ background:#f9f7f4; border:1px solid var(--line); border-radius:var(--r); padding:7px 10px; font-size:12px; font-family:inherit; color:var(--ink); outline:none; transition:.15s; width:100%; box-sizing:border-box; }
+.field input:focus,.field select:focus,.field textarea:focus{ border-color:var(--acc); box-shadow:0 0 0 3px rgba(180,83,9,.08); background:white; }
+.field-row{ display:grid; gap:12px; }
+.field-row.col2{ grid-template-columns:1fr 1fr; }
+.field-row.col3{ grid-template-columns:1fr 1fr 1fr; }
+.field-hint{ font-size:10px; color:var(--ink3); margin-top:2px; }
+.section-divider{ font-size:10px; font-weight:600; color:var(--ink3); letter-spacing:.5px; text-transform:uppercase; padding-bottom:4px; border-bottom:1px solid var(--line); }
+
+/* TOAST */
+.toast-container{ position:fixed; bottom:24px; right:24px; z-index:600; display:flex; flex-direction:column; gap:8px; }
+.toast{ background:var(--panel); color:#e7e5e4; padding:10px 16px; border-radius:var(--r); font-size:12px; box-shadow:0 4px 16px rgba(0,0,0,.3); display:flex; align-items:center; gap:8px; animation:slideIn .2s ease; border-left:3px solid var(--acc); }
+.toast.ok{ border-left-color:#059669; }
+.toast.err{ border-left-color:#dc2626; }
+@keyframes slideIn{ from{transform:translateX(20px);opacity:0} }
+
+/* REPAIR LOG */
+.log-item{ padding:8px 12px; border-radius:var(--r); background:#f9f7f4; border:1px solid var(--line); font-size:11px; }
+.log-date{ font-size:10px; color:var(--ink3); font-family:var(--font-mono); }
+
+/* QR SCANNER */
+#reader { width: 100%; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #000; }
+#reader video { object-fit: cover; }
+
+@media(max-width:1100px){ .kpi-row{grid-template-columns:repeat(3,1fr);} }
+@media(max-width:800px){ .kpi-row{grid-template-columns:repeat(2,1fr);} }
+</style>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
+    authDomain: "company-system-6ea1a.firebaseapp.com",
+    projectId: "company-system-6ea1a"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) window.location.href = 'login.html';
+  });
+
+  window.logout = function() {
+    signOut(auth).then(() => { window.location.href = 'login.html'; });
+  };
+</script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand"><div class="brand-dot"></div>公司管理系統</div>
+  <div class="topbar-nav">
+    <a href="index.html" class="nav-tab">報價單</a>
+    <a href="project.html" class="nav-tab">專案進度</a>
+    <a href="cost.html" class="nav-tab">成本計算</a>
+    <a href="inventory.html" class="nav-tab active">器材庫存</a>
+    <a href="contacts.html" class="nav-tab">客戶與廠商管理</a>
+  </div>
+  <div class="topbar-actions">
+    <span style="font-size:10px;color:#78716c;display:flex;align-items:center;gap:5px;">
+      <span class="sync-dot" id="sync-dot"></span>
+      <span id="sync-text">連線中...</span>
+    </span>
+    <button class="btn btn-green btn-sm" onclick="openScanner()">📷 掃描借還</button>
+    <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
+    <button class="btn btn-ghost btn-sm" onclick="openExcelImport()">📥 Excel 匯入</button>
+    <button class="btn btn-ghost btn-sm" onclick="openLoanModal()">📤 借出器材</button>
+    <button class="btn btn-amber btn-sm" onclick="openItemModal()">＋ 新增器材</button>
+    <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
+    <button class="btn btn-ghost" style="color: #fca5a5; border-color: rgba(220,38,38,0.3); padding: 4px 10px;" onclick="logout()">登出</button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="tg">
+    <span class="tg-label">狀態篩選</span>
+    <button class="view-pill on" onclick="setFilter('status','all',this)">全部</button>
+    <button class="view-pill" onclick="setFilter('status','在庫',this)">在庫</button>
+    <button class="view-pill" onclick="setFilter('status','借出',this)">借出中</button>
+    <button class="view-pill" onclick="setFilter('status','維修中',this)">維修中</button>
+    <button class="view-pill" onclick="setFilter('status','報廢',this)">報廢</button>
+  </div>
+  <div class="tg" id="cat-filter-container">
+    </div>
+  <div class="tg">
+    <span class="tg-label">搜尋</span>
+    <input type="text" id="inv-search" placeholder="器材名稱..." oninput="renderAll()"
+      style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:3px 8px;font-size:11px;color:#d6d3d1;outline:none;font-family:inherit;width:110px;">
+  </div>
+  <div class="tg">
+    <span class="tg-label">Firebase</span>
+    <button class="view-pill" id="fb-status-pill">載入中</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="kpi-row" id="kpi-row">
+    <div class="kpi-card k-total"><div class="kpi-label">器材總數</div><div class="kpi-value" id="k-total">—</div><div class="kpi-sub" id="k-total-sub">所有品項</div></div>
+    <div class="kpi-card k-ok"><div class="kpi-label">可用中</div><div class="kpi-value" id="k-ok" style="color:#059669">—</div><div class="kpi-sub" id="k-ok-sub">狀態在庫</div></div>
+    <div class="kpi-card k-out"><div class="kpi-label">借出中</div><div class="kpi-value" id="k-out" style="color:#0369a1">—</div><div class="kpi-sub" id="k-out-sub">等待歸還</div></div>
+    <div class="kpi-card k-repair"><div class="kpi-label">維修中</div><div class="kpi-value" id="k-repair" style="color:#dc2626">—</div><div class="kpi-sub" id="k-repair-sub">送修品項</div></div>
+    <div class="kpi-card k-value"><div class="kpi-label">總資產估值</div><div class="kpi-value" id="k-value" style="color:#7c3aed;font-size:14px;">—</div><div class="kpi-sub" id="k-value-sub">現值合計</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">器材清單</span>
+      <span style="font-size:11px;color:var(--ink3);" id="item-count-label">共 0 項</span>
+    </div>
+    <div class="inv-table-wrap">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>器材名稱</th>
+            <th>類別</th>
+            <th>狀態</th>
+            <th>數量</th>
+            <th>可用</th>
+            <th>購入價</th>
+            <th>日租金 / 行情</th>
+            <th>購入日期</th>
+            <th style="text-align:right;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="inv-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">借出紀錄</span>
+        <button class="btn btn-ghost-dark btn-xs" onclick="openLoanModal()">＋ 新增借出</button>
+      </div>
+      <div class="loan-row loan-header">
+        <div>器材</div>
+        <div>借用人</div>
+        <div>借出日</div>
+        <div>預計歸還</div>
+        <div>連結專案</div>
+        <div></div>
+      </div>
+      <div id="loan-list">
+        <div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">目前無借出紀錄</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">維修保養紀錄</span>
+        <button class="btn btn-ghost-dark btn-xs" onclick="openRepairModal()">＋ 新增紀錄</button>
+      </div>
+      <div id="repair-list" style="padding:12px 18px;display:flex;flex-direction:column;gap:8px;">
+        <div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">目前無維修紀錄</div></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<div class="overlay" id="confirm-overlay">
+  <div class="modal" style="width:340px;">
+    <div class="modal-header"><span class="modal-title">確認操作</span></div>
+    <div class="modal-body" style="padding:20px 20px 10px;">
+      <p id="confirm-msg" style="font-size:13px;color:var(--ink);line-height:1.6;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" id="confirm-cancel">取消</button>
+      <button class="btn btn-red" id="confirm-ok">確定</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="item-overlay" onclick="closeItemIfBg(event)">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <span class="modal-title" id="item-modal-title">新增器材</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeItemModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="item-id">
+
+      <div class="section-divider">基本資訊</div>
+      <div class="field">
+        <label>器材名稱 *</label>
+        <input type="text" id="item-name" placeholder="例：Sony A7IV 機身、Aputure 300d 燈具">
+      </div>
+      <div class="field-row col3">
+        <div class="field">
+          <label>類別</label>
+          <div style="display:flex;gap:6px;">
+            <select id="item-cat" style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;"></select>
+            <button class="btn btn-ghost-dark btn-sm" onclick="openInvCatManager()" title="管理自訂分類">⚙</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>品牌</label>
+          <input type="text" id="item-brand" placeholder="Sony、Canon...">
+        </div>
+        <div class="field">
+          <label>型號 / 編號</label>
+          <input type="text" id="item-code" placeholder="序號或自訂編號">
+        </div>
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>數量（總計）</label>
+          <input type="number" id="item-qty" value="1" min="1">
+        </div>
+        <div class="field">
+          <label>狀態</label>
+          <select id="item-status">
+            <option value="在庫">在庫</option>
+            <option value="借出">借出</option>
+            <option value="維修中">維修中</option>
+            <option value="報廢">報廢</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-divider" style="margin-top:4px;">財務資訊 & 行情比價</div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>購入價格（NT$）</label>
+          <input type="number" id="item-buy-price" placeholder="0" min="0">
+        </div>
+        <div class="field">
+          <label>現值估算（NT$）</label>
+          <input type="number" id="item-cur-value" placeholder="0" min="0">
+          <span class="field-hint">用於資產估值統計</span>
+        </div>
+      </div>
+      
+      <div class="field-row col2" style="background:rgba(180,83,9,.03); padding:10px; border-radius:6px; border:1px solid rgba(180,83,9,.15);">
+        <div class="field">
+          <label>日租金（NT$／天）</label>
+          <input type="number" id="item-day-rate" placeholder="0" min="0" oninput="checkRate()">
+        </div>
+        <div class="field">
+          <label>市場參考行情（NT$）</label>
+          <input type="number" id="item-market-rate" placeholder="輸入行情供系統比價" min="0" oninput="checkRate()">
+          <div id="rate-warning" style="font-size:10px; margin-top:3px; font-weight:600;"></div>
+        </div>
+      </div>
+      
+      <div class="field" style="background:#fff; padding:10px; border-radius:6px; border:1px dashed var(--line);">
+        <label style="color:var(--acc)">🔍 行情快速查詢</label>
+        <div style="font-size:10px; color:var(--ink3); margin-bottom:6px;">受限於網頁安全機制，系統無法直接抓取外部網站價格。請點擊下方按鈕，系統會帶入「器材名稱」自動在新分頁搜尋行情：</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-ghost-dark btn-sm" onclick="quickSearch('google')">Google 搜尋</button>
+          <button class="btn btn-ghost-dark btn-sm" onclick="quickSearch('merry')">旋轉木馬</button>
+          <button class="btn btn-ghost-dark btn-sm" onclick="quickSearch('camera')">攝手座</button>
+          <button class="btn btn-ghost-dark btn-sm" onclick="quickSearch('lens')">鏡頭銀行</button>
+        </div>
+      </div>
+
+      <div class="field-row col2">
+        <div class="field">
+          <label>購入日期</label>
+          <input type="date" id="item-buy-date">
+        </div>
+        <div class="field">
+          <label>保固到期</label>
+          <input type="date" id="item-warranty">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>備註</label>
+        <textarea id="item-note" rows="2" placeholder="配件清單、注意事項..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="closeItemModal()">取消</button>
+      <button class="btn btn-amber" onclick="saveItem()">儲存器材</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="loan-overlay" onclick="closeLoanIfBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="loan-modal-title">借出器材</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeLoanModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="loan-id">
+      <div class="field">
+        <label>器材 *</label>
+        <select id="loan-item-id"></select>
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>借用數量</label>
+          <input type="number" id="loan-qty" value="1" min="1">
+        </div>
+        <div class="field">
+          <label>借用人 *</label>
+          <input type="text" id="loan-borrower" placeholder="姓名">
+        </div>
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>借出日期</label>
+          <input type="date" id="loan-out-date">
+        </div>
+        <div class="field">
+          <label>預計歸還日</label>
+          <input type="date" id="loan-return-date">
+        </div>
+      </div>
+      <div class="field">
+        <label>連結專案（選填）</label>
+        <select id="loan-proj-id">
+          <option value="">— 不連結 —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>連動成本計算</label>
+        <select id="loan-cost-mode">
+          <option value="none">不計費</option>
+          <option value="auto">依日租金自動計算（借還天數 × 日租金）</option>
+          <option value="fixed">固定金額</option>
+        </select>
+      </div>
+      <div class="field" id="loan-fixed-amount-field" style="display:none;">
+        <label>固定金額（NT$）</label>
+        <input type="number" id="loan-fixed-amount" placeholder="0" min="0">
+      </div>
+      <div class="field">
+        <label>備註</label>
+        <input type="text" id="loan-note" placeholder="選填">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="closeLoanModal()">取消</button>
+      <button class="btn btn-amber" onclick="saveLoan()">確認借出</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="excel-overlay" onclick="closeExcelIfBg(event)">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <span class="modal-title">📥 Excel 匯入器材</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeExcelImport()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="section-divider">匯入說明</div>
+      <p style="font-size:11px;color:var(--ink2);line-height:1.7;">
+        請上傳 <strong>.xlsx / .xls</strong> 檔案，第一列為標題列，從第二列開始為資料。<br>
+        欄位順序（可部分填寫）：
+      </p>
+      <div style="background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-size:10px;font-family:var(--font-mono);color:var(--ink2);line-height:1.8;">
+        A: 器材名稱 *&nbsp;&nbsp;&nbsp;B: 類別&nbsp;&nbsp;&nbsp;C: 品牌&nbsp;&nbsp;&nbsp;D: 型號/編號&nbsp;&nbsp;&nbsp;E: 數量<br>
+        F: 狀態&nbsp;&nbsp;&nbsp;G: 購入價&nbsp;&nbsp;&nbsp;H: 現值&nbsp;&nbsp;&nbsp;I: 日租金&nbsp;&nbsp;&nbsp;J: 購入日&nbsp;&nbsp;&nbsp;K: 保固期&nbsp;&nbsp;&nbsp;L: 備註<br>
+        M: 市場行情(選填)
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-ghost-dark btn-sm" onclick="downloadItemTemplate()">⬇ 下載範本</button>
+        <button class="btn btn-ghost-dark btn-sm" onclick="exportItemsExcel()">⬇ 匯出現有器材</button>
+      </div>
+      <div class="section-divider" style="margin-top:4px;">選擇檔案</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <label class="btn btn-blue btn-sm" style="cursor:pointer;">
+          📂 選擇 Excel 檔案
+          <input type="file" id="item-excel-input" accept=".xlsx,.xls" style="display:none;" onchange="importItemExcel(event)">
+        </label>
+        <span id="item-excel-filename" style="font-size:11px;color:var(--ink3);">尚未選擇檔案</span>
+      </div>
+      <div id="item-import-msg" style="font-size:12px;padding:8px 12px;border-radius:var(--r);display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="closeExcelImport()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="repair-overlay" onclick="closeRepairIfBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">新增維修保養紀錄</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeRepairModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>器材 *</label>
+        <select id="repair-item-id"></select>
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>類型</label>
+          <select id="repair-type">
+            <option value="維修">維修</option>
+            <option value="保養">保養</option>
+            <option value="清潔">清潔</option>
+            <option value="校正">校正</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>日期</label>
+          <input type="date" id="repair-date">
+        </div>
+      </div>
+      <div class="field">
+        <label>送修廠商 / 執行人</label>
+        <input type="text" id="repair-vendor" placeholder="廠商名稱或自行保養">
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>費用（NT$）</label>
+          <input type="number" id="repair-cost" placeholder="0" min="0">
+        </div>
+        <div class="field">
+          <label>完成後狀態</label>
+          <select id="repair-after-status">
+            <option value="在庫">恢復在庫</option>
+            <option value="維修中">仍在維修</option>
+            <option value="報廢">報廢</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>說明</label>
+        <textarea id="repair-note" rows="2" placeholder="故障原因、維修內容..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="closeRepairModal()">取消</button>
+      <button class="btn btn-amber" onclick="saveRepair()">儲存紀錄</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="inv-cat-overlay" onclick="closeInvCatIfBg(event)">
+  <div class="modal" style="width:380px;">
+    <div class="modal-header">
+      <span class="modal-title">管理器材分類</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeInvCatManager()">✕</button>
+    </div>
+    <div class="modal-body" style="gap:14px;">
+      <div style="font-size:11px;color:var(--ink3);">自訂分類將儲存於系統中，方便您建立器材時快速選取。</div>
+      <div id="inv-cat-list" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;"></div>
+      <div style="border-top:1px solid var(--line);padding-top:12px;display:flex;gap:8px;align-items:center;">
+        <input type="text" id="new-inv-cat-input" placeholder="輸入新分類名稱..." maxlength="12"
+          style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;"
+          onkeydown="if(event.key==='Enter')addCustomInvCat()">
+        <button class="btn btn-amber btn-sm" onclick="addCustomInvCat()">＋ 新增</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-amber" onclick="closeInvCatManager()">完成</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="qrcode-overlay" onclick="closeQRCodeIfBg(event)">
+  <div class="modal" style="width:300px; text-align:center;">
+    <div class="modal-header">
+      <span class="modal-title">器材 QR Code</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeQRCode()">✕</button>
+    </div>
+    <div class="modal-body" style="align-items:center;">
+      <div style="font-size:14px; font-weight:600; margin-bottom:10px;" id="qr-item-name"></div>
+      <div id="qrcode-box" style="padding:10px; background:white; border-radius:8px; display:inline-block;"></div>
+      <div style="font-size:11px; color:var(--ink3); margin-top:10px;">請截圖或列印此條碼，並貼於器材上。<br>使用「手機掃描借還」功能時即可自動辨識。</div>
+    </div>
+    <div class="modal-footer" style="justify-content:center;">
+      <button class="btn btn-ghost-dark" onclick="closeQRCode()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="scanner-overlay" onclick="closeScannerIfBg(event)">
+  <div class="modal" style="width:400px;">
+    <div class="modal-header">
+      <span class="modal-title">📷 掃描器材 QR Code</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeScanner()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0; background:#000;">
+      <div id="reader"></div>
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:11px; color:var(--ink3); flex:1;">請允許瀏覽器使用相機權限，並將鏡頭對準器材標籤。</div>
+      <button class="btn btn-ghost-dark" onclick="closeScanner()">取消</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* =============================================
+   STATE
+   ============================================= */
+let items   = [];   
+let loans   = [];   
+let repairs = [];   
+let projects = [];  
+let costItems = []; 
+
+let filterStatus = 'all';
+let filterCat    = 'all';
+
+/* =============================================
+   FIREBASE
+   ============================================= */
+const FB_CONFIG = {
+  apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
+  authDomain: "company-system-6ea1a.firebaseapp.com",
+  projectId: "company-system-6ea1a",
+  storageBucket: "company-system-6ea1a.firebasestorage.app",
+  messagingSenderId: "865462311535",
+  appId: "1:865462311535:web:033e059bc0e86fa902cb9a"
+};
+let fbDb = null, fbReady = false;
+
+async function initData() {
+  try {
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+    const { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } =
+      await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+    
+    // Check if window._fbDb exists from module script
+    let waited = 0;
+    while (!window._fbDb && waited < 5000) {
+      await new Promise(r => setTimeout(r, 100));
+      waited += 100;
+    }
+
+    if(window._fbDb) {
+       fbDb = window._fbDb;
+       window._invFb = { collection, getDocs, doc, setDoc, deleteDoc, fbDb };
+       fbReady = true;
+       setSyncStatus('ok','已連線');
+       setPill('ok');
+       await loadAll();
+    } else {
+       throw new Error("Firebase not initialized");
+    }
+  } catch(e) {
+    console.warn('Firebase error:', e);
+    setSyncStatus('err','離線模式');
+    setPill('offline');
+    loadLocal();
+  }
+  
+  // 載入分類過濾器
+  renderInvCatFilters();
+  renderAll();
+}
+
+async function loadAll() {
+  const { collection, getDocs, fbDb } = window._invFb;
+  const [is, ls, rs, ps, cs] = await Promise.all([
+    getDocs(collection(fbDb,'inv_items')),
+    getDocs(collection(fbDb,'inv_loans')),
+    getDocs(collection(fbDb,'inv_repairs')),
+    getDocs(collection(fbDb,'cost_projects')),
+    getDocs(collection(fbDb,'cost_items')),
+  ]);
+  items    = []; is.forEach(d => items.push({id:d.id,...d.data()}));
+  loans    = []; ls.forEach(d => loans.push({id:d.id,...d.data()}));
+  repairs  = []; rs.forEach(d => repairs.push({id:d.id,...d.data()}));
+  projects = []; ps.forEach(d => projects.push({id:d.id,...d.data()}));
+  costItems= []; cs.forEach(d => costItems.push({id:d.id,...d.data()}));
+  saveLocal();
+}
+
+async function fbSet(col, id, data) {
+  if(!fbReady){ saveLocal(); return; }
+  setSyncStatus('syncing','同步中...');
+  const { doc, setDoc, fbDb } = window._invFb;
+  await setDoc(doc(fbDb, col, id), data);
+  setSyncStatus('ok','已同步'); saveLocal();
+}
+async function fbDel(col, id) {
+  if(!fbReady){ saveLocal(); return; }
+  const { doc, deleteDoc, fbDb } = window._invFb;
+  await deleteDoc(doc(fbDb, col, id)); saveLocal();
+}
+
+function saveLocal() {
+  localStorage.setItem('inv_items',   JSON.stringify(items));
+  localStorage.setItem('inv_loans',   JSON.stringify(loans));
+  localStorage.setItem('inv_repairs', JSON.stringify(repairs));
+  localStorage.setItem('cost_projects', JSON.stringify(projects));
+  localStorage.setItem('cost_items',  JSON.stringify(costItems));
+}
+function loadLocal() {
+  items    = JSON.parse(localStorage.getItem('inv_items')   || '[]');
+  loans    = JSON.parse(localStorage.getItem('inv_loans')   || '[]');
+  repairs  = JSON.parse(localStorage.getItem('inv_repairs') || '[]');
+  projects = JSON.parse(localStorage.getItem('cost_projects') || '[]');
+  costItems= JSON.parse(localStorage.getItem('cost_items')  || '[]');
+}
+
+function setSyncStatus(state, text) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  dot.className = 'sync-dot'+(state==='ok'?' ok':state==='syncing'?' syncing':'');
+  txt.textContent = text;
+}
+function setPill(state) {
+  const p = document.getElementById('fb-status-pill');
+  if(state==='ok'){ p.textContent='Firebase ✓'; p.style.color='#34d399'; p.style.borderColor='#34d399'; }
+  else{ p.textContent='本機模式'; p.style.color='#d97706'; p.style.borderColor='#d97706'; }
+}
+
+/* =============================================
+   CATEGORY MANAGEMENT (自訂分類)
+   ============================================= */
+const DEFAULT_INV_CATS = ['攝影機', '鏡頭', '燈光', '收音', '配件', '支撐', '其他'];
+
+function getCustomInvCats() {
+  try { return JSON.parse(localStorage.getItem('inv_custom_cats') || '[]'); } catch(e) { return []; }
+}
+function saveCustomInvCats(cats) {
+  localStorage.setItem('inv_custom_cats', JSON.stringify(cats));
+}
+function getAllInvCats() {
+  return [...DEFAULT_INV_CATS, ...getCustomInvCats()];
+}
+
+// 產生上方的篩選按鈕
+function renderInvCatFilters() {
+  const container = document.getElementById('cat-filter-container');
+  const allCats = getAllInvCats();
+  
+  let html = `<span class="tg-label">類別</span>`;
+  html += `<button class="view-pill ${filterCat==='all'?'on':''}" onclick="setFilter('cat','all',this)">全部</button>`;
+  
+  allCats.forEach(cat => {
+    html += `<button class="view-pill ${filterCat===cat?'on':''}" onclick="setFilter('cat','${cat}',this)">${cat}</button>`;
+  });
+  
+  container.innerHTML = html;
+}
+
+// 產生 Modal 裡的下拉選單
+function populateInvCatSelect(currentValue) {
+  const sel = document.getElementById('item-cat');
+  if (!sel) return;
+  const cats = getAllInvCats();
+  let opts = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  
+  // 避免現有資料分類被刪除後找不到
+  if (currentValue && !cats.includes(currentValue)) {
+    opts += `<option value="${currentValue}">${currentValue}</option>`;
+  }
+  
+  sel.innerHTML = opts;
+  if (currentValue) sel.value = currentValue;
+}
+
+// 管理介面
+function openInvCatManager() {
+  renderInvCatList();
+  document.getElementById('inv-cat-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('new-inv-cat-input').focus(), 100);
+}
+function closeInvCatManager() {
+  document.getElementById('inv-cat-overlay').classList.remove('open');
+  populateInvCatSelect(document.getElementById('item-cat').value);
+  renderInvCatFilters();
+}
+function closeInvCatIfBg(e) { if(e.target === document.getElementById('inv-cat-overlay')) closeInvCatManager(); }
+
+function renderInvCatList() {
+  const customs = getCustomInvCats();
+  const list = document.getElementById('inv-cat-list');
+
+  const allCats = [
+    ...DEFAULT_INV_CATS.map(c => ({name:c, custom:false})),
+    ...customs.map(c => ({name:c, custom:true}))
+  ];
+
+  list.innerHTML = allCats.map(({name, custom}) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r);background:${custom?'#faf9f7':'rgba(0,0,0,.03)'};border:1px solid var(--line);">
+      <span class="cat-badge cat-${name}" style="flex-shrink:0;">${name}</span>
+      <span style="flex:1;font-size:12px;color:var(--ink2);">${name}</span>
+      ${custom
+        ? `<button class="btn btn-red btn-xs" onclick="deleteCustomInvCat('${name}')">刪除</button>`
+        : `<span style="font-size:10px;color:var(--ink3);padding:2px 7px;border-radius:20px;background:rgba(0,0,0,.05);">預設</span>`
+      }
+    </div>
+  `).join('');
+}
+
+function addCustomInvCat() {
+  const input = document.getElementById('new-inv-cat-input');
+  const name = input.value.trim();
+  if(!name) return;
+  const all = getAllInvCats();
+  if(all.includes(name)) { showToast('此分類已存在', 'err'); return; }
+  
+  const customs = getCustomInvCats(); 
+  customs.push(name);
+  saveCustomInvCats(customs);
+  
+  input.value = '';
+  renderInvCatList();
+  showToast(`✓ 已新增分類「${name}」`);
+}
+
+function deleteCustomInvCat(name) {
+  if(!confirm(`確定刪除分類「${name}」？\n這不會影響已經建立的器材。`)) return;
+  saveCustomInvCats(getCustomInvCats().filter(c => c !== name));
+  renderInvCatList();
+  showToast(`已刪除分類「${name}」`);
+}
+
+/* =============================================
+   FILTER
+   ============================================= */
+function setFilter(type, val, el) {
+  if(type==='status') {
+    filterStatus = val;
+    document.querySelectorAll('.tg:first-child .view-pill').forEach(b=>b.classList.remove('on'));
+  } else {
+    filterCat = val;
+    document.querySelectorAll('#cat-filter-container .view-pill').forEach(b=>b.classList.remove('on'));
+  }
+  el.classList.add('on');
+  renderAll();
+}
+
+function getFiltered() {
+  const q = (document.getElementById('inv-search')?.value||'').toLowerCase();
+  return items.filter(it => {
+    const matchStatus = filterStatus==='all' || it.status===filterStatus;
+    const matchCat    = filterCat==='all'    || it.cat===filterCat;
+    const matchQ      = !q || it.name.toLowerCase().includes(q) || (it.brand||'').toLowerCase().includes(q) || (it.code||'').toLowerCase().includes(q);
+    return matchStatus && matchCat && matchQ;
+  }).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+}
+
+/* =============================================
+   RENDER ALL
+   ============================================= */
+function renderAll() {
+  renderKPI();
+  renderTable();
+  renderLoans();
+  renderRepairs();
+}
+
+/* =============================================
+   KPI
+   ============================================= */
+function renderKPI() {
+  const total  = items.length;
+  // ★ 狀態已改為在庫
+  const ok     = items.filter(i=>i.status==='在庫').length;
+  const out    = items.filter(i=>i.status==='借出').length;
+  const repair = items.filter(i=>i.status==='維修中').length;
+  const value  = items.reduce((a,i)=>(a+(+i.curValue||+i.buyPrice||0)),0);
+
+  document.getElementById('k-total').textContent = total;
+  document.getElementById('k-total-sub').textContent = `共 ${total} 件器材`;
+  document.getElementById('k-ok').textContent = ok;
+  document.getElementById('k-ok-sub').textContent = `${ok} 件可使用`;
+  document.getElementById('k-out').textContent = out;
+  document.getElementById('k-out-sub').textContent = out ? `${out} 件待歸還` : '無借出';
+  document.getElementById('k-repair').textContent = repair;
+  document.getElementById('k-repair-sub').textContent = repair ? `${repair} 件送修` : '無維修';
+  document.getElementById('k-value').textContent = value ? 'NT$'+Math.round(value).toLocaleString() : '—';
+  document.getElementById('k-value-sub').textContent = '現值合計';
+}
+
+/* =============================================
+   RATE WARNING SYSTEM (行情警示與快速查價)
+   ============================================= */
+function checkRate() {
+  const myRate = parseFloat(document.getElementById('item-day-rate').value) || 0;
+  const mktRate = parseFloat(document.getElementById('item-market-rate').value) || 0;
+  const warnEl = document.getElementById('rate-warning');
+
+  if (!myRate || !mktRate) {
+    warnEl.textContent = '';
+    return;
+  }
+
+  const ratio = myRate / mktRate;
+  if (ratio > 1.2) {
+    warnEl.innerHTML = '<span style="color:#dc2626">▲ 偏高 (高於行情 20% 以上)</span>';
+  } else if (ratio < 0.8) {
+    warnEl.innerHTML = '<span style="color:#b45309">▼ 偏低 (低於行情 20% 以上)</span>';
+  } else {
+    warnEl.innerHTML = '<span style="color:#059669">✓ 價格合理</span>';
+  }
+}
+
+// 快速查價按鈕功能
+function quickSearch(site) {
+  const name = document.getElementById('item-name').value.trim();
+  if(!name) { 
+    showToast('請先輸入上方「器材名稱」再點擊搜尋', 'err'); 
+    return; 
+  }
+  
+  let url = '';
+  if (site === 'google') {
+    url = `https://www.google.com/search?q=${encodeURIComponent(name + ' 租借 價格')}`;
+  } else if (site === 'merry') {
+    // 旋轉木馬站內搜尋
+    url = `https://www.google.com/search?q=site:merrygoround.com.tw+${encodeURIComponent(name)}`;
+  } else if (site === 'camera') {
+    // 攝手座站內搜尋
+    url = `https://www.google.com/search?q=site:camerarental.com.tw+${encodeURIComponent(name)}`;
+  } else if (site === 'lens') {
+    // 鏡頭銀行站內搜尋
+    url = `https://www.google.com/search?q=site:lensbank.com.tw+${encodeURIComponent(name)}`;
+  }
+  
+  if(url) window.open(url, '_blank');
+}
+
+function getRateBadge(myRate, mktRate) {
+  if(!myRate || !mktRate) return '';
+  const ratio = myRate / mktRate;
+  if(ratio > 1.2) return '<div style="color:#dc2626;font-size:9px;">▲ 高於行情</div>';
+  if(ratio < 0.8) return '<div style="color:#b45309;font-size:9px;">▼ 低於行情</div>';
+  return '<div style="color:#059669;font-size:9px;">✓ 合理</div>';
+}
+
+/* =============================================
+   INVENTORY TABLE
+   ============================================= */
+function renderTable() {
+  const filtered = getFiltered();
+  document.getElementById('item-count-label').textContent = `共 ${filtered.length} 項`;
+  const tbody = document.getElementById('inv-tbody');
+  if(!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📷</div><div class="empty-title">查無器材</div><div class="empty-sub">調整篩選條件，或點右上角「新增器材」</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(it => {
+    const activeLoanQty = loans.filter(l=>l.itemId===it.id&&!l.returned).reduce((a,l)=>a+(+l.qty||1),0);
+    const avail = (+it.qty||1) - activeLoanQty;
+    const warrantyExpired = it.warranty && new Date(it.warranty) < new Date();
+    
+    // 如果沒有填行情，就不顯示按鈕；有才顯示快速 google 搜尋
+    const quickSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(it.name + ' 租金 攝影')}`;
+
+    return `<tr>
+      <td>
+        <div class="item-name">${it.name}</div>
+        <div class="item-code">${[it.brand, it.code].filter(Boolean).join(' · ')}</div>
+        ${it.warranty ? `<div style="font-size:9px;color:${warrantyExpired?'#dc2626':'var(--ink3)'};">${warrantyExpired?'⚠ 保固已到期':'保固至 '+it.warranty}</div>` : ''}
+      </td>
+      <td><span class="cat-badge cat-${it.cat||'其他'}">${it.cat||'其他'}</span></td>
+      <td><span class="status-badge s-${it.status||'在庫'}">${it.status||'在庫'}</span></td>
+      <td class="qty-cell">${it.qty||1}</td>
+      <td class="qty-cell ${avail<=0?'qty-low':'qty-avail'}">${avail}</td>
+      <td class="price-cell">${it.buyPrice?'NT$'+(+it.buyPrice).toLocaleString():'—'}</td>
+      <td class="price-cell">
+        <div style="display:flex; align-items:center;">
+          ${it.dayRate?'NT$'+(+it.dayRate).toLocaleString()+'/天':'—'}
+          <a href="${quickSearchUrl}" target="_blank" style="text-decoration:none; margin-left:4px; font-size:12px;" title="Google 搜尋市場行情">🔗</a>
+        </div>
+        ${getRateBadge(it.dayRate, it.marketRate)}
+      </td>
+      <td style="font-size:11px;color:var(--ink3);">${it.buyDate||'—'}</td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-ghost-dark btn-xs" onclick="openQRCode('${it.id}','${it.name.replace(/'/g, "\\'")}')" title="產生 QR Code 供手機掃描">🔲 QR</button>
+          <button class="btn btn-blue btn-xs" onclick="openLoanModal('${it.id}')">借出</button>
+          <button class="btn btn-ghost-dark btn-xs" onclick="openItemModal('${it.id}')">編</button>
+          <button class="btn btn-red btn-xs" onclick="deleteItem('${it.id}')">刪</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* =============================================
+   LOAN LIST
+   ============================================= */
+function renderLoans() {
+  const active = loans.filter(l=>!l.returned).sort((a,b)=>(a.returnDate||'').localeCompare(b.returnDate||''));
+  const wrap = document.getElementById('loan-list');
+  if(!active.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">目前無借出紀錄</div></div>`;
+    return;
+  }
+  const today = new Date().toISOString().slice(0,10);
+  wrap.innerHTML = active.map(l => {
+    const item = items.find(i=>i.id===l.itemId);
+    const proj = projects.find(p=>p.id===l.projId);
+    const overdue = l.returnDate && l.returnDate < today;
+    return `<div class="loan-row">
+      <div>
+        <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
+        ${l.note?`<div style="font-size:10px;color:var(--ink3);">${l.note}</div>`:''}
+      </div>
+      <div style="font-size:12px;">${l.borrower||'—'}</div>
+      <div style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);">${l.outDate||'—'}</div>
+      <div style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'} ${overdue?'<span class="overdue-tag">逾期</span>':''}</div>
+      <div style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
+      <div style="display:flex;gap:4px;">
+        <button class="btn btn-green btn-xs" onclick="returnLoan('${l.id}')">歸還</button>
+        <button class="btn btn-red btn-xs" onclick="deleteLoan('${l.id}')">刪</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* =============================================
+   REPAIR LIST
+   ============================================= */
+function renderRepairs() {
+  const sorted = [...repairs].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,20);
+  const wrap = document.getElementById('repair-list');
+  if(!sorted.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">目前無維修紀錄</div></div>`;
+    return;
+  }
+  wrap.innerHTML = sorted.map(r => {
+    const item = items.find(i=>i.id===r.itemId);
+    return `<div class="log-item">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div>
+          <span style="font-weight:500;">${item?item.name:'(已刪除)'}</span>
+          <span style="font-size:10px;color:var(--ink3);margin-left:6px;">${r.type||'維修'}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${r.cost?`<span style="font-size:10px;font-family:var(--font-mono);color:#dc2626;">NT$${(+r.cost).toLocaleString()}</span>`:''}
+          <button class="btn btn-red btn-xs" onclick="deleteRepair('${r.id}')">刪</button>
+        </div>
+      </div>
+      <div class="log-date">${r.date||'—'} ${r.vendor?'· '+r.vendor:''}</div>
+      ${r.note?`<div style="font-size:11px;color:var(--ink2);margin-top:3px;">${r.note}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+/* =============================================
+   ITEM CRUD
+   ============================================= */
+function openItemModal(itemId) {
+  const it = itemId ? items.find(i=>i.id===itemId) : null;
+  document.getElementById('item-modal-title').textContent = it ? '編輯器材' : '新增器材';
+  document.getElementById('item-id').value = it ? it.id : '';
+  document.getElementById('item-name').value = it ? it.name : '';
+  
+  populateInvCatSelect(it ? (it.cat||'攝影機') : '攝影機');
+  
+  document.getElementById('item-brand').value = it ? (it.brand||'') : '';
+  document.getElementById('item-code').value  = it ? (it.code||'') : '';
+  document.getElementById('item-qty').value   = it ? (it.qty||1) : 1;
+  // ★ 狀態改為在庫
+  document.getElementById('item-status').value= it ? (it.status||'在庫') : '在庫';
+  document.getElementById('item-buy-price').value  = it ? (it.buyPrice||'') : '';
+  document.getElementById('item-cur-value').value  = it ? (it.curValue||'') : '';
+  document.getElementById('item-day-rate').value   = it ? (it.dayRate||'') : '';
+  document.getElementById('item-market-rate').value = it ? (it.marketRate||'') : '';
+  document.getElementById('item-buy-date').value   = it ? (it.buyDate||'') : '';
+  document.getElementById('item-warranty').value   = it ? (it.warranty||'') : '';
+  document.getElementById('item-note').value  = it ? (it.note||'') : '';
+  
+  checkRate(); // 檢查一次價格警告
+
+  document.getElementById('item-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('item-name').focus(),100);
+}
+function closeItemModal() { document.getElementById('item-overlay').classList.remove('open'); }
+function closeItemIfBg(e) { if(e.target===document.getElementById('item-overlay')) closeItemModal(); }
+
+async function saveItem() {
+  const name = document.getElementById('item-name').value.trim();
+  if(!name){ showToast('請輸入器材名稱','err'); return; }
+  const id = document.getElementById('item-id').value || ('item_'+Date.now());
+  const it = {
+    id, name,
+    cat:        document.getElementById('item-cat').value,
+    brand:      document.getElementById('item-brand').value.trim(),
+    code:       document.getElementById('item-code').value.trim(),
+    qty:        +document.getElementById('item-qty').value||1,
+    status:     document.getElementById('item-status').value,
+    buyPrice:   +document.getElementById('item-buy-price').value||0,
+    curValue:   +document.getElementById('item-cur-value').value||0,
+    dayRate:    +document.getElementById('item-day-rate').value||0,
+    marketRate: +document.getElementById('item-market-rate').value||0,
+    buyDate:    document.getElementById('item-buy-date').value,
+    warranty:   document.getElementById('item-warranty').value,
+    note:       document.getElementById('item-note').value,
+    createdAt:  items.find(i=>i.id===id)?.createdAt || Date.now(),
+    updatedAt:  Date.now()
+  };
+  const idx = items.findIndex(i=>i.id===id);
+  if(idx>=0) items[idx]=it; else items.unshift(it);
+  await fbSet('inv_items', id, it);
+  closeItemModal();
+  showToast(`✓ 已儲存「${name}」`);
+  renderAll();
+}
+
+async function deleteItem(id) {
+  const it = items.find(i=>i.id===id);
+  if(!it) return;
+  showConfirm(`確定刪除器材「${it.name}」？相關借出紀錄不會刪除。`, async () => {
+    items = items.filter(i=>i.id!==id);
+    await fbDel('inv_items', id);
+    showToast('已刪除器材');
+    renderAll();
+  });
+}
+
+/* =============================================
+   LOAN CRUD
+   ============================================= */
+function openLoanModal(preItemId) {
+  document.getElementById('loan-id').value = '';
+  // 填入器材選單
+  const sel = document.getElementById('loan-item-id');
+  sel.innerHTML = items.map(it => `<option value="${it.id}" ${it.id===preItemId?'selected':''}>${it.name}${it.brand?' ('+it.brand+')':''}</option>`).join('');
+  if(preItemId) sel.value = preItemId;
+  // 填入專案選單
+  const psel = document.getElementById('loan-proj-id');
+  psel.innerHTML = `<option value="">— 不連結 —</option>` + projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  // 預設日期
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('loan-out-date').value = today;
+  document.getElementById('loan-return-date').value = '';
+  document.getElementById('loan-borrower').value = '';
+  document.getElementById('loan-qty').value = 1;
+  document.getElementById('loan-cost-mode').value = 'none';
+  document.getElementById('loan-fixed-amount').value = '';
+  document.getElementById('loan-fixed-amount-field').style.display = 'none';
+  document.getElementById('loan-note').value = '';
+  document.getElementById('loan-overlay').classList.add('open');
+}
+function closeLoanModal() { document.getElementById('loan-overlay').classList.remove('open'); }
+function closeLoanIfBg(e) { if(e.target===document.getElementById('loan-overlay')) closeLoanModal(); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loan-cost-mode').addEventListener('change', function() {
+    document.getElementById('loan-fixed-amount-field').style.display = this.value==='fixed' ? '' : 'none';
+  });
+});
+
+async function saveLoan() {
+  const itemId   = document.getElementById('loan-item-id').value;
+  const borrower = document.getElementById('loan-borrower').value.trim();
+  if(!itemId || !borrower){ showToast('請填寫器材和借用人','err'); return; }
+
+  const id = 'loan_'+Date.now();
+  const outDate    = document.getElementById('loan-out-date').value;
+  const returnDate = document.getElementById('loan-return-date').value;
+  const costMode   = document.getElementById('loan-cost-mode').value;
+  const projId     = document.getElementById('loan-proj-id').value;
+  const qty        = +document.getElementById('loan-qty').value||1;
+
+  const loan = {
+    id, itemId, borrower, qty,
+    outDate, returnDate,
+    projId: projId||'',
+    costMode,
+    fixedAmount: +document.getElementById('loan-fixed-amount').value||0,
+    note: document.getElementById('loan-note').value,
+    returned: false,
+    createdAt: Date.now()
+  };
+  loans.push(loan);
+
+  // 更新器材狀態為借出
+  const it = items.find(i=>i.id===itemId);
+  if(it && it.status==='在庫') {
+    it.status = '借出';
+    await fbSet('inv_items', it.id, it);
+  }
+
+  // 連動成本
+  if(projId && costMode !== 'none') {
+    await createCostEntry(loan, it);
+  }
+
+  await fbSet('inv_loans', id, loan);
+  closeLoanModal();
+  showToast(`✓ 已登記借出給「${borrower}」`);
+  renderAll();
+}
+
+async function createCostEntry(loan, item) {
+  if(!item) return;
+  let amount = 0;
+  if(loan.costMode === 'fixed') {
+    amount = loan.fixedAmount;
+  } else if(loan.costMode === 'auto' && item.dayRate && loan.outDate && loan.returnDate) {
+    const days = Math.max(1, Math.round((new Date(loan.returnDate)-new Date(loan.outDate))/(1000*60*60*24)));
+    amount = days * item.dayRate * loan.qty;
+  }
+  if(!amount) return;
+  const ci = {
+    id: 'ci_inv_'+loan.id,
+    projId: loan.projId,
+    name: `器材：${item.name}${loan.qty>1?` ×${loan.qty}`:''}`,
+    type: '器材',
+    amount,
+    note: `借出給 ${loan.borrower}，${loan.outDate}～${loan.returnDate||'未定'}`,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    fromLoan: loan.id
+  };
+  costItems.push(ci);
+  await fbSet('cost_items', ci.id, ci);
+}
+
+async function returnLoan(id) {
+  const loan = loans.find(l=>l.id===id);
+  if(!loan) return;
+  const item = items.find(i=>i.id===loan.itemId);
+  showConfirm(`確認「${item?item.name:'器材'}」已歸還？`, async () => {
+    loan.returned = true;
+    loan.actualReturnDate = new Date().toISOString().slice(0,10);
+    await fbSet('inv_loans', id, loan);
+    // 若該器材無其他借出，改回在庫
+    const stillOut = loans.filter(l=>l.itemId===loan.itemId&&!l.returned&&l.id!==id).length;
+    if(item && !stillOut) {
+      item.status = '在庫';
+      await fbSet('inv_items', item.id, item);
+    }
+    showToast('✓ 已登記歸還');
+    renderAll();
+  });
+}
+
+async function deleteLoan(id) {
+  showConfirm('確定刪除此借出紀錄？', async () => {
+    loans = loans.filter(l=>l.id!==id);
+    await fbDel('inv_loans', id);
+    showToast('已刪除借出紀錄');
+    renderAll();
+  });
+}
+
+/* =============================================
+   REPAIR CRUD
+   ============================================= */
+function openRepairModal(preItemId) {
+  const sel = document.getElementById('repair-item-id');
+  sel.innerHTML = items.map(it=>`<option value="${it.id}" ${it.id===preItemId?'selected':''}>${it.name}</option>`).join('');
+  document.getElementById('repair-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('repair-type').value = '維修';
+  document.getElementById('repair-vendor').value = '';
+  document.getElementById('repair-cost').value = '';
+  // ★
+  document.getElementById('repair-after-status').value = '在庫';
+  document.getElementById('repair-note').value = '';
+  document.getElementById('repair-overlay').classList.add('open');
+}
+function closeRepairModal() { document.getElementById('repair-overlay').classList.remove('open'); }
+function closeRepairIfBg(e) { if(e.target===document.getElementById('repair-overlay')) closeRepairModal(); }
+
+async function saveRepair() {
+  const itemId = document.getElementById('repair-item-id').value;
+  if(!itemId){ showToast('請選擇器材','err'); return; }
+  const id = 'repair_'+Date.now();
+  const afterStatus = document.getElementById('repair-after-status').value;
+  const r = {
+    id, itemId,
+    type:   document.getElementById('repair-type').value,
+    date:   document.getElementById('repair-date').value,
+    vendor: document.getElementById('repair-vendor').value.trim(),
+    cost:   +document.getElementById('repair-cost').value||0,
+    note:   document.getElementById('repair-note').value,
+    afterStatus,
+    createdAt: Date.now()
+  };
+  repairs.push(r);
+  // 更新器材狀態
+  const it = items.find(i=>i.id===itemId);
+  if(it) {
+    it.status = afterStatus;
+    await fbSet('inv_items', it.id, it);
+  }
+  await fbSet('inv_repairs', id, r);
+  closeRepairModal();
+  showToast('✓ 已新增維修紀錄');
+  renderAll();
+}
+
+async function deleteRepair(id) {
+  showConfirm('確定刪除此維修紀錄？', async () => {
+    repairs = repairs.filter(r=>r.id!==id);
+    await fbDel('inv_repairs', id);
+    showToast('已刪除維修紀錄');
+    renderAll();
+  });
+}
+
+/* =============================================
+   QR CODE & SCANNER (手機掃描借還)
+   ============================================= */
+let qrcodeInstance = null;
+
+function openQRCode(id, name) {
+  document.getElementById('qr-item-name').innerText = name;
+  document.getElementById('qrcode-box').innerHTML = '';
+  qrcodeInstance = new QRCode(document.getElementById("qrcode-box"), {
+    text: id,
+    width: 150,
+    height: 150
+  });
+  document.getElementById('qrcode-overlay').classList.add('open');
+}
+
+function closeQRCode() { 
+  document.getElementById('qrcode-overlay').classList.remove('open'); 
+}
+function closeQRCodeIfBg(e) { 
+  if(e.target === document.getElementById('qrcode-overlay')) closeQRCode(); 
+}
+
+let html5QrcodeScanner = null;
+
+function openScanner() {
+  document.getElementById('scanner-overlay').classList.add('open');
+  // 啟動鏡頭
+  html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+  html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+}
+
+function closeScanner() {
+  if (html5QrcodeScanner) {
+    html5QrcodeScanner.clear().catch(err => console.error(err));
+    html5QrcodeScanner = null;
+  }
+  document.getElementById('scanner-overlay').classList.remove('open');
+}
+function closeScannerIfBg(e) { 
+  if(e.target === document.getElementById('scanner-overlay')) closeScanner(); 
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+  closeScanner(); // 掃描成功後自動關閉掃描器
+  
+  // 比對器材 ID
+  const it = items.find(i => i.id === decodedText);
+  if (!it) { 
+    showToast('找不到該器材！請確認掃描的條碼是否正確', 'err'); 
+    return; 
+  }
+  
+  // 檢查該器材是否正被借出
+  const activeLoan = loans.find(l => l.itemId === decodedText && !l.returned);
+  
+  if (activeLoan) {
+    // 如果已被借出，詢問是否歸還
+    showConfirm(`「${it.name}」目前由 ${activeLoan.borrower||'未知'} 借出中。\n確定要執行【歸還】嗎？`, () => {
+      returnLoan(activeLoan.id);
+    });
+  } else {
+    // 如果在庫中，直接打開借出視窗，並預先選好該器材
+    openLoanModal(it.id);
+    showToast(`✓ 已辨識器材「${it.name}」，請填寫借用人`);
+  }
+}
+
+function onScanFailure(error) {
+  // 掃描過程中持續報錯是正常的（代表還沒掃到），不需要特別處理
+}
+
+/* =============================================
+   TOAST & CONFIRM
+   ============================================= */
+function showToast(msg, type='ok') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast '+type; t.textContent = msg;
+  c.appendChild(t); setTimeout(()=>t.remove(),3000);
+}
+function showConfirm(msg, onOk) {
+  const overlay = document.getElementById('confirm-overlay');
+  document.getElementById('confirm-msg').textContent = msg;
+  overlay.classList.add('open');
+  document.getElementById('confirm-ok').onclick   = () => { overlay.classList.remove('open'); onOk(); };
+  document.getElementById('confirm-cancel').onclick= () => overlay.classList.remove('open');
+}
+
+/* =============================================
+   EXCEL IMPORT / EXPORT
+   ============================================= */
+function openExcelImport() {
+  document.getElementById('item-import-msg').style.display = 'none';
+  document.getElementById('item-excel-filename').textContent = '尚未選擇檔案';
+  document.getElementById('excel-overlay').classList.add('open');
+}
+function closeExcelImport() { document.getElementById('excel-overlay').classList.remove('open'); }
+function closeExcelIfBg(e) { if(e.target===document.getElementById('excel-overlay')) closeExcelImport(); }
+
+async function importItemExcel(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  document.getElementById('item-excel-filename').textContent = file.name;
+  const msg = document.getElementById('item-import-msg');
+  msg.style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+      if(rows.length < 2) {
+        showImportMsg('❌ 檔案中沒有資料（需要至少 2 列，含標題列）', 'err');
+        return;
+      }
+
+      const validCats = getAllInvCats();
+      // ★ 狀態已改為在庫
+      const validStatuses = ['在庫','借出','維修中','報廢'];
+      let added=0, updated=0, skipped=0;
+
+      for(let i=1; i<rows.length; i++) {
+        const row = rows[i];
+        const name = String(row[0]||'').trim();
+        if(!name){ skipped++; continue; }
+
+        const rawCat = String(row[1]||'').trim();
+        const rawStatus = String(row[5]||'').trim();
+        const existing = items.find(it => it.name === name);
+        const id = existing ? existing.id : ('item_'+Date.now()+'_'+i);
+
+        const entry = {
+          id,
+          name,
+          cat:        validCats.includes(rawCat) ? rawCat : '其他',
+          brand:      String(row[2]||'').trim(),
+          code:       String(row[3]||'').trim(),
+          qty:        parseInt(row[4])||1,
+          status:     validStatuses.includes(rawStatus) ? rawStatus : '在庫',
+          buyPrice:   parseFloat(row[6])||0,
+          curValue:   parseFloat(row[7])||0,
+          dayRate:    parseFloat(row[8])||0,
+          buyDate:    String(row[9]||'').trim(),
+          warranty:   String(row[10]||'').trim(),
+          note:       String(row[11]||'').trim(),
+          marketRate: parseFloat(row[12])||0,
+          createdAt:  existing ? existing.createdAt : Date.now(),
+          updatedAt:  Date.now()
+        };
+
+        if(existing) {
+          Object.assign(existing, entry);
+          await fbSet('inv_items', id, entry);
+          updated++;
+        } else {
+          items.unshift(entry);
+          await fbSet('inv_items', id, entry);
+          added++;
+        }
+      }
+
+      renderAll();
+      showImportMsg(`✅ 匯入完成：新增 ${added} 筆、更新 ${updated} 筆${skipped?'、略過空白 '+skipped+' 筆':''}`, 'ok');
+    } catch(err) {
+      showImportMsg('❌ 讀取失敗：'+err.message, 'err');
+    }
+    event.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showImportMsg(text, type) {
+  const msg = document.getElementById('item-import-msg');
+  msg.style.display = 'block';
+  msg.style.background = type==='ok' ? 'rgba(5,150,105,.08)' : 'rgba(220,38,38,.08)';
+  msg.style.border = type==='ok' ? '1px solid rgba(5,150,105,.25)' : '1px solid rgba(220,38,38,.25)';
+  msg.style.color = type==='ok' ? '#059669' : '#dc2626';
+  msg.textContent = text;
+}
+
+function downloadItemTemplate() {
+  const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','現值估算','日租金(每天)','購入日期','保固到期','備註','市場行情(選填)'];
+  // ★ 範本預設值改為「在庫」
+  const sample = ['Sony A7 IV','攝影機','Sony','ILCE-7M4',1,'在庫',90000,70000,1500,'2023-01-15','2025-01-15','含原廠電池x2', 1500];
+  const sample2 = ['Aputure 300d II','燈光','Aputure','300d-II',2,'在庫',45000,35000,800,'2022-06-01','','含燈架', 1000];
+  const ws = XLSX.utils.aoa_to_sheet([header, sample, sample2]);
+  ws['!cols'] = [{wch:22},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:20},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '器材清單');
+  XLSX.writeFile(wb, '器材庫存範本.xlsx');
+}
+
+function exportItemsExcel() {
+  if(!items.length){ showToast('目前無器材可匯出','err'); return; }
+  const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','現值估算','日租金(每天)','購入日期','保固到期','備註','市場行情'];
+  const rows = items.map(it=>[it.name,it.cat||'',it.brand||'',it.code||'',it.qty||1,it.status||'在庫',it.buyPrice||0,it.curValue||0,it.dayRate||0,it.buyDate||'',it.warranty||'',it.note||'',it.marketRate||0]);
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [{wch:22},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:20},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '器材清單');
+  XLSX.writeFile(wb, '器材庫存.xlsx');
+  showToast(`✓ 已匯出 ${items.length} 筆器材`);
+}
+
+/* =============================================
+   FIREBASE SCRIPT LOADING TRICK
+   ============================================= */
+const script = document.createElement('script');
+script.type = 'module';
+script.textContent = `
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+const app = getApp();
+window._fbDb = getFirestore(app);
+window._fbReady = true;
+`;
+document.body.appendChild(script);
+
+// INIT
+window.addEventListener('load', () => {
+  initData();
+});
+</script>
+</body>
+</html>

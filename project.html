@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>專案進度 — 公司系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #eeeae4; --panel: #1c1917; --panel2: #292524;
+  --paper: #fdfcfb; --ink: #1c1917; --ink2: #57534e; --ink3: #a8a29e;
+  --line: #e7e3dc; --acc: #b45309; --acc2: #d97706;
+  --success: #059669; --danger: #dc2626; --info: #0369a1;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+  --r: 6px;
+  --font-body: 'Noto Sans TC','Microsoft JhengHei',sans-serif;
+  --font-mono: 'IBM Plex Mono',monospace;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font-size:13px; line-height:1.55; min-height:100vh; }
+::-webkit-scrollbar{ width:6px; height:6px; }
+::-webkit-scrollbar-thumb{ background:#c4bdb6; border-radius:3px; }
+
+/* TOPBAR */
+.topbar{ background:var(--panel); color:#fafaf9; padding:0 24px; height:50px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:300; border-bottom:1px solid rgba(255,255,255,.05); }
+.topbar-brand{ display:flex; align-items:center; gap:10px; font-size:13px; font-weight:500; color:#e7e5e4; }
+.brand-dot{ width:7px; height:7px; border-radius:50%; background:var(--acc2); }
+.topbar-nav{ display:flex; gap:2px; }
+.nav-tab{ padding:6px 14px; border-radius:var(--r); font-size:12px; font-weight:500; color:#a8a29e; cursor:pointer; transition:.15s; text-decoration:none; border:1px solid transparent; }
+.nav-tab:hover{ color:#e7e5e4; background:rgba(255,255,255,.06); }
+.nav-tab.active{ color:var(--acc2); border-color:rgba(217,119,6,.3); background:rgba(180,83,9,.12); }
+.topbar-actions{ display:flex; gap:7px; align-items:center; }
+
+/* TOOLBAR */
+.toolbar{ background:var(--panel2); padding:0 24px; height:44px; display:flex; align-items:center; gap:0; position:sticky; top:50px; z-index:290; border-bottom:1px solid rgba(255,255,255,.05); overflow-x:auto; scrollbar-width:none; }
+.toolbar::-webkit-scrollbar{ display:none; }
+.tg{ display:flex; align-items:center; gap:6px; padding:0 16px; border-right:1px solid rgba(255,255,255,.08); height:100%; flex-shrink:0; }
+.tg:last-child{ border-right:none; }
+.tg-label{ font-size:10px; color:#78716c; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+.t-select{ background:rgba(255,255,255,.06); color:#d6d3d1; border:1px solid rgba(255,255,255,.1); border-radius:4px; padding:3px 7px; font-size:11px; cursor:pointer; font-family:inherit; outline:none; }
+.t-select:hover{ border-color:rgba(255,255,255,.22); }
+.view-pill{ padding:3px 10px; border-radius:20px; font-size:10px; font-weight:500; border:1px solid rgba(255,255,255,.12); color:#a8a29e; cursor:pointer; transition:.15s; background:none; font-family:inherit; }
+.view-pill:hover{ color:#e7e5e4; border-color:rgba(255,255,255,.25); }
+.view-pill.on{ color:var(--acc2); border-color:var(--acc2); background:rgba(180,83,9,.15); }
+.sync-dot{ width:6px; height:6px; border-radius:50%; background:#78716c; transition:.3s; }
+.sync-dot.ok{ background:#059669; }
+.sync-dot.syncing{ background:#d97706; animation:pulse .8s infinite; }
+@keyframes pulse{ 0%,100%{opacity:1}50%{opacity:.4} }
+
+/* BTNS */
+.btn{ display:inline-flex; align-items:center; gap:5px; padding:6px 13px; border-radius:var(--r); border:none; font-size:12px; font-weight:500; cursor:pointer; transition:.15s; font-family:inherit; white-space:nowrap; }
+.btn-ghost{ background:rgba(255,255,255,.07); color:#d6d3d1; border:1px solid rgba(255,255,255,.12); }
+.btn-ghost:hover{ background:rgba(255,255,255,.14); color:#fafaf9; }
+.btn-ghost-dark{ background:rgba(0,0,0,.04); color:var(--ink2); border:1px solid var(--line); }
+.btn-ghost-dark:hover{ background:rgba(0,0,0,.08); color:var(--ink); }
+.btn-amber{ background:var(--acc); color:white; }
+.btn-amber:hover{ background:var(--acc2); }
+.btn-green{ background:rgba(5,150,105,.12); color:#059669; border:1px solid rgba(5,150,105,.3); }
+.btn-green:hover{ background:#059669; color:white; }
+.btn-red{ background:rgba(220,38,38,.1); color:#dc2626; border:1px solid rgba(220,38,38,.25); }
+.btn-red:hover{ background:var(--danger); color:white; }
+.btn-sm{ padding:4px 10px; font-size:11px; }
+.btn-xs{ padding:3px 8px; font-size:10px; }
+.btn-icon{ padding:5px; border-radius:4px; }
+
+/* MAIN */
+.main{ padding:20px 24px; max-width:1400px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
+
+/* KPI ROW */
+.kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.kpi-card{ background:var(--paper); border-radius:10px; padding:16px 18px; box-shadow:var(--shadow-sm); border:1px solid var(--line); position:relative; overflow:hidden; }
+.kpi-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:10px 10px 0 0; }
+.kpi-card.k-total::before{ background:linear-gradient(90deg,#b45309,#d97706); }
+.kpi-card.k-active::before{ background:linear-gradient(90deg,#059669,#34d399); }
+.kpi-card.k-done::before{ background:linear-gradient(90deg,#0369a1,#38bdf8); }
+.kpi-card.k-late::before{ background:linear-gradient(90deg,#dc2626,#f87171); }
+.kpi-label{ font-size:10px; color:var(--ink3); letter-spacing:.5px; text-transform:uppercase; margin-bottom:5px; }
+.kpi-value{ font-size:22px; font-weight:600; font-family:var(--font-mono); letter-spacing:-0.5px; line-height:1; margin-bottom:3px; }
+.kpi-sub{ font-size:10px; color:var(--ink3); }
+
+/* PANEL */
+.panel{ background:var(--paper); border-radius:10px; box-shadow:var(--shadow-sm); border:1px solid var(--line); overflow:hidden; }
+.panel-header{ padding:13px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; background:#faf9f7; }
+.panel-title{ font-size:13px; font-weight:600; color:var(--ink); }
+
+/* ===== GANTT ===== */
+.gantt-wrap{ overflow-x:auto; }
+.gantt-container{ min-width:800px; }
+.gantt-header{ display:flex; border-bottom:1px solid var(--line); background:#faf9f7; }
+.gantt-label-col{ width:220px; flex-shrink:0; padding:8px 14px; font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; border-right:1px solid var(--line); }
+.gantt-timeline-header{ flex:1; display:flex; position:relative; overflow:hidden; }
+.gantt-month{ flex:1; text-align:center; font-size:10px; color:var(--ink3); padding:8px 4px; border-right:1px solid var(--line); white-space:nowrap; font-weight:500; }
+.gantt-month:last-child{ border-right:none; }
+.gantt-row{ display:flex; border-bottom:1px solid var(--line); min-height:40px; align-items:center; }
+.gantt-row:last-child{ border-bottom:none; }
+.gantt-row:hover{ background:#faf9f7; }
+.gantt-proj-label{ width:220px; flex-shrink:0; padding:8px 14px; border-right:1px solid var(--line); display:flex; align-items:center; gap:8px; cursor:pointer; }
+.gantt-proj-name{ font-size:11px; font-weight:500; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gantt-proj-sub{ font-size:9px; color:var(--ink3); margin-top:1px; }
+.gantt-bar-area{ flex:1; position:relative; height:40px; display:flex; align-items:center; padding:0 4px; }
+.gantt-bar{ position:absolute; height:18px; border-radius:4px; display:flex; align-items:center; padding:0 8px; font-size:9px; color:white; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:.2s; cursor:pointer; min-width:4px; }
+.gantt-bar:hover{ filter:brightness(1.12); }
+.gantt-today-line{ position:absolute; top:0; bottom:0; width:1.5px; background:rgba(220,38,38,.6); z-index:10; pointer-events:none; }
+.gantt-today-line::before{ content:'今'; position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:9px; color:#dc2626; font-weight:600; }
+.gantt-empty{ padding:32px; text-align:center; color:var(--ink3); font-size:12px; }
+
+/* ===== PROJECT LIST ===== */
+.proj-list-wrap{ display:flex; flex-direction:column; gap:0; }
+.proj-row{ border-bottom:1px solid var(--line); }
+.proj-row:last-child{ border-bottom:none; }
+.proj-row-header{ display:grid; align-items:center; padding:12px 18px; cursor:pointer; transition:.12s; gap:12px;
+  grid-template-columns: 14px 1fr 110px 130px 110px 110px 80px 70px; }
+.proj-row-header:hover{ background:#faf9f7; }
+.proj-row-header.expanded{ background:rgba(180,83,9,.03); }
+.col-toggle{ font-size:11px; color:var(--ink3); transition:.2s; }
+.col-toggle.open{ transform:rotate(90deg); }
+.col-name{ display:flex; align-items:center; gap:8px; min-width:0; }
+.proj-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.proj-title{ font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.proj-client-tag{ font-size:10px; color:var(--ink3); background:rgba(0,0,0,.05); padding:1px 6px; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.col-progress{ display:flex; flex-direction:column; gap:3px; }
+.progress-bar-bg{ height:5px; background:var(--line); border-radius:3px; overflow:hidden; }
+.progress-bar-fill{ height:100%; border-radius:3px; transition:width .4s; }
+.progress-pct{ font-size:10px; color:var(--ink3); font-family:var(--font-mono); }
+.col-dates{ font-size:11px; color:var(--ink2); }
+.col-dates .date-sub{ font-size:10px; color:var(--ink3); }
+.col-assignee{ font-size:11px; color:var(--ink2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.col-cost{ font-size:11px; font-family:var(--font-mono); }
+.col-status .status-badge{ display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:500; }
+.s-進行中{ background:rgba(5,150,105,.1); color:#059669; }
+.s-規劃中{ background:rgba(3,105,161,.1); color:#0369a1; }
+.s-已完成{ background:rgba(120,113,108,.1); color:#78716c; }
+.s-暫停{ background:rgba(220,38,38,.1); color:#dc2626; }
+.col-actions{ display:flex; gap:4px; justify-content:flex-end; }
+
+/* LIST HEADER */
+.list-col-header{ display:grid; padding:8px 18px; gap:12px; background:#faf9f7; border-bottom:1px solid var(--line);
+  grid-template-columns: 14px 1fr 110px 130px 110px 110px 80px 70px;
+  font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; }
+
+/* TASK SUB-LIST */
+.task-area{ padding:0 18px 12px 42px; border-top:1px solid var(--line); background:rgba(0,0,0,.015); }
+.task-header{ display:flex; align-items:center; justify-content:space-between; padding:10px 0 8px; }
+.task-header-title{ font-size:11px; font-weight:600; color:var(--ink2); }
+.task-item{ display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--line); }
+.task-item:last-child{ border-bottom:none; }
+.task-check{ width:15px; height:15px; border-radius:3px; border:1.5px solid var(--line); cursor:pointer; flex-shrink:0; appearance:none; -webkit-appearance:none; background:white; transition:.15s; position:relative; }
+.task-check:checked{ background:var(--acc); border-color:var(--acc); }
+.task-check:checked::after{ content:'✓'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-size:9px; font-weight:700; }
+.task-name{ flex:1; font-size:11px; color:var(--ink); }
+.task-name.done{ text-decoration:line-through; color:var(--ink3); }
+.task-assignee{ font-size:10px; color:var(--ink3); background:rgba(0,0,0,.05); padding:1px 7px; border-radius:20px; white-space:nowrap; }
+.task-date{ font-size:10px; color:var(--ink3); font-family:var(--font-mono); white-space:nowrap; }
+.task-milestone{ font-size:9px; padding:1px 6px; border-radius:20px; background:rgba(124,58,237,.1); color:#7c3aed; font-weight:500; flex-shrink:0; }
+.task-late{ font-size:9px; padding:1px 6px; border-radius:20px; background:rgba(220,38,38,.1); color:#dc2626; font-weight:500; }
+.task-actions{ display:flex; gap:3px; flex-shrink:0; }
+.no-tasks{ font-size:11px; color:var(--ink3); padding:12px 0; }
+
+/* MODAL */
+.overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
+.overlay.open{ display:flex; }
+.modal{ background:var(--paper); border-radius:12px; width:500px; box-shadow:0 20px 60px rgba(0,0,0,.3); overflow:hidden; max-height:90vh; overflow-y:auto; }
+.modal-header{ background:var(--panel); color:#fafaf9; padding:15px 20px; display:flex; align-items:center; justify-content:space-between; }
+.modal-title{ font-size:14px; font-weight:600; }
+.modal-body{ padding:20px; display:flex; flex-direction:column; gap:13px; }
+.modal-footer{ padding:14px 20px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px; }
+.field{ display:flex; flex-direction:column; gap:5px; }
+.field label{ font-size:11px; font-weight:500; color:var(--ink2); }
+.field input,.field select,.field textarea{ background:#f9f7f4; border:1px solid var(--line); border-radius:var(--r); padding:7px 10px; font-size:12px; font-family:inherit; color:var(--ink); outline:none; transition:.15s; width:100%; }
+.field input:focus,.field select:focus,.field textarea:focus{ border-color:var(--acc); box-shadow:0 0 0 3px rgba(180,83,9,.08); background:white; }
+.field-row{ display:grid; gap:12px; }
+.field-row.col2{ grid-template-columns:1fr 1fr; }
+.field-row.col3{ grid-template-columns:1fr 1fr 1fr; }
+
+/* TOAST */
+.toast-container{ position:fixed; bottom:24px; right:24px; z-index:600; display:flex; flex-direction:column; gap:8px; }
+.toast{ background:var(--panel); color:#e7e5e4; padding:10px 16px; border-radius:var(--r); font-size:12px; box-shadow:0 4px 16px rgba(0,0,0,.3); display:flex; align-items:center; gap:8px; animation:slideIn .2s ease; border-left:3px solid var(--acc); }
+.toast.ok{ border-left-color:#059669; }
+.toast.err{ border-left-color:#dc2626; }
+@keyframes slideIn{ from{transform:translateX(20px);opacity:0} }
+
+/* EMPTY */
+.empty-state{ padding:48px 20px; text-align:center; color:var(--ink3); font-size:12px;}
+.empty-icon{ font-size:32px; margin-bottom:10px; opacity:.4; }
+.empty-title{ font-size:13px; font-weight:500; color:var(--ink2); margin-bottom:4px; }
+.empty-sub{ font-size:11px; color:var(--ink3); }
+
+@media(max-width:1100px){ .kpi-row{grid-template-columns:repeat(2,1fr);} }
+@media(max-width:900px){ .proj-row-header,.list-col-header{grid-template-columns:14px 1fr 90px 100px;} .col-assignee,.col-cost,.col-actions{display:none;} }
+</style>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
+    authDomain: "company-system-6ea1a.firebaseapp.com",
+    projectId: "company-system-6ea1a"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = 'login.html'; 
+    }
+  });
+
+  window.logout = function() {
+    signOut(auth).then(() => { window.location.href = 'login.html'; });
+  };
+</script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand"><div class="brand-dot"></div>公司管理系統</div>
+  <div class="topbar-nav">
+    <a href="index.html" class="nav-tab">報價單</a>
+    <a href="project.html" class="nav-tab active">專案進度</a>
+    <a href="cost.html" class="nav-tab">成本計算</a>
+    <a href="inventory.html" class="nav-tab">器材庫存</a>
+    <a href="contacts.html" class="nav-tab">客戶與廠商管理</a>
+  </div>
+  <div class="topbar-actions">
+    <span style="font-size:10px;color:#78716c;display:flex;align-items:center;gap:5px;">
+      <span class="sync-dot" id="sync-dot"></span>
+      <span id="sync-text">連線中...</span>
+    </span>
+    <button class="btn btn-ghost btn-sm" onclick="openNewProjModal()">＋ 新增專案</button>
+    <button class="btn btn-amber btn-sm" onclick="openTaskModal()">＋ 新增任務</button>
+    <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
+    <button class="btn btn-ghost" style="color: #fca5a5; border-color: rgba(220,38,38,0.3); padding: 4px 10px;" onclick="logout()">登出</button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="tg">
+    <span class="tg-label">狀態篩選</span>
+    <button class="view-pill on" id="sf-all" onclick="setStatusFilter('all',this)">全部</button>
+    <button class="view-pill" id="sf-active" onclick="setStatusFilter('進行中',this)">進行中</button>
+    <button class="view-pill" id="sf-plan" onclick="setStatusFilter('規劃中',this)">規劃中</button>
+    <button class="view-pill" id="sf-done" onclick="setStatusFilter('已完成',this)">已完成</button>
+  </div>
+  <div class="tg">
+    <span class="tg-label">年度</span>
+    <select class="t-select" id="sel-year" onchange="renderAll()"></select>
+  </div>
+  <div class="tg">
+    <span class="tg-label">Gantt 區間</span>
+    <select class="t-select" id="gantt-range" onchange="renderGantt()">
+      <option value="1w">本週（7天）</option>
+      <option value="2w">近 2 週</option>
+      <option value="1m">近 1 個月</option>
+      <option value="3m" selected>近 3 個月</option>
+      <option value="6m">近 6 個月</option>
+      <option value="12m">近 12 個月</option>
+    </select>
+  </div>
+  <div class="tg">
+    <span class="tg-label">Firebase</span>
+    <button class="view-pill" id="fb-status-pill">載入中</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="kpi-row" id="kpi-row">
+    <div class="kpi-card k-total"><div class="kpi-label">專案總數</div><div class="kpi-value" id="k-total">—</div><div class="kpi-sub" id="k-total-sub">所有狀態</div></div>
+    <div class="kpi-card k-active"><div class="kpi-label">進行中</div><div class="kpi-value" id="k-active" style="color:#059669">—</div><div class="kpi-sub" id="k-active-sub">進行中專案</div></div>
+    <div class="kpi-card k-done"><div class="kpi-label">已完成</div><div class="kpi-value" id="k-done" style="color:#0369a1">—</div><div class="kpi-sub" id="k-done-sub">已完成專案</div></div>
+    <div class="kpi-card k-late"><div class="kpi-label">逾期警示</div><div class="kpi-value" id="k-late" style="color:#dc2626">—</div><div class="kpi-sub" id="k-late-sub">超過預計完成日</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">時間軸</span>
+      <span style="font-size:11px;color:var(--ink3);">依專案開始／結束日期顯示</span>
+    </div>
+    <div class="gantt-wrap">
+      <div class="gantt-container" id="gantt-container">
+        <div class="gantt-empty">載入中...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">專案列表</span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" id="proj-search" placeholder="搜尋專案..." oninput="renderList()"
+          style="background:rgba(0,0,0,.04);border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-size:11px;outline:none;width:100px;font-family:inherit;">
+        <button class="btn btn-ghost-dark btn-xs" onclick="expandAll()">全展開</button>
+        <button class="btn btn-ghost-dark btn-xs" onclick="collapseAll()">全收合</button>
+      </div>
+    </div>
+    <div class="list-col-header">
+      <div></div>
+      <div>專案名稱</div>
+      <div>整體進度</div>
+      <div>日期區間</div>
+      <div>負責人</div>
+      <div>收支連動</div>
+      <div>狀態</div>
+      <div></div>
+    </div>
+    <div class="proj-list-wrap" id="proj-list"></div>
+  </div>
+
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<div class="overlay" id="task-overlay" onclick="closeTaskIfBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="task-modal-title">新增任務</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeTaskModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="task-id">
+      <div class="field">
+        <label>所屬專案 *</label>
+        <select id="task-proj-id"></select>
+      </div>
+      <div class="field">
+        <label>任務名稱 *</label>
+        <input type="text" id="task-name" placeholder="例：初稿設計、場地勘查...">
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>負責人</label>
+          <div style="display:flex;gap:6px;align-items:flex-start;">
+            <select id="task-assignee" style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;">
+              <option value="">— 請選擇 —</option>
+            </select>
+            <button class="btn btn-ghost-dark btn-sm" onclick="openMemberModal()" title="管理成員名單" style="flex-shrink:0;">⚙ 管理</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>類型</label>
+          <select id="task-type">
+            <option value="task">一般任務</option>
+            <option value="milestone">里程碑</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>預計完成日</label>
+          <input type="date" id="task-due">
+        </div>
+        <div class="field">
+          <label>實際完成日</label>
+          <input type="date" id="task-actual">
+        </div>
+      </div>
+      <div class="field">
+        <label>備註</label>
+        <input type="text" id="task-note" placeholder="選填">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="closeTaskModal()">取消</button>
+      <button class="btn btn-amber" onclick="saveTask()">儲存任務</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="proj-overlay" onclick="closeProjIfBg(event)">
+  <div class="modal" style="width:440px;">
+    <div class="modal-header">
+      <span class="modal-title" id="proj-modal-title">編輯專案</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeProjModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-proj-id">
+      <div class="field">
+        <label>專案名稱 *</label>
+        <input type="text" id="edit-proj-name">
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>客戶</label>
+          <select id="edit-proj-client" style="background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;">
+            <option value="">— 請選擇 —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>狀態</label>
+          <select id="edit-proj-status">
+            <option value="進行中">進行中</option>
+            <option value="規劃中">規劃中</option>
+            <option value="已完成">已完成</option>
+            <option value="暫停">暫停</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>開始日期</label>
+          <input type="date" id="edit-proj-start">
+        </div>
+        <div class="field">
+          <label>預計完成日</label>
+          <input type="date" id="edit-proj-end">
+        </div>
+      </div>
+      <div class="field">
+        <label>負責人</label>
+        <div style="display:flex;gap:6px;">
+          <select id="edit-proj-assignee" style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;">
+            <option value="">— 請選擇 —</option>
+          </select>
+          <button class="btn btn-ghost-dark btn-sm" onclick="openMemberModal()" title="管理成員名單" style="flex-shrink:0;">⚙ 管理</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>備註</label>
+        <textarea id="edit-proj-note" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="closeProjModal()">取消</button>
+      <button class="btn btn-amber" onclick="saveProjEdit()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="new-proj-overlay" onclick="closeNewProjIfBg(event)">
+  <div class="modal" style="width:480px;">
+    <div class="modal-header">
+      <span class="modal-title">新增專案</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeNewProjModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>專案名稱 *</label>
+        <input type="text" id="new-proj-name" placeholder="例：2024 品牌形象拍攝">
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>客戶名稱</label>
+          <select id="new-proj-client" style="background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;">
+            <option value="">— 請選擇 —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>狀態</label>
+          <select id="new-proj-status">
+            <option value="規劃中">規劃中</option>
+            <option value="進行中">進行中</option>
+            <option value="已完成">已完成</option>
+            <option value="暫停">暫停</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>開始日期</label>
+          <input type="date" id="new-proj-start">
+        </div>
+        <div class="field">
+          <label>預計完成日</label>
+          <input type="date" id="new-proj-end">
+        </div>
+      </div>
+      <div class="field">
+        <label>負責人</label>
+        <div style="display:flex;gap:6px;">
+          <select id="new-proj-assignee" style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;">
+            <option value="">— 請選擇 —</option>
+          </select>
+          <button class="btn btn-ghost-dark btn-sm" onclick="openMemberModal()" title="管理成員名單" style="flex-shrink:0;">⚙ 管理</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>備註</label>
+        <textarea id="new-proj-note" rows="2" placeholder="專案說明、備忘..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="closeNewProjModal()">取消</button>
+      <button class="btn btn-amber" onclick="saveNewProj()">建立專案</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="member-overlay" onclick="closeMemberIfBg(event)">
+  <div class="modal" style="width:360px;">
+    <div class="modal-header">
+      <span class="modal-title">管理負責人名單</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeMemberModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="new-member-input" placeholder="輸入姓名或職稱..."
+          style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;"
+          onkeydown="if(event.key==='Enter')addMember()">
+        <button class="btn btn-amber btn-sm" onclick="addMember()">新增</button>
+      </div>
+      <div id="member-list" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto;margin-top:4px;"></div>
+      <p style="font-size:10px;color:var(--ink3);margin-top:6px;">名單儲存於本機，供所有負責人下拉選單共用。</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-amber" onclick="closeMemberModal()">完成</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="confirm-overlay">
+  <div class="modal" style="width:340px;">
+    <div class="modal-header">
+      <span class="modal-title">確認操作</span>
+    </div>
+    <div class="modal-body" style="padding:20px 20px 10px;">
+      <p id="confirm-msg" style="font-size:13px;color:var(--ink);line-height:1.6;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" id="confirm-cancel">取消</button>
+      <button class="btn btn-red" id="confirm-ok">確定刪除</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+const app = getApp();
+const fbDb = getFirestore(app);
+
+window._projFb = { collection, getDocs, doc, setDoc, deleteDoc, getDoc, fbDb };
+window._fbReady = true;
+
+// Trigger initialization
+initData();
+</script>
+
+<script>
+/* =============================================
+   STATE
+   ============================================= */
+let projects  = [];
+let costItems = [];
+let tasks     = [];  
+let clientList = []; // ★ 存放客戶資料庫的名單
+let statusFilter = 'all';
+let expandedProjs = new Set();
+
+const COLORS = ['#b45309','#0369a1','#059669','#7c3aed','#be185d','#0891b2','#d97706','#16a34a'];
+
+// ★ 動態初始化年份下拉選單
+function initYearSelect() {
+  const sel = document.getElementById('sel-year');
+  if(!sel) return;
+  
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  let yearSet = new Set();
+  
+  // 1. 預留過去 5 年到未來 10 年
+  for(let y = currentYear - 5; y <= currentYear + 10; y++) {
+    yearSet.add(y);
+  }
+
+  // 2. 掃描歷史資料
+  const scanDate = (dStr) => {
+    if(dStr) {
+      const y = parseInt(dStr.split('-')[0]);
+      if(!isNaN(y)) yearSet.add(y);
+    }
+  };
+  try { (typeof projects !== 'undefined') && projects.forEach(p => { scanDate(p.start); scanDate(p.end); }); } catch(e){}
+
+  // 3. 排序與產出
+  let sortedYears = Array.from(yearSet).sort((a,b) => b - a);
+  sel.innerHTML = '<option value="all">全部年度</option>';
+  sortedYears.forEach(y => {
+    const o = document.createElement('option');
+    o.value = String(y);
+    o.textContent = y + '年';
+    if(y === currentYear) o.selected = true; // 預設顯示今年
+    sel.appendChild(o);
+  });
+}
+
+/* =============================================
+   MEMBERS — 負責人名單
+   ============================================= */
+function loadMembers() {
+  try { return JSON.parse(localStorage.getItem('proj_members') || '[]'); } catch{ return []; }
+}
+function saveMembers(list) {
+  localStorage.setItem('proj_members', JSON.stringify(list));
+}
+
+function populateAssigneeSelect(selId, currentValue) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const members = loadMembers();
+  let opts = `<option value="">— 請選擇 —</option>` +
+    members.map(m => `<option value="${m}">${m}</option>`).join('');
+  if (currentValue && !members.includes(currentValue)) {
+    opts += `<option value="${currentValue}">${currentValue}</option>`;
+  }
+  sel.innerHTML = opts;
+  if (currentValue) sel.value = currentValue;
+}
+
+// ★ 動態載入客戶選單 (過濾重複的公司名稱)
+function populateClientSelect(selId, currentValue) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  
+  // 只抓出不重複的「公司名稱」
+  let uniqueNames = [...new Set(clientList.map(c => (c.name||'').trim()))].filter(Boolean);
+
+  let opts = `<option value="">— 請選擇 —</option>` +
+    uniqueNames.map(name => `<option value="${name}">${name}</option>`).join('');
+  
+  if (currentValue && !uniqueNames.includes(currentValue)) {
+    opts += `<option value="${currentValue}">${currentValue}</option>`;
+  }
+  
+  sel.innerHTML = opts;
+  if (currentValue) sel.value = currentValue;
+}
+
+/* ── 管理成員 modal ── */
+function openMemberModal(returnTo) {
+  window._memberReturnTo = returnTo || null;
+  renderMemberList();
+  document.getElementById('member-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('new-member-input').focus(), 100);
+}
+function closeMemberModal() {
+  document.getElementById('member-overlay').classList.remove('open');
+  document.getElementById('new-member-input').value = '';
+  // 關閉後重新整理所有負責人選單
+  const cur1 = document.getElementById('task-assignee')?.value;
+  const cur2 = document.getElementById('edit-proj-assignee')?.value;
+  const cur3 = document.getElementById('new-proj-assignee')?.value;
+  populateAssigneeSelect('task-assignee', cur1);
+  populateAssigneeSelect('edit-proj-assignee', cur2);
+  populateAssigneeSelect('new-proj-assignee', cur3);
+}
+function closeMemberIfBg(e) { if(e.target===document.getElementById('member-overlay')) closeMemberModal(); }
+
+function renderMemberList() {
+  const members = loadMembers();
+  const wrap = document.getElementById('member-list');
+  if (!members.length) {
+    wrap.innerHTML = `<div style="font-size:11px;color:var(--ink3);padding:8px 0;">尚無成員，請在上方輸入新增。</div>`;
+    return;
+  }
+  wrap.innerHTML = members.map((m, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);">
+      <span style="font-size:12px;">${m}</span>
+      <button class="btn btn-red btn-xs" onclick="deleteMember(${i})">刪除</button>
+    </div>`).join('');
+}
+
+function addMember() {
+  const input = document.getElementById('new-member-input');
+  const name = input.value.trim();
+  if (!name) return;
+  const members = loadMembers();
+  if (members.includes(name)) { showToast('此名稱已存在', 'err'); return; }
+  members.push(name);
+  saveMembers(members);
+  input.value = '';
+  renderMemberList();
+  showToast(`✓ 已新增「${name}」`);
+}
+
+function deleteMember(idx) {
+  const members = loadMembers();
+  const name = members[idx];
+  if (!confirm(`確定刪除「${name}」？`)) return;
+  members.splice(idx, 1);
+  saveMembers(members);
+  renderMemberList();
+  showToast(`已刪除「${name}」`);
+}
+
+/* =============================================
+   新增專案 modal
+   ============================================= */
+function openNewProjModal() {
+  document.getElementById('new-proj-name').value = '';
+  document.getElementById('new-proj-status').value = '規劃中';
+  document.getElementById('new-proj-start').value = '';
+  document.getElementById('new-proj-end').value = '';
+  document.getElementById('new-proj-note').value = '';
+  populateAssigneeSelect('new-proj-assignee', '');
+  
+  // ★ 帶入不重複的客戶資料
+  populateClientSelect('new-proj-client', '');
+
+  document.getElementById('new-proj-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('new-proj-name').focus(), 100);
+}
+function closeNewProjModal() { document.getElementById('new-proj-overlay').classList.remove('open'); }
+function closeNewProjIfBg(e) { if(e.target===document.getElementById('new-proj-overlay')) closeNewProjModal(); }
+
+async function saveNewProj() {
+  const name = document.getElementById('new-proj-name').value.trim();
+  if (!name) { showToast('請輸入專案名稱', 'err'); return; }
+  const id = 'proj_' + Date.now();
+  const colorIdx = projects.length % COLORS.length;
+  const proj = {
+    id,
+    name,
+    client:   document.getElementById('new-proj-client').value.trim(),
+    status:   document.getElementById('new-proj-status').value,
+    start:    document.getElementById('new-proj-start').value,
+    end:      document.getElementById('new-proj-end').value,
+    assignee: document.getElementById('new-proj-assignee').value,
+    note:     document.getElementById('new-proj-note').value,
+    color:    COLORS[colorIdx],
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  projects.unshift(proj);
+  await saveProjToFb(proj);
+  closeNewProjModal();
+  showToast(`✓ 已建立專案「${name}」`);
+  renderAll();
+}
+
+/* =============================================
+   FIREBASE INIT DATA
+   ============================================= */
+
+function syncLocalClientDB() {
+  try {
+    const local = JSON.parse(localStorage.getItem('clientDB') || '[]');
+    if (local.length > 0 && clientList.length === 0) {
+      clientList = local;
+    }
+  } catch(e) { console.warn(e) }
+}
+
+async function initData() {
+  let waited = 0;
+  while (!window._fbReady && waited < 5000) {
+    await new Promise(r => setTimeout(r, 100));
+    waited += 100;
+  }
+  
+  if(!window._fbReady) {
+    setSyncStatus('err', '離線模式');
+    setPill('offline');
+    loadLocal();
+    initYearSelect();
+    renderAll();
+    return;
+  }
+
+  try {
+    setSyncStatus('ok','已連線');
+    setPill('ok');
+    await loadAll();
+    initYearSelect();
+    renderAll();
+  } catch(e) {
+    console.warn('Firebase error:', e);
+    setSyncStatus('','離線模式');
+    setPill('offline');
+    loadLocal();
+    initYearSelect();
+    renderAll();
+  }
+}
+
+async function loadAll() {
+  const { collection, getDocs, doc, getDoc, fbDb } = window._projFb;
+  const [ps, cs, ts] = await Promise.all([
+    getDocs(collection(fbDb,'cost_projects')),
+    getDocs(collection(fbDb,'cost_items')),
+    getDocs(collection(fbDb,'proj_tasks')),
+  ]);
+  projects  = []; ps.forEach(d => projects.push({id:d.id,...d.data()}));
+  costItems = []; cs.forEach(d => costItems.push({id:d.id,...d.data()}));
+  tasks     = []; ts.forEach(d => tasks.push({id:d.id,...d.data()}));
+
+  // ★ 抓取雲端的客戶及廠商資料庫
+  try {
+    const snapC = await getDoc(doc(fbDb, 'databases', 'clientDB'));
+    const snapV = await getDoc(doc(fbDb, 'databases', 'vendorDB'));
+    let clients = snapC.exists() ? (snapC.data().list || []) : [];
+    let vendors = snapV.exists() ? (snapV.data().list || []) : [];
+    clientList = [...clients, ...vendors];
+    
+    if (clientList.length === 0) {
+      syncLocalClientDB(); 
+    }
+  } catch(e) { 
+    console.warn('Failed to load clients', e); 
+    syncLocalClientDB();
+  }
+
+  saveLocal();
+}
+
+async function saveTaskToFb(task) {
+  if(!window._fbReady){ saveLocal(); return; }
+  setSyncStatus('syncing','同步中...');
+  const { doc, setDoc, fbDb } = window._projFb;
+  await setDoc(doc(fbDb,'proj_tasks',task.id), task);
+  setSyncStatus('ok','已同步'); saveLocal();
+}
+async function deleteTaskFromFb(id) {
+  if(!window._fbReady){ saveLocal(); return; }
+  const { doc, deleteDoc, fbDb } = window._projFb;
+  await deleteDoc(doc(fbDb,'proj_tasks',id)); saveLocal();
+}
+async function saveProjToFb(proj) {
+  if(!window._fbReady){ saveLocal(); return; }
+  setSyncStatus('syncing','同步中...');
+  const { doc, setDoc, fbDb } = window._projFb;
+  await setDoc(doc(fbDb,'cost_projects',proj.id), proj);
+  setSyncStatus('ok','已同步'); saveLocal();
+}
+
+function saveLocal() {
+  localStorage.setItem('cost_projects', JSON.stringify(projects));
+  localStorage.setItem('cost_items', JSON.stringify(costItems));
+  localStorage.setItem('proj_tasks', JSON.stringify(tasks));
+}
+
+function loadLocal() {
+  projects  = JSON.parse(localStorage.getItem('cost_projects')||'[]');
+  costItems = JSON.parse(localStorage.getItem('cost_items')||'[]');
+  tasks     = JSON.parse(localStorage.getItem('proj_tasks')||'[]');
+  syncLocalClientDB(); 
+}
+
+function setSyncStatus(state, text) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  dot.className = 'sync-dot' + (state==='ok'?' ok':state==='syncing'?' syncing':'');
+  txt.textContent = text;
+}
+function setPill(state) {
+  const p = document.getElementById('fb-status-pill');
+  if(state==='ok'){ p.textContent='Firebase ✓'; p.style.color='#34d399'; p.style.borderColor='#34d399'; }
+  else{ p.textContent='本機模式'; p.style.color='#d97706'; p.style.borderColor='#d97706'; }
+}
+
+/* =============================================
+   FILTER / HELPERS
+   ============================================= */
+function setStatusFilter(s, el) {
+  statusFilter = s;
+  document.querySelectorAll('[id^="sf-"]').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  renderAll();
+}
+
+// ★ 更新：依據上方年份選單過濾專案
+function getFilteredProjects() {
+  const q = (document.getElementById('proj-search')?.value||'').toLowerCase();
+  const y = document.getElementById('sel-year')?.value;
+
+  return projects.filter(p => {
+    // 1. 狀態篩選
+    if (statusFilter !== 'all' && (p.status||'進行中') !== statusFilter) return false;
+    
+    // 2. 關鍵字搜尋
+    if (q && !p.name.toLowerCase().includes(q) && !(p.client||'').toLowerCase().includes(q)) return false;
+    
+    // 3. 年度篩選 (如果不是全部年度)
+    if (y && y !== 'all') {
+       const startY = p.start ? p.start.split('-')[0] : '';
+       const endY = p.end ? p.end.split('-')[0] : '';
+       const createY = new Date(p.createdAt || Date.now()).getFullYear().toString();
+       // 若開始、結束、建立時間 都不包含該年度，則過濾掉
+       if (startY !== y && endY !== y && createY !== y) return false;
+    }
+    return true;
+  }).sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+}
+
+function getProjTasks(projId) {
+  return tasks.filter(t => t.projId === projId).sort((a,b) => (a.due||'').localeCompare(b.due||''));
+}
+function calcProgress(projId) {
+  const t = getProjTasks(projId);
+  if(!t.length) return null;
+  return Math.round(t.filter(t=>t.done).length / t.length * 100);
+}
+function calcCost(projId) {
+  const items = costItems.filter(c => c.projId === projId);
+  const income = items.filter(c=>c.type==='收入').reduce((a,c)=>a+(+c.amount||0),0);
+  const cost   = items.filter(c=>c.type!=='收入').reduce((a,c)=>a+(+c.amount||0),0);
+  return { income, cost, profit: income-cost };
+}
+function fmt(n) {
+  if(!n && n!==0) return '—';
+  return (n<0?'-':'')+'NT$'+Math.abs(Math.round(n)).toLocaleString();
+}
+function isLate(proj) {
+  if(!proj.end || (proj.status==='已完成')) return false;
+  return new Date(proj.end) < new Date();
+}
+function expandAll() { getFilteredProjects().forEach(p => expandedProjs.add(p.id)); renderList(); }
+function collapseAll() { expandedProjs.clear(); renderList(); }
+
+/* =============================================
+   RENDER ALL
+   ============================================= */
+function renderAll() {
+  renderKPI();
+  renderGantt();
+  renderList();
+  populateProjSelect();
+}
+
+/* =============================================
+   KPI
+   ============================================= */
+function renderKPI() {
+  const fProjs = getFilteredProjects(); // 套用所有篩選後的專案
+  const total  = fProjs.length;
+  const active = fProjs.filter(p=>(p.status||'進行中')==='進行中').length;
+  const done   = fProjs.filter(p=>p.status==='已完成').length;
+  const late   = fProjs.filter(p=>isLate(p)).length;
+  
+  document.getElementById('k-total').textContent = total;
+  document.getElementById('k-total-sub').textContent = `共 ${total} 個專案`;
+  document.getElementById('k-active').textContent = active;
+  document.getElementById('k-active-sub').textContent = `${active} 個進行中`;
+  document.getElementById('k-done').textContent = done;
+  document.getElementById('k-done-sub').textContent = `${done} 個已完成`;
+  document.getElementById('k-late').textContent = late;
+  document.getElementById('k-late-sub').textContent = late ? `${late} 個需注意` : '無逾期專案';
+}
+
+/* =============================================
+   GANTT
+   ============================================= */
+function renderGantt() {
+  const val = document.getElementById('gantt-range').value;
+  const now = new Date();
+  let start, end, cols, colLabel, isWeekMode = false;
+
+  if (val === '1w' || val === '2w') {
+    isWeekMode = true;
+    const totalDays = val === '1w' ? 7 : 14;
+    const halfDays = Math.floor(totalDays / 2);
+    start = new Date(now); start.setDate(start.getDate() - halfDays); start.setHours(0,0,0,0);
+    end   = new Date(start); end.setDate(end.getDate() + totalDays - 1); end.setHours(23,59,59,999);
+    cols = [];
+    const d = new Date(start);
+    const dayNames = ['日','一','二','三','四','五','六'];
+    while (d <= end) {
+      cols.push({ label: `${d.getMonth()+1}/${d.getDate()}`, sub: dayNames[d.getDay()], isToday: d.toDateString()===now.toDateString() });
+      d.setDate(d.getDate()+1);
+    }
+  } else {
+    const months = parseInt(val);
+    start = new Date(now.getFullYear(), now.getMonth() - Math.floor(months/2), 1);
+    end   = new Date(start.getFullYear(), start.getMonth() + months, 0);
+    end.setHours(23,59,59,999);
+    cols = [];
+    let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+    while(cur <= end) {
+      cols.push({ label: `${cur.getMonth()+1}月`, sub: `${cur.getFullYear()}`, date: new Date(cur) });
+      cur.setMonth(cur.getMonth()+1);
+    }
+  }
+
+  const totalMs = end - start;
+  const todayPct = Math.max(0, Math.min(100, (now - start) / totalMs * 100));
+  const filtered = getFilteredProjects().filter(p => p.start || p.end);
+  const container = document.getElementById('gantt-container');
+
+  if(!filtered.length) {
+    container.innerHTML = `<div class="gantt-empty">尚無設定日期的專案<br><span style="font-size:11px;">請先在此頁新增專案並設定開始／結束日期</span></div>`;
+    return;
+  }
+
+  const headerHTML = `<div class="gantt-header">
+    <div class="gantt-label-col">專案</div>
+    <div class="gantt-timeline-header" style="position:relative;">
+      ${cols.map(c => `<div class="gantt-month" ${c.isToday?'style="background:rgba(220,38,38,.06);font-weight:700;"':''}>${c.label}<span style="font-size:9px;color:${c.isToday?'#dc2626':'var(--ink3)'};display:block;">${c.sub}</span></div>`).join('')}
+      <div class="gantt-today-line" style="left:${todayPct}%;"></div>
+    </div>
+  </div>`;
+
+  const rowsHTML = filtered.map(proj => {
+    const pStart = proj.start ? new Date(proj.start) : null;
+    const pEnd   = proj.end   ? new Date(proj.end)   : null;
+    let barHTML = '';
+    if(pStart && pEnd && pEnd >= start && pStart <= end) {
+      const barStart = Math.max(0, (Math.max(pStart,start) - start) / totalMs * 100);
+      const barEnd   = Math.min(100, (Math.min(pEnd,end) - start) / totalMs * 100);
+      const barW = Math.max(barEnd - barStart, 0.5);
+      const late = isLate(proj);
+      const bg = late ? '#dc2626' : (proj.color || '#b45309');
+      const pct = calcProgress(proj.id);
+      barHTML = `<div class="gantt-bar" style="left:${barStart}%;width:${barW}%;background:${bg};opacity:${proj.status==='已完成'?.6:1};"
+        onclick="scrollToProj('${proj.id}')" title="${proj.name}">
+        ${proj.name}${pct!==null?' '+pct+'%':''}
+      </div>`;
+    }
+    return `<div class="gantt-row">
+      <div class="gantt-proj-label" onclick="scrollToProj('${proj.id}')">
+        <div style="width:8px;height:8px;border-radius:50%;background:${proj.color||'#b45309'};flex-shrink:0;"></div>
+        <div><div class="gantt-proj-name">${proj.name}</div><div class="gantt-proj-sub">${proj.client||''}</div></div>
+      </div>
+      <div class="gantt-bar-area" style="position:relative;">
+        ${barHTML}
+        <div class="gantt-today-line" style="left:${todayPct}%;"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = headerHTML + rowsHTML;
+}
+
+function scrollToProj(id) {
+  expandedProjs.add(id);
+  renderList();
+  const el = document.getElementById('proj-row-'+id);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+/* =============================================
+   PROJECT LIST
+   ============================================= */
+function renderList() {
+  const filtered = getFilteredProjects();
+  const wrap = document.getElementById('proj-list');
+  if(!filtered.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">查無專案</div><div class="empty-sub">此條件下沒有任何專案資料</div></div>`;
+    return;
+  }
+  wrap.innerHTML = filtered.map(proj => renderProjRow(proj)).join('');
+}
+
+function renderProjRow(proj) {
+  const isExpanded = expandedProjs.has(proj.id);
+  const projTasks  = getProjTasks(proj.id);
+  const pct = calcProgress(proj.id);
+  const { income, cost, profit } = calcCost(proj.id);
+  const late = isLate(proj);
+  const status = proj.status || '進行中';
+  const assignee = proj.assignee || '—';
+
+  const progressHTML = pct !== null
+    ? `<div class="col-progress">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="progress-bar-bg" style="flex:1;"><div class="progress-bar-fill" style="width:${pct}%;background:${pct===100?'#059669':'#b45309'};"></div></div>
+          <span class="progress-pct">${pct}%</span>
+        </div>
+        <div style="font-size:9px;color:var(--ink3);">${projTasks.filter(t=>t.done).length}/${projTasks.length} 完成</div>
+      </div>`
+    : `<span style="font-size:10px;color:var(--ink3);">尚無任務</span>`;
+
+  const dateHTML = `<div class="col-dates">
+    <div>${proj.start||'—'}</div>
+    <div class="date-sub">→ ${proj.end||'—'} ${late?'<span style="color:#dc2626;font-size:9px;">逾期</span>':''}</div>
+  </div>`;
+
+  const profitColor = profit>0?'#059669':profit<0?'#dc2626':'var(--ink3)';
+  const costHTML = `<div class="col-cost">
+    <div style="color:#059669;font-size:10px;">${fmt(income)}</div>
+    <div style="color:${profitColor};font-size:10px;">${profit>=0?'▲':'▼'} ${fmt(Math.abs(profit))}</div>
+  </div>`;
+
+  const taskRows = projTasks.length
+    ? projTasks.map(t => renderTaskRow(t, proj.id)).join('')
+    : `<div class="no-tasks">尚無任務 — <button class="btn btn-ghost-dark btn-xs" onclick="openTaskModal('${proj.id}')">＋ 新增第一個任務</button></div>`;
+
+  return `<div class="proj-row" id="proj-row-${proj.id}">
+    <div class="proj-row-header ${isExpanded?'expanded':''}" onclick="toggleProj('${proj.id}')">
+      <div class="col-toggle ${isExpanded?'open':''}">▶</div>
+      <div class="col-name">
+        <div class="proj-dot" style="background:${proj.color||'#b45309'}"></div>
+        <span class="proj-title">${proj.name}</span>
+        ${proj.client?`<span class="proj-client-tag">${proj.client}</span>`:''}
+      </div>
+      <div>${progressHTML}</div>
+      <div>${dateHTML}</div>
+      <div class="col-assignee">${assignee}</div>
+      <div>${costHTML}</div>
+      <div class="col-status"><span class="status-badge s-${status}">${status}</span></div>
+      <div class="col-actions" onclick="e=>e.stopPropagation()">
+        <button class="btn btn-ghost-dark btn-xs" onclick="event.stopPropagation();openProjModal('${proj.id}')">編</button>
+      </div>
+    </div>
+    ${isExpanded ? `<div class="task-area">
+      <div class="task-header">
+        <span class="task-header-title">任務清單（${projTasks.length}）</span>
+        <button class="btn btn-amber btn-xs" onclick="openTaskModal('${proj.id}')">＋ 新增任務</button>
+      </div>
+      ${taskRows}
+    </div>` : ''}
+  </div>`;
+}
+
+function renderTaskRow(t, projId) {
+  const isLateTask = t.due && !t.done && new Date(t.due) < new Date();
+  return `<div class="task-item" onclick="event.stopPropagation()">
+    <input type="checkbox" class="task-check" ${t.done?'checked':''} onchange="event.stopPropagation();toggleTaskDone('${t.id}',this.checked)">
+    <span class="task-name ${t.done?'done':''}">${t.name}</span>
+    ${t.type==='milestone'?`<span class="task-milestone">⬥ 里程碑</span>`:''}
+    ${isLateTask?`<span class="task-late">逾期</span>`:''}
+    ${t.assignee?`<span class="task-assignee">${t.assignee}</span>`:''}
+    <span class="task-date">${t.due||'—'} ${t.actual?'→ 實際:'+t.actual:''}</span>
+    <div class="task-actions">
+      <button class="btn btn-ghost-dark btn-xs" onclick="event.stopPropagation();openTaskModal('${projId}','${t.id}')">編</button>
+      <button class="btn btn-red btn-xs" onclick="event.stopPropagation();deleteTask('${t.id}')">刪</button>
+    </div>
+  </div>`;
+}
+
+function toggleProj(id) {
+  if(expandedProjs.has(id)) expandedProjs.delete(id);
+  else expandedProjs.add(id);
+  renderList();
+}
+
+/* =============================================
+   TASK CRUD
+   ============================================= */
+function populateProjSelect(currentProjId) {
+  const sel = document.getElementById('task-proj-id');
+  if(!sel) return;
+  sel.innerHTML = projects.map(p => `<option value="${p.id}" ${p.id===currentProjId?'selected':''}>${p.name}</option>`).join('');
+}
+
+function openTaskModal(projId, taskId) {
+  const t = taskId ? tasks.find(t=>t.id===taskId) : null;
+  document.getElementById('task-modal-title').textContent = t ? '編輯任務' : '新增任務';
+  document.getElementById('task-id').value = t ? t.id : '';
+  populateProjSelect(projId || (t ? t.projId : projects[0]?.id));
+  if(t) document.getElementById('task-proj-id').value = t.projId;
+  document.getElementById('task-name').value = t ? t.name : '';
+  populateAssigneeSelect('task-assignee', t ? (t.assignee||'') : '');
+  document.getElementById('task-type').value = t ? (t.type||'task') : 'task';
+  document.getElementById('task-due').value = t ? (t.due||'') : '';
+  document.getElementById('task-actual').value = t ? (t.actual||'') : '';
+  document.getElementById('task-note').value = t ? (t.note||'') : '';
+  document.getElementById('task-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('task-name').focus(),100);
+}
+function closeTaskModal() { document.getElementById('task-overlay').classList.remove('open'); }
+function closeTaskIfBg(e) { if(e.target===document.getElementById('task-overlay')) closeTaskModal(); }
+
+async function saveTask() {
+  const name = document.getElementById('task-name').value.trim();
+  if(!name){ showToast('請輸入任務名稱','err'); return; }
+  const id = document.getElementById('task-id').value || ('task_'+Date.now());
+  const task = {
+    id,
+    projId: document.getElementById('task-proj-id').value,
+    name,
+    assignee: document.getElementById('task-assignee').value.trim(),
+    type: document.getElementById('task-type').value,
+    due: document.getElementById('task-due').value,
+    actual: document.getElementById('task-actual').value,
+    note: document.getElementById('task-note').value,
+    done: tasks.find(t=>t.id===id)?.done || false,
+    createdAt: tasks.find(t=>t.id===id)?.createdAt || Date.now(),
+    updatedAt: Date.now()
+  };
+  const idx = tasks.findIndex(t=>t.id===id);
+  if(idx>=0) tasks[idx]=task; else tasks.push(task);
+  expandedProjs.add(task.projId);
+  await saveTaskToFb(task);
+  closeTaskModal();
+  showToast(`✓ 已儲存任務「${name}」`);
+  renderAll();
+}
+
+async function toggleTaskDone(id, done) {
+  const t = tasks.find(t=>t.id===id);
+  if(!t) return;
+  t.done = done;
+  if(done && !t.actual) t.actual = new Date().toISOString().slice(0,10);
+  t.updatedAt = Date.now();
+  await saveTaskToFb(t);
+  renderAll();
+}
+
+async function deleteTask(id) {
+  const t = tasks.find(t=>t.id===id);
+  if(!t) return;
+  showConfirm(`確定刪除任務「${t.name}」？`, async () => {
+    tasks = tasks.filter(t=>t.id!==id);
+    await deleteTaskFromFb(id);
+    showToast('已刪除任務','ok');
+    renderAll();
+  });
+}
+
+/* =============================================
+   PROJ EDIT (in this page)
+   ============================================= */
+function openProjModal(projId) {
+  const proj = projects.find(p=>p.id===projId);
+  if(!proj) return;
+  document.getElementById('proj-modal-title').textContent = proj.name;
+  document.getElementById('edit-proj-id').value = proj.id;
+  document.getElementById('edit-proj-name').value = proj.name;
+  document.getElementById('edit-proj-status').value = proj.status||'進行中';
+  document.getElementById('edit-proj-start').value = proj.start||'';
+  document.getElementById('edit-proj-end').value = proj.end||'';
+  populateAssigneeSelect('edit-proj-assignee', proj.assignee||'');
+  document.getElementById('edit-proj-note').value = proj.note||'';
+  
+  // ★ 帶入客戶資料
+  populateClientSelect('edit-proj-client', proj.client||'');
+
+  document.getElementById('proj-overlay').classList.add('open');
+}
+function closeProjModal() { document.getElementById('proj-overlay').classList.remove('open'); }
+function closeProjIfBg(e) { if(e.target===document.getElementById('proj-overlay')) closeProjModal(); }
+
+async function saveProjEdit() {
+  const id = document.getElementById('edit-proj-id').value;
+  const name = document.getElementById('edit-proj-name').value.trim();
+  if(!name){ showToast('請輸入專案名稱','err'); return; }
+  const proj = projects.find(p=>p.id===id);
+  if(!proj) return;
+  proj.name     = name;
+  proj.client   = document.getElementById('edit-proj-client').value;
+  proj.status   = document.getElementById('edit-proj-status').value;
+  proj.start    = document.getElementById('edit-proj-start').value;
+  proj.end      = document.getElementById('edit-proj-end').value;
+  proj.assignee = document.getElementById('edit-proj-assignee').value;
+  proj.note     = document.getElementById('edit-proj-note').value;
+  proj.updatedAt = Date.now();
+  await saveProjToFb(proj);
+  closeProjModal();
+  showToast(`✓ 已更新「${name}」`);
+  renderAll();
+}
+
+/* =============================================
+   TOAST & CONFIRM
+   ============================================= */
+function showToast(msg, type='ok') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast '+type; t.textContent = msg;
+  c.appendChild(t); setTimeout(()=>t.remove(),3000);
+}
+
+function showConfirm(msg, onOk) {
+  const overlay = document.getElementById('confirm-overlay');
+  document.getElementById('confirm-msg').textContent = msg;
+  overlay.classList.add('open');
+  const okBtn = document.getElementById('confirm-ok');
+  const cancelBtn = document.getElementById('confirm-cancel');
+  const close = () => overlay.classList.remove('open');
+  okBtn.onclick = () => { close(); onOk(); };
+  cancelBtn.onclick = close;
+}
+
+</script>
+</body>
+</html>

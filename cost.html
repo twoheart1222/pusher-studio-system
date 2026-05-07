@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>成本計算 — 公司系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=Noto+Serif+TC:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #eeeae4;
+  --panel: #1c1917;
+  --panel2: #292524;
+  --paper: #fdfcfb;
+  --ink: #1c1917;
+  --ink2: #57534e;
+  --ink3: #a8a29e;
+  --line: #e7e3dc;
+  --acc: #b45309;
+  --acc2: #d97706;
+  --success: #059669;
+  --danger: #dc2626;
+  --info: #0369a1;
+  --shadow-lg: 0 8px 12px -2px rgba(0,0,0,.1), 0 24px 56px -8px rgba(0,0,0,.18);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+  --r: 6px;
+  --font-body: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--ink); font-size: 13px; line-height: 1.55; min-height: 100vh; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c4bdb6; border-radius: 3px; }
+
+/* ===== TOPBAR ===== */
+.topbar {
+  background: var(--panel); color: #fafaf9;
+  padding: 0 24px; height: 50px;
+  display: flex; justify-content: space-between; align-items: center;
+  position: sticky; top: 0; z-index: 300;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.topbar-brand { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; color: #e7e5e4; }
+.topbar-brand .brand-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acc2); }
+.topbar-nav { display: flex; gap: 2px; }
+.nav-tab {
+  padding: 6px 14px; border-radius: var(--r); font-size: 12px; font-weight: 500;
+  color: #a8a29e; cursor: pointer; transition: all .15s; text-decoration: none;
+  border: 1px solid transparent;
+}
+.nav-tab:hover { color: #e7e5e4; background: rgba(255,255,255,.06); }
+.nav-tab.active { color: var(--acc2); border-color: rgba(217,119,6,.3); background: rgba(180,83,9,.12); }
+.topbar-actions { display: flex; gap: 7px; align-items: center; }
+
+/* ===== TOOLBAR ===== */
+.toolbar {
+  background: var(--panel2); padding: 0 24px; height: 44px;
+  display: flex; align-items: center; gap: 0;
+  position: sticky; top: 50px; z-index: 290;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  overflow-x: auto; scrollbar-width: none;
+}
+.toolbar::-webkit-scrollbar { display: none; }
+.tg { display: flex; align-items: center; gap: 6px; padding: 0 16px; border-right: 1px solid rgba(255,255,255,.08); height: 100%; flex-shrink: 0; }
+.tg:last-child { border-right: none; }
+.tg-label { font-size: 10px; color: #78716c; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; }
+.t-select {
+  background: rgba(255,255,255,.06); color: #d6d3d1;
+  border: 1px solid rgba(255,255,255,.1); border-radius: 4px;
+  padding: 3px 7px; font-size: 11px; cursor: pointer; font-family: inherit; outline: none;
+}
+.t-select:hover { border-color: rgba(255,255,255,.22); }
+.view-pill {
+  padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 500;
+  border: 1px solid rgba(255,255,255,.12); color: #a8a29e;
+  cursor: pointer; transition: .15s; background: none; font-family: inherit;
+}
+.view-pill:hover { color: #e7e5e4; border-color: rgba(255,255,255,.25); }
+.view-pill.on { color: var(--acc2); border-color: var(--acc2); background: rgba(180,83,9,.15); }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #78716c; transition: .3s; }
+.sync-dot.syncing { background: #d97706; animation: pulse .8s infinite; }
+.sync-dot.ok { background: #059669; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ===== BTNS ===== */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 13px; border-radius: var(--r); border: none;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: all .15s; font-family: inherit; white-space: nowrap;
+}
+.btn-ghost { background: rgba(255,255,255,.07); color: #d6d3d1; border: 1px solid rgba(255,255,255,.12); }
+.btn-ghost:hover { background: rgba(255,255,255,.14); color: #fafaf9; }
+.btn-ghost-dark { background: rgba(0,0,0,.04); color: var(--ink2); border: 1px solid var(--line); }
+.btn-ghost-dark:hover { background: rgba(0,0,0,.08); color: var(--ink); }
+.btn-amber { background: var(--acc); color: white; }
+.btn-amber:hover { background: var(--acc2); }
+.btn-green { background: rgba(5,150,105,.15); color: #6ee7b7; border: 1px solid rgba(5,150,105,.4); }
+.btn-green:hover { background: #059669; color: white; }
+.btn-red { background: rgba(220,38,38,.12); color: #fca5a5; border: 1px solid rgba(220,38,38,.3); }
+.btn-red:hover { background: var(--danger); color: white; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn-xs { padding: 3px 8px; font-size: 10px; }
+.btn-icon { padding: 5px; border-radius: 4px; }
+
+/* ===== MAIN LAYOUT ===== */
+.main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+/* ===== KPI CARDS ===== */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+.kpi-card {
+  background: var(--paper); border-radius: 10px; padding: 18px 20px;
+  box-shadow: var(--shadow-sm); border: 1px solid var(--line);
+  position: relative; overflow: hidden;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: 10px 10px 0 0;
+}
+.kpi-card.income::before { background: linear-gradient(90deg, #059669, #34d399); }
+.kpi-card.cost::before { background: linear-gradient(90deg, #b45309, #d97706); }
+.kpi-card.profit::before { background: linear-gradient(90deg, #0369a1, #38bdf8); }
+.kpi-card.margin::before { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+.kpi-label { font-size: 10px; color: var(--ink3); letter-spacing: .5px; text-transform: uppercase; margin-bottom: 6px; }
+.kpi-value { font-size: 22px; font-weight: 600; font-family: var(--font-mono); letter-spacing: -0.5px; line-height: 1; margin-bottom: 4px; }
+.kpi-value.income { color: #059669; }
+.kpi-value.cost { color: var(--acc); }
+.kpi-value.profit.pos { color: #0369a1; }
+.kpi-value.profit.neg { color: var(--danger); }
+.kpi-value.margin { color: #7c3aed; }
+.kpi-sub { font-size: 10px; color: var(--ink3); }
+
+/* ===== TWO-COL LAYOUT ===== */
+.content-grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+
+/* ===== PANEL ===== */
+.panel {
+  background: var(--paper); border-radius: 10px;
+  box-shadow: var(--shadow-sm); border: 1px solid var(--line);
+  overflow: hidden;
+}
+.panel-header {
+  padding: 14px 18px; border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between;
+  background: #faf9f7;
+}
+.panel-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.panel-body { padding: 0; }
+
+/* ===== PROJECT LIST ===== */
+.project-item {
+  padding: 12px 18px; border-bottom: 1px solid var(--line);
+  cursor: pointer; transition: .12s; display: flex; align-items: center; gap: 10px;
+}
+.project-item:last-child { border-bottom: none; }
+.project-item:hover { background: #f5f2ee; }
+.project-item.active { background: rgba(180,83,9,.06); border-left: 3px solid var(--acc); padding-left: 15px; }
+.proj-color { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.proj-info { flex: 1; min-width: 0; }
+.proj-name { font-weight: 500; font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proj-meta { font-size: 10px; color: var(--ink3); margin-top: 1px; }
+.proj-amount { text-align: right; flex-shrink: 0; }
+.proj-profit { font-size: 11px; font-weight: 500; font-family: var(--font-mono); }
+.proj-profit.pos { color: #059669; }
+.proj-profit.neg { color: var(--danger); }
+.proj-profit.zero { color: var(--ink3); }
+
+/* ===== PROJ FILTER PILLS & DOTS ===== */
+.proj-filter-pill {
+  padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 500;
+  border: 1px solid rgba(0,0,0,.12); color: var(--ink3);
+  cursor: pointer; transition: .15s; background: none; font-family: inherit; white-space: nowrap;
+}
+.proj-filter-pill:hover { color: var(--ink); border-color: rgba(0,0,0,.25); }
+.proj-filter-pill.on { color: var(--acc); border-color: var(--acc); background: rgba(180,83,9,.08); }
+
+.status-dot { width:6px;height:6px;border-radius:50%;flex-shrink:0;display:inline-block; }
+.status-進行中 { background:#059669; }
+.status-規劃中 { background:#0369a1; }
+.status-已完成 { background:#a8a29e; }
+.status-暫停   { background:#dc2626; }
+
+.proj-extra { font-size:10px;color:var(--ink3);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap; }
+
+/* ===== RIGHT PANEL ===== */
+.right-panels { display: flex; flex-direction: column; gap: 20px; }
+
+/* ===== NO PROJECT SELECTED ===== */
+.no-proj {
+  background: var(--paper); border-radius: 10px; box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line); padding: 64px 32px; text-align: center;
+}
+.no-proj-icon { width: 48px; height: 48px; border-radius: 12px; background: rgba(180,83,9,.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+
+/* ===== CHARTS ROW ===== */
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.chart-wrap { position: relative; height: 220px; }
+
+/* ===== COST TABLE ===== */
+.cost-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cost-table th {
+  background: var(--panel); color: #d6d3d1;
+  padding: 8px 12px; font-size: 10px;
+  font-weight: 500; letter-spacing: .5px; text-transform: uppercase;
+}
+.cost-table th.left { text-align: left; }
+.cost-table th.right { text-align: right; }
+.cost-table th:first-child { border-radius: 0; }
+.cost-table td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.cost-table tr:last-child td { border-bottom: none; }
+.cost-table tr:hover td { background: #f7f5f1; }
+
+.cat-badge {
+  display: inline-block; padding: 2px 7px; border-radius: 20px;
+  font-size: 10px; font-weight: 500;
+}
+.cat-人力 { background: rgba(3,105,161,.12); color: #0369a1; }
+.cat-材料 { background: rgba(180,83,9,.12); color: #b45309; }
+.cat-外包 { background: rgba(124,58,237,.12); color: #7c3aed; }
+.cat-收入 { background: rgba(5,150,105,.12); color: #059669; }
+.cat-雜支 { background: rgba(120,113,108,.12); color: #57534e; }
+[class^="cat-"]:not(.cat-人力):not(.cat-材料):not(.cat-外包):not(.cat-收入):not(.cat-雜支) { background: rgba(88,28,135,.1); color: #7c3aed; }
+
+.amount-cell { font-family: var(--font-mono); font-size: 12px; text-align: right; }
+.amount-pos { color: #059669; }
+.amount-neg { color: var(--acc); }
+
+/* 執行人標籤 */
+.payee-tag { font-size:10px; background:rgba(180,83,9,.1); color:var(--acc); padding:2px 6px; border-radius:4px; font-weight:600; display:inline-block; }
+
+/* ===== MODAL ===== */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  z-index: 500; display: none; align-items: center; justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.overlay.open { display: flex; }
+.modal {
+  background: var(--paper); border-radius: 12px; width: 480px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; max-height: 90vh; overflow-y: auto;
+}
+.modal-header {
+  background: var(--panel); color: #fafaf9; padding: 16px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title { font-size: 14px; font-weight: 600; }
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.modal-footer { padding: 16px 20px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 8px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 11px; font-weight: 500; color: var(--ink2); }
+.field input, .field select, .field textarea {
+  background: #f9f7f4; border: 1px solid var(--line); border-radius: var(--r);
+  padding: 7px 10px; font-size: 12px; font-family: inherit; color: var(--ink);
+  outline: none; transition: .15s; width: 100%;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--acc); box-shadow: 0 0 0 3px rgba(180,83,9,.08); background: white;
+}
+.field-row { display: grid; gap: 12px; }
+.field-row.col2 { grid-template-columns: 1fr 1fr; }
+.field-row.col3 { grid-template-columns: 1fr 1fr 1fr; }
+.link-section {
+  background: rgba(5,150,105,.06); border: 1px solid rgba(5,150,105,.2);
+  border-radius: var(--r); padding: 12px 14px;
+}
+.link-section-title { font-size: 11px; font-weight: 600; color: #059669; margin-bottom: 8px; }
+.link-row { display: flex; align-items: center; gap: 8px; }
+.link-row select { flex: 1; }
+.link-tag { font-size: 10px; color: var(--ink3); }
+
+/* ===== EMPTY STATE ===== */
+.empty-state { padding: 48px 20px; text-align: center; }
+.empty-icon { font-size: 32px; margin-bottom: 10px; opacity: .4; }
+.empty-title { font-size: 13px; font-weight: 500; color: var(--ink2); margin-bottom: 4px; }
+.empty-sub { font-size: 11px; color: var(--ink3); }
+
+/* ===== SUMMARY ROW ===== */
+.summary-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; background: #f5f2ee; border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.summary-item { display: flex; align-items: center; gap: 6px; }
+.summary-label { color: var(--ink3); }
+.summary-value { font-family: var(--font-mono); font-weight: 500; }
+
+/* ===== TABS ===== */
+.tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--line); padding: 0 18px; background: #faf9f7; }
+.tab-item {
+  padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--ink3);
+  cursor: pointer; border-bottom: 2px solid transparent; transition: .15s;
+  white-space: nowrap;
+}
+.tab-item:hover { color: var(--ink); }
+.tab-item.active { color: var(--acc); border-bottom-color: var(--acc); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ===== TOAST ===== */
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 600; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--panel); color: #e7e5e4; padding: 10px 16px;
+  border-radius: var(--r); font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  display: flex; align-items: center; gap: 8px;
+  animation: slideIn .2s ease; border-left: 3px solid var(--acc);
+}
+.toast.ok { border-left-color: #059669; }
+.toast.err { border-left-color: #dc2626; }
+@keyframes slideIn { from { transform: translateX(20px); opacity: 0; } }
+
+/* ===== LOADING ===== */
+.loading-bar {
+  position: fixed; top: 0; left: 0; height: 2px; background: var(--acc);
+  width: 0; z-index: 999; transition: width .3s;
+}
+
+@media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) { .content-grid { grid-template-columns: 1fr; } .charts-row { grid-template-columns: 1fr; } }
+</style>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
+    authDomain: "company-system-6ea1a.firebaseapp.com",
+    projectId: "company-system-6ea1a"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) window.location.href = 'login.html';
+  });
+
+  window.logout = function() {
+    signOut(auth).then(() => { window.location.href = 'login.html'; });
+  };
+</script>
+</head>
+<body>
+
+<div class="loading-bar" id="loading-bar"></div>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-dot"></div>
+    公司管理系統
+  </div>
+  <div class="topbar-nav">
+    <a href="index.html" class="nav-tab">報價單</a>
+    <a href="project.html" class="nav-tab">專案進度</a>
+    <a href="cost.html" class="nav-tab active">成本計算</a>
+    <a href="inventory.html" class="nav-tab">器材庫存</a>
+    <a href="contacts.html" class="nav-tab">客戶與廠商管理</a>
+  </div>
+  <div class="topbar-actions">
+    <span id="sync-status" style="font-size:10px;color:#78716c;display:flex;align-items:center;gap:5px;">
+      <span class="sync-dot" id="sync-dot"></span>
+      <span id="sync-text">連線中...</span>
+    </span>
+    <button class="btn btn-ghost btn-sm" onclick="exportExcel()">↓ 匯出 Excel</button>
+    <button class="btn btn-amber btn-sm" onclick="openProjectModal()">＋ 新增專案</button>
+    <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
+    <button class="btn btn-ghost" style="color: #fca5a5; border-color: rgba(220,38,38,0.3); padding: 4px 10px;" onclick="logout()">登出</button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="tg">
+    <span class="tg-label">檢視期間</span>
+    <button class="view-pill on" id="vp-all" onclick="setView('all')">全部時間</button>
+    <button class="view-pill" id="vp-year" onclick="setView('year')">年度</button>
+    <button class="view-pill" id="vp-month" onclick="setView('month')">月份</button>
+  </div>
+  <div class="tg" id="tg-year" style="display:none;">
+    <span class="tg-label">年份</span>
+    <select class="t-select" id="sel-year" onchange="onFilterChange()"></select>
+  </div>
+  <div class="tg" id="tg-month" style="display:none;">
+    <span class="tg-label">月份</span>
+    <select class="t-select" id="sel-month" onchange="onFilterChange()">
+      <option value="01">1月</option><option value="02">2月</option>
+      <option value="03">3月</option><option value="04">4月</option>
+      <option value="05">5月</option><option value="06">6月</option>
+      <option value="07">7月</option><option value="08">8月</option>
+      <option value="09">9月</option><option value="10">10月</option>
+      <option value="11">11月</option><option value="12">12月</option>
+    </select>
+  </div>
+  <div class="tg">
+    <span class="tg-label">Firebase</span>
+    <button class="view-pill" id="fb-status-pill">載入中</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="kpi-row">
+    <div class="kpi-card income">
+      <div class="kpi-label">總收入</div>
+      <div class="kpi-value income" id="kpi-income">—</div>
+      <div class="kpi-sub" id="kpi-income-sub">計算中...</div>
+    </div>
+    <div class="kpi-card cost">
+      <div class="kpi-label">總成本</div>
+      <div class="kpi-value cost" id="kpi-cost">—</div>
+      <div class="kpi-sub" id="kpi-cost-sub">計算中...</div>
+    </div>
+    <div class="kpi-card profit">
+      <div class="kpi-label">淨利潤</div>
+      <div class="kpi-value profit" id="kpi-profit">—</div>
+      <div class="kpi-sub" id="kpi-profit-sub">計算中...</div>
+    </div>
+    <div class="kpi-card margin">
+      <div class="kpi-label">利潤率</div>
+      <div class="kpi-value margin" id="kpi-margin">—</div>
+      <div class="kpi-sub" id="kpi-margin-sub">計算中...</div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+
+    <div class="panel" id="proj-panel">
+      <div class="panel-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn btn-ghost btn-xs btn-icon" id="proj-collapse-btn" onclick="toggleProjectList()" title="摺疊/展開" style="font-size:13px;line-height:1;padding:3px 6px;">▾</button>
+          <span class="panel-title">專案列表</span>
+          <span id="proj-count-badge" style="font-size:10px;color:var(--ink3);background:rgba(0,0,0,.06);padding:1px 6px;border-radius:20px;"></span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="text" id="proj-search" placeholder="搜尋..." style="background:rgba(0,0,0,.04);border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-size:11px;outline:none;width:80px;font-family:inherit;" oninput="renderProjectList()">
+          <button class="btn btn-amber btn-xs" onclick="openProjectModal()">＋</button>
+        </div>
+      </div>
+      <div id="proj-list-controls" style="padding:8px 12px;border-bottom:1px solid var(--line);background:#faf9f7;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;gap:4px;flex-wrap:wrap;flex:1;">
+          <button class="proj-filter-pill on" data-status="all" onclick="setProjFilter('all',this)">全部</button>
+          <button class="proj-filter-pill" data-status="進行中" onclick="setProjFilter('進行中',this)">進行中</button>
+          <button class="proj-filter-pill" data-status="規劃中" onclick="setProjFilter('規劃中',this)">規劃中</button>
+          <button class="proj-filter-pill" data-status="已完成" onclick="setProjFilter('已完成',this)">已完成</button>
+          <button class="proj-filter-pill" data-status="暫停" onclick="setProjFilter('暫停',this)">暫停</button>
+        </div>
+        <select id="proj-sort" onchange="renderProjectList()" style="background:rgba(0,0,0,.04);border:1px solid var(--line);border-radius:4px;padding:3px 6px;font-size:10px;color:var(--ink2);outline:none;font-family:inherit;flex-shrink:0;">
+          <option value="newest">最新建立</option>
+          <option value="name">名稱 A→Z</option>
+          <option value="profit">利潤↓</option>
+          <option value="status">狀態</option>
+        </select>
+      </div>
+      <div class="panel-body" id="project-list">
+        <div class="empty-state">
+          <div class="empty-icon">📁</div>
+          <div class="empty-title">尚無專案</div>
+          <div class="empty-sub">點擊右上角「＋ 新增專案」開始</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panels" id="right-panels">
+      <div class="no-proj">
+        <div class="no-proj-icon">
+          <svg width="24" height="24" fill="none" stroke="#b45309" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+        </div>
+        <div style="font-size:14px;font-weight:600;color:var(--ink2);margin-bottom:6px;">選擇或新增專案</div>
+        <div style="font-size:12px;color:var(--ink3);">從左側點選專案，查看收支明細與圖表分析</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<div class="overlay" id="proj-overlay" onclick="closeProjIfBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="proj-modal-title">新增專案</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeProj()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="proj-id">
+      <div class="field">
+        <label>專案名稱 *</label>
+        <input type="text" id="proj-name" placeholder="例：台北辦公室裝修工程">
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>客戶</label>
+          <select id="proj-client" style="background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;">
+            <option value="">— 請選擇 —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>狀態</label>
+          <select id="proj-status">
+            <option value="進行中">進行中</option>
+            <option value="已完成">已完成</option>
+            <option value="暫停">暫停</option>
+            <option value="規劃中">規劃中</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>開始日期</label>
+          <input type="date" id="proj-start">
+        </div>
+        <div class="field">
+          <label>結束日期</label>
+          <input type="date" id="proj-end">
+        </div>
+      </div>
+      <div class="field">
+        <label>備註</label>
+        <textarea id="proj-note" rows="2" placeholder="選填描述"></textarea>
+      </div>
+      <div class="link-section">
+        <div class="link-section-title">🔗 連結報價單（選填）</div>
+        <div class="link-row">
+          <select id="proj-quote-link" style="background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;flex:1;">
+            <option value="">— 不連結 —</option>
+          </select>
+          <span class="link-tag">從報價單自動帶入收入金額</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeProj()">取消</button>
+      <button class="btn btn-amber" onclick="saveProject()">儲存專案</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="cost-overlay" onclick="closeCostIfBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="cost-modal-title">新增項目</span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="btn btn-ghost btn-xs" onclick="openCatManager()" title="管理分類">⚙ 管理分類</button>
+        <button class="btn btn-ghost btn-xs btn-icon" onclick="closeCost()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cost-id">
+      <input type="hidden" id="cost-proj-id">
+      <div class="field-row col2">
+        <div class="field">
+          <label>類型</label>
+          <select id="cost-type" onchange="onCostTypeChange()">
+            <option value="支出">支出（成本）</option>
+            <option value="收入">收入</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>分類</label>
+          <select id="cost-cat"></select>
+        </div>
+      </div>
+      
+      <div class="field" id="cost-payee-wrap">
+        <label>執行人 / 廠商 (長期配合)</label>
+        <div style="display:flex;gap:6px;">
+          <select id="cost-payee" style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;">
+            <option value="">— 無 / 不指定 —</option>
+          </select>
+          <button class="btn btn-ghost-dark btn-sm" onclick="openHrModal()" title="管理常用人員">⚙ 管理</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>項目說明 *</label>
+        <input type="text" id="cost-desc" placeholder="例：攝影師薪資、租借設備...">
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>金額（NTD）*</label>
+          <input type="number" id="cost-amount" placeholder="0" min="0">
+        </div>
+        <div class="field">
+          <label>日期</label>
+          <input type="date" id="cost-date">
+        </div>
+      </div>
+      <div class="field">
+        <label>備註</label>
+        <input type="text" id="cost-note" placeholder="選填">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCost()">取消</button>
+      <button class="btn btn-amber" onclick="saveCostItem()">儲存項目</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="cat-overlay" onclick="closeCatIfBg(event)">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      <span class="modal-title">管理分類</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeCatManager()">✕</button>
+    </div>
+    <div class="modal-body" style="gap:14px;">
+      <div style="font-size:11px;color:var(--ink3);">預設分類無法刪除，自訂分類全域共用於所有專案。</div>
+      <div style="display:flex;gap:0;border-bottom:1px solid var(--line);">
+        <button id="cat-tab-expense" onclick="switchCatTab('expense')"
+          style="padding:8px 16px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:2px solid var(--acc);color:var(--acc);">支出分類</button>
+        <button id="cat-tab-income" onclick="switchCatTab('income')"
+          style="padding:8px 16px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;color:var(--ink3);">收入分類</button>
+      </div>
+      <div id="cat-list" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;"></div>
+      <div style="border-top:1px solid var(--line);padding-top:12px;display:flex;gap:8px;align-items:center;">
+        <input type="text" id="new-cat-input" placeholder="輸入新分類名稱..." maxlength="12"
+          style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;"
+          onkeydown="if(event.key==='Enter')addCustomCat()">
+        <button class="btn btn-amber btn-sm" onclick="addCustomCat()">＋ 新增</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-amber" onclick="closeCatManager()">完成</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="hr-overlay" onclick="closeHrIfBg(event)">
+  <div class="modal" style="width:360px;">
+    <div class="modal-header">
+      <span class="modal-title">管理執行人 / 廠商名單</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeHrModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="new-hr-input" placeholder="輸入姓名或稱呼 (例如：阿明-攝影)"
+          style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;"
+          onkeydown="if(event.key==='Enter')addHrMember()">
+        <button class="btn btn-amber btn-sm" onclick="addHrMember()">新增</button>
+      </div>
+      <div id="hr-list" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto;margin-top:4px;"></div>
+      <p style="font-size:10px;color:var(--ink3);margin-top:6px;">名單儲存於本機，供所有專案的成本下拉選單共用。</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-amber" onclick="closeHrModal()">完成</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+const app = getApp();
+const fbDb = getFirestore(app);
+
+window._costFb = { collection, getDocs, doc, setDoc, deleteDoc, getDoc, onSnapshot, fbDb };
+window._fbReady = true;
+
+initData();
+</script>
+
+<script>
+/* =============================================
+   STATE
+   ============================================= */
+let projects = [];  
+let costItems = []; 
+let clientList = []; 
+let currentProjId = null;
+let currentView = 'all'; // all, year, month
+let barChartInst = null;
+let pieChartInst = null;
+
+const COLORS = ['#b45309','#0369a1','#059669','#7c3aed','#be185d','#0891b2','#d97706','#16a34a'];
+
+// ★ 動態初始化年份下拉選單
+function initYearSelect() {
+  const sel = document.getElementById('sel-year');
+  if(!sel) return;
+  
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  let yearSet = new Set();
+  
+  for(let y = currentYear - 5; y <= currentYear + 10; y++) {
+    yearSet.add(y);
+  }
+
+  const scanDate = (dStr) => {
+    if(dStr) {
+      const y = parseInt(dStr.split('-')[0]);
+      if(!isNaN(y)) yearSet.add(y);
+    }
+  };
+  try { (typeof costItems !== 'undefined') && costItems.forEach(i => scanDate(i.date)); } catch(e){}
+  try { (typeof projects !== 'undefined') && projects.forEach(p => { scanDate(p.start); scanDate(p.end); }); } catch(e){}
+  try { JSON.parse(localStorage.getItem('quotesHistory')||'[]').forEach(q => scanDate(q.date)); } catch(e){}
+  try { JSON.parse(localStorage.getItem('costsDB')||'[]').forEach(c => scanDate(c.date)); } catch(e){}
+
+  let sortedYears = Array.from(yearSet).sort((a,b) => b - a);
+  sel.innerHTML = '';
+  sortedYears.forEach(y => {
+    const o = document.createElement('option');
+    o.value = String(y);
+    o.textContent = y + '年';
+    if(y === currentYear) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  const mInput = document.getElementById('sel-month');
+  if(mInput && !mInput.value) {
+    mInput.value = String(now.getMonth()+1).padStart(2,'0');
+  }
+}
+
+// ★ 長期配合人員名單 (HR Members)
+function loadHrMembers() {
+  try { return JSON.parse(localStorage.getItem('cost_payees') || '[]'); } catch{ return []; }
+}
+function saveHrMembers(list) {
+  localStorage.setItem('cost_payees', JSON.stringify(list));
+}
+function populatePayeeSelect(selId, currentValue) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const members = loadHrMembers();
+  let opts = `<option value="">— 無 / 不指定 —</option>` +
+    members.map(m => `<option value="${m}">${m}</option>`).join('');
+  if (currentValue && !members.includes(currentValue)) {
+    opts += `<option value="${currentValue}">${currentValue}</option>`;
+  }
+  sel.innerHTML = opts;
+  if (currentValue) sel.value = currentValue;
+}
+
+function openHrModal() {
+  renderHrList();
+  document.getElementById('hr-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('new-hr-input').focus(), 100);
+}
+function closeHrModal() {
+  document.getElementById('hr-overlay').classList.remove('open');
+  document.getElementById('new-hr-input').value = '';
+  populatePayeeSelect('cost-payee', document.getElementById('cost-payee').value);
+}
+function closeHrIfBg(e) { if(e.target===document.getElementById('hr-overlay')) closeHrModal(); }
+
+function renderHrList() {
+  const members = loadHrMembers();
+  const wrap = document.getElementById('hr-list');
+  if (!members.length) {
+    wrap.innerHTML = `<div style="font-size:11px;color:var(--ink3);padding:8px 0;">尚無名單，請在上方輸入新增。</div>`;
+    return;
+  }
+  wrap.innerHTML = members.map((m, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);">
+      <span style="font-size:12px;">${m}</span>
+      <button class="btn btn-red btn-xs" onclick="deleteHrMember(${i})">刪除</button>
+    </div>`).join('');
+}
+function addHrMember() {
+  const input = document.getElementById('new-hr-input');
+  const name = input.value.trim();
+  if (!name) return;
+  const members = loadHrMembers();
+  if (members.includes(name)) { showToast('此名稱已存在', 'err'); return; }
+  members.push(name);
+  saveHrMembers(members);
+  input.value = '';
+  renderHrList();
+  showToast(`✓ 已新增「${name}」`);
+}
+function deleteHrMember(idx) {
+  const members = loadHrMembers();
+  const name = members[idx];
+  if (!confirm(`確定刪除「${name}」？這不會影響已經建立的費用紀錄。`)) return;
+  members.splice(idx, 1);
+  saveHrMembers(members);
+  renderHrList();
+  showToast(`已刪除「${name}」`);
+}
+
+function syncLocalClientDB() {
+  try {
+    const local = JSON.parse(localStorage.getItem('clientDB') || '[]');
+    const validClients = local.filter(c => c.type !== 'vendor'); 
+    if (validClients.length > 0 && clientList.length === 0) {
+      clientList = validClients;
+    }
+  } catch(e) { console.warn(e) }
+}
+
+async function initData() {
+  let waited = 0;
+  while (!window._fbReady && waited < 5000) {
+    await new Promise(r => setTimeout(r, 100));
+    waited += 100;
+  }
+  
+  if(!window._fbReady) {
+    setSyncStatus('err', '離線模式');
+    setPill('offline');
+    loadLocal();
+    initYearSelect();
+    setView('all'); 
+    return;
+  }
+
+  try {
+    setSyncStatus('ok', '已連線');
+    setPill('ok');
+    await loadAll();
+    initYearSelect();
+    setView('all');
+  } catch(e) {
+    console.warn('Firebase error:', e);
+    setSyncStatus('err', '離線模式');
+    setPill('offline');
+    loadLocal();
+    initYearSelect();
+    setView('all');
+  }
+}
+
+async function loadAll() {
+  const { collection, getDocs, doc, getDoc, fbDb } = window._costFb;
+  const [ps, cs] = await Promise.all([
+    getDocs(collection(fbDb, 'cost_projects')),
+    getDocs(collection(fbDb, 'cost_items'))
+  ]);
+  projects = []; ps.forEach(d => projects.push({id: d.id, ...d.data()}));
+  costItems = []; cs.forEach(d => costItems.push({id: d.id, ...d.data()}));
+
+  try {
+    const snap = await getDoc(doc(fbDb, 'databases', 'clientDB'));
+    const snapV = await getDoc(doc(fbDb, 'databases', 'vendorDB'));
+    let clients = snap.exists() ? (snap.data().list || []) : [];
+    let vendors = snapV.exists() ? (snapV.data().list || []) : [];
+    clientList = [...clients, ...vendors];
+    if (clientList.length === 0) { syncLocalClientDB(); }
+  } catch(e) { 
+    console.warn('Failed to load clients', e); 
+    syncLocalClientDB();
+  }
+
+  saveLocal();
+}
+
+async function saveProjectToFb(proj) {
+  if(!window._fbReady) { saveLocal(); return; }
+  setSyncStatus('syncing', '同步中...');
+  const { doc, setDoc, fbDb } = window._costFb;
+  await setDoc(doc(fbDb, 'cost_projects', proj.id), proj);
+  setSyncStatus('ok', '已同步');
+  saveLocal();
+}
+
+async function deleteProjFromFb(id) {
+  if(!window._fbReady) { saveLocal(); return; }
+  const { doc, deleteDoc, fbDb } = window._costFb;
+  await deleteDoc(doc(fbDb, 'cost_projects', id));
+  const items = costItems.filter(c => c.projId === id);
+  for(const item of items) {
+    await deleteDoc(doc(fbDb, 'cost_items', item.id));
+  }
+  saveLocal();
+}
+
+async function saveCostToFb(item) {
+  if(!window._fbReady) { saveLocal(); return; }
+  setSyncStatus('syncing', '同步中...');
+  const { doc, setDoc, fbDb } = window._costFb;
+  await setDoc(doc(fbDb, 'cost_items', item.id), item);
+  setSyncStatus('ok', '已同步');
+  saveLocal();
+}
+
+async function deleteCostFromFb(id) {
+  if(!window._fbReady) { saveLocal(); return; }
+  const { doc, deleteDoc, fbDb } = window._costFb;
+  await deleteDoc(doc(fbDb, 'cost_items', id));
+  saveLocal();
+}
+
+function saveLocal() {
+  localStorage.setItem('cost_projects', JSON.stringify(projects));
+  localStorage.setItem('cost_items', JSON.stringify(costItems));
+}
+
+function loadLocal() {
+  projects = JSON.parse(localStorage.getItem('cost_projects') || '[]');
+  costItems = JSON.parse(localStorage.getItem('cost_items') || '[]');
+  syncLocalClientDB();
+}
+
+function setSyncStatus(state, text) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  dot.className = 'sync-dot' + (state === 'ok' ? ' ok' : state === 'syncing' ? ' syncing' : '');
+  txt.textContent = text;
+}
+function setPill(state) {
+  const p = document.getElementById('fb-status-pill');
+  if(state === 'ok') { p.textContent = 'Firebase ✓'; p.style.color='#34d399'; p.style.borderColor='#34d399'; }
+  else if(state === 'offline') { p.textContent = '本機模式'; p.style.color='#d97706'; p.style.borderColor='#d97706'; }
+  else { p.textContent = '載入中'; }
+}
+
+function populateClientSelect(selId, currentValue) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  // ★ 過濾重複名稱
+  let uniqueNames = [...new Set(clientList.map(c => (c.name||'').trim()))].filter(Boolean);
+  
+  let opts = `<option value="">— 請選擇 —</option>` +
+    uniqueNames.map(name => `<option value="${name}">${name}</option>`).join('');
+  
+  if (currentValue && !uniqueNames.includes(currentValue)) {
+    opts += `<option value="${currentValue}">${currentValue}</option>`;
+  }
+  
+  sel.innerHTML = opts;
+  if (currentValue) sel.value = currentValue;
+}
+
+/* =============================================
+   VIEW / FILTER
+   ============================================= */
+function setView(v) {
+  currentView = v;
+  ['month','year','all'].forEach(k => {
+    document.getElementById('vp-'+k).classList.toggle('on', k === v);
+  });
+  document.getElementById('tg-year').style.display = (v === 'year' || v === 'month') ? 'flex' : 'none';
+  document.getElementById('tg-month').style.display = v === 'month' ? 'flex' : 'none';
+  renderAll();
+}
+
+function onFilterChange() { renderAll(); }
+
+function getFilteredItems(projId) {
+  const year = document.getElementById('sel-year').value;
+  const month = document.getElementById('sel-month').value;
+  return costItems.filter(c => {
+    if(projId && c.projId !== projId) return false;
+    if(currentView === 'all') return true;
+    if(!c.date) return false;
+    const [y, m] = c.date.split('-');
+    if(currentView === 'month') return y === year && m === month;
+    if(currentView === 'year')  return y === year;
+    return true;
+  });
+}
+
+function getFilteredProjects() {
+  const q = (document.getElementById('proj-search')?.value||'').toLowerCase();
+  const sort = document.getElementById('proj-sort')?.value || 'newest';
+  const year = document.getElementById('sel-year')?.value;
+
+  let filtered = projects.filter(p => {
+    if (projFilterStatus !== 'all' && (p.status||'進行中') !== projFilterStatus) return false;
+    if (q && !p.name.toLowerCase().includes(q) && !(p.client||'').toLowerCase().includes(q)) return false;
+    
+    // 時間篩選
+    if (currentView !== 'all') {
+       const startY = p.start ? p.start.split('-')[0] : '';
+       const endY = p.end ? p.end.split('-')[0] : '';
+       const createY = new Date(p.createdAt || Date.now()).getFullYear().toString();
+       if (startY !== year && endY !== year && createY !== year) return false;
+    }
+    return true;
+  });
+  
+  const STATUS_ORDER = {'進行中':0,'規劃中':1,'暫停':2,'已完成':3};
+  return filtered.sort((a, b) => {
+    if(sort === 'newest') return (b.createdAt||0) - (a.createdAt||0);
+    if(sort === 'name')   return a.name.localeCompare(b.name, 'zh-TW');
+    if(sort === 'status') return (STATUS_ORDER[a.status||'進行中']||0) - (STATUS_ORDER[b.status||'進行中']||0);
+    if(sort === 'profit') {
+      const pa = calcTotals(costItems.filter(c=>c.projId===a.id)).profit;
+      const pb = calcTotals(costItems.filter(c=>c.projId===b.id)).profit;
+      return pb - pa;
+    }
+    return 0;
+  });
+}
+
+/* =============================================
+   CALC
+   ============================================= */
+function calcTotals(items) {
+  const income = items.filter(c => c.type === '收入').reduce((a,c) => a + (+c.amount||0), 0);
+  const cost   = items.filter(c => c.type !== '收入').reduce((a,c) => a + (+c.amount||0), 0);
+  const profit = income - cost;
+  const margin = income > 0 ? (profit / income * 100) : 0;
+  return { income, cost, profit, margin };
+}
+
+function fmt(n) {
+  if(n === undefined || n === null || isNaN(n)) return '—';
+  return (n < 0 ? '-' : '') + 'NT$' + Math.abs(Math.round(n)).toLocaleString();
+}
+
+/* =============================================
+   RENDER ALL
+   ============================================= */
+function renderAll() {
+  renderKPI();
+  renderProjectList();
+  if(currentProjId) renderProjectDetail(currentProjId);
+}
+
+function renderKPI() {
+  const allFiltered = getFilteredItems(null);
+  const { income, cost, profit, margin } = calcTotals(allFiltered);
+
+  const label = currentView === 'month'
+    ? document.getElementById('sel-year').value + '年' + document.getElementById('sel-month').value + '月'
+    : currentView === 'year' ? document.getElementById('sel-year').value + '年度'
+    : '全部紀錄';
+
+  document.getElementById('kpi-income').textContent = fmt(income);
+  document.getElementById('kpi-income-sub').textContent = label + '．' + allFiltered.filter(c=>c.type==='收入').length + ' 筆';
+  document.getElementById('kpi-cost').textContent = fmt(cost);
+  document.getElementById('kpi-cost-sub').textContent = label + '．' + allFiltered.filter(c=>c.type!=='收入').length + ' 筆';
+
+  const profitEl = document.getElementById('kpi-profit');
+  profitEl.textContent = fmt(profit);
+  profitEl.className = 'kpi-value profit ' + (profit >= 0 ? 'pos' : 'neg');
+  document.getElementById('kpi-profit-sub').textContent = profit >= 0 ? '盈餘' : '虧損';
+
+  document.getElementById('kpi-margin').textContent = isNaN(margin) ? '—' : margin.toFixed(1) + '%';
+  document.getElementById('kpi-margin-sub').textContent = income > 0 ? '毛利率' : '尚無收入';
+}
+
+let projFilterStatus = 'all';
+let projListCollapsed = false;
+
+function setProjFilter(status, el) {
+  projFilterStatus = status;
+  document.querySelectorAll('.proj-filter-pill').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  renderProjectList();
+}
+
+function toggleProjectList() {
+  projListCollapsed = !projListCollapsed;
+  const list = document.getElementById('project-list');
+  const controls = document.getElementById('proj-list-controls');
+  const btn = document.getElementById('proj-collapse-btn');
+  list.style.display = projListCollapsed ? 'none' : '';
+  controls.style.display = projListCollapsed ? 'none' : '';
+  btn.textContent = projListCollapsed ? '▸' : '▾';
+}
+
+function renderProjectList() {
+  const filtered = getFilteredProjects();
+  const list = document.getElementById('project-list');
+  const q = document.getElementById('proj-search').value;
+
+  const badge = document.getElementById('proj-count-badge');
+  if(badge) badge.textContent = filtered.length + ' / ' + projects.length;
+
+  if(!filtered.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-title">${q||projFilterStatus!=='all' ? '查無結果' : '尚無專案'}</div><div class="empty-sub">點擊右上角「＋ 新增專案」開始</div></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => {
+    const allItems = costItems.filter(c => c.projId === p.id); 
+    const filteredItems = getFilteredItems(p.id); 
+    const { profit } = calcTotals(filteredItems);
+    const { income, cost } = calcTotals(filteredItems); 
+    const profitClass = profit > 0 ? 'pos' : profit < 0 ? 'neg' : 'zero';
+    const profitText = profit !== 0 ? fmt(profit) : '—';
+    const isActive = p.id === currentProjId;
+    const status = p.status || '進行中';
+
+    const dateRange = p.start || p.end
+      ? `${p.start||'?'} ～ ${p.end||'?'}`
+      : null;
+
+    return `<div class="project-item ${isActive ? 'active' : ''}" onclick="selectProject('${p.id}')">
+      <span class="status-dot status-${status}"></span>
+      <div class="proj-info">
+        <div class="proj-name">${p.name}</div>
+        <div class="proj-meta">${p.client||'—'} · ${status}</div>
+        <div class="proj-extra">
+          ${dateRange ? `<span>📅 ${dateRange}</span>` : ''}
+          <span>📋 ${filteredItems.length} 筆</span>
+          <span style="color:${income>0?'#059669':'var(--ink3)'}">收 ${fmt(income)}</span>
+          <span style="color:${cost>0?'#b45309':'var(--ink3)'}">支 ${fmt(cost)}</span>
+        </div>
+      </div>
+      <div class="proj-amount">
+        <div class="proj-profit ${profitClass}">${profitText}</div>
+        <div style="font-size:9px;color:var(--ink3);margin-top:1px">${currentView!=='all' ? '期間統計' : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectProject(id) {
+  currentProjId = id;
+  renderProjectList();
+  renderProjectDetail(id);
+}
+
+function renderProjectDetail(id) {
+  const proj = projects.find(p => p.id === id);
+  if(!proj) return;
+  const items = getFilteredItems(id);
+  const { income, cost, profit, margin } = calcTotals(items);
+
+  const rp = document.getElementById('right-panels');
+  rp.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${proj.color||'#b45309'};flex-shrink:0"></div>
+          <span class="panel-title">${proj.name}</span>
+          <span style="font-size:10px;color:var(--ink3);background:rgba(0,0,0,.05);padding:2px 7px;border-radius:20px;">${proj.status||'進行中'}</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost btn-xs" onclick="openProjectModal('${id}')">編輯</button>
+          <button class="btn btn-red btn-xs" onclick="deleteProject('${id}')">刪除</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--line);">
+        ${[
+          ['期間收入', fmt(income), '#059669'],
+          ['期間成本', fmt(cost), '#b45309'],
+          ['利潤', fmt(profit), profit>=0?'#0369a1':'#dc2626'],
+          ['利潤率', isNaN(margin)?'—':margin.toFixed(1)+'%', '#7c3aed']
+        ].map(([l,v,c]) => `<div style="padding:14px 16px;border-right:1px solid var(--line);last:border-none">
+          <div style="font-size:9px;color:var(--ink3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">${l}</div>
+          <div style="font-size:16px;font-weight:600;font-family:var(--font-mono);color:${c};">${v}</div>
+        </div>`).join('')}
+      </div>
+      <div class="tab-bar" id="proj-tabs">
+        <div class="tab-item active" onclick="switchTab('detail','${id}',this)">明細列表</div>
+        <div class="tab-item" onclick="switchTab('chart','${id}',this)">圖表分析</div>
+      </div>
+      <div id="tab-detail" class="tab-content active">${renderCostTable(id, items)}</div>
+      <div id="tab-chart" class="tab-content">${renderChartsHTML()}</div>
+    </div>`;
+
+  setTimeout(() => renderCharts(id), 50);
+}
+
+const _costTabState = {};
+
+function setCostTab(projId, cat, el) {
+  _costTabState[projId] = cat;
+  const proj = projects.find(p => p.id === projId);
+  if(!proj) return;
+  const allItems = getFilteredItems(projId);
+  document.getElementById('cost-table-wrap').outerHTML = buildCostTableWrap(projId, allItems);
+}
+
+function buildCostCatTabs(projId, items) {
+  const CATS = ['全部', '收入', ...getAllCats()];
+  const activeCat = _costTabState[projId] || '全部';
+
+  const counts = {};
+  CATS.forEach(c => {
+    if(c === '全部') counts[c] = items.length;
+    else if(c === '收入') counts[c] = items.filter(i => i.type === '收入').length;
+    else counts[c] = items.filter(i => i.cat === c && i.type !== '收入').length;
+  });
+
+  return `<div style="display:flex;gap:0;border-bottom:1px solid var(--line);padding:0 18px;background:#faf9f7;overflow-x:auto;scrollbar-width:none;">
+    ${CATS.map(c => {
+      const isActive = c === activeCat;
+      const cnt = counts[c];
+      return `<button onclick="setCostTab('${projId}','${c}',this)"
+        style="padding:9px 12px;font-size:11px;font-weight:500;white-space:nowrap;border:none;background:none;cursor:pointer;
+               border-bottom:2px solid ${isActive ? 'var(--acc)' : 'transparent'};
+               color:${isActive ? 'var(--acc)' : 'var(--ink3)'};font-family:inherit;transition:.15s;
+               display:flex;align-items:center;gap:5px;">
+        ${c}
+        <span style="font-size:9px;padding:1px 5px;border-radius:20px;background:${isActive?'rgba(180,83,9,.12)':'rgba(0,0,0,.06)'};color:${isActive?'var(--acc)':'var(--ink3)'};">${cnt}</span>
+      </button>`;
+    }).join('')}
+  </div>`;
+}
+
+// ★ 變更點：明細列表拆分「收入」與「支出」欄位
+function buildCostTableWrap(projId, allItems) {
+  const activeCat = _costTabState[projId] || '全部';
+
+  let shown = allItems;
+  if(activeCat === '收入') shown = allItems.filter(i => i.type === '收入');
+  else if(activeCat !== '全部') shown = allItems.filter(i => i.cat === activeCat && i.type !== '收入');
+
+  const addBtn = `<div style="padding:10px 18px;border-bottom:1px solid var(--line);display:flex;gap:6px;">
+    <button class="btn btn-green btn-sm" onclick="openCostModal('${projId}','收入')">＋ 收入</button>
+    <button class="btn btn-amber btn-sm" onclick="openCostModal('${projId}','支出')">＋ 支出</button>
+  </div>`;
+
+  let tableHTML;
+  if(!shown.length) {
+    tableHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">此分類尚無項目</div><div class="empty-sub">切換分類或新增項目</div></div>`;
+  } else {
+    const rows = [...shown].sort((a,b) => (b.date||'').localeCompare(a.date||'')).map(item => {
+      const isIncome = item.type === '收入';
+      
+      // ★ 將金額分為收入與支出
+      const incStr = isIncome ? `<span class="amount-pos">+${fmt(+item.amount).replace('NT$','')}</span>` : '<span style="color:var(--line)">—</span>';
+      const expStr = !isIncome ? `<span class="amount-neg">-${fmt(+item.amount).replace('NT$','')}</span>` : '<span style="color:var(--line)">—</span>';
+      const payeeText = item.payee ? `<span class="payee-tag">${item.payee}</span>` : '';
+
+      return `<tr>
+        <td>${item.date||'—'}</td>
+        <td><span class="cat-badge cat-${isIncome?'收入':item.cat}">${isIncome?'收入':item.cat}</span></td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.desc}">${item.desc}</td>
+        <td>${payeeText}</td>
+        <td class="amount-cell" style="text-align:right">${incStr}</td>
+        <td class="amount-cell" style="text-align:right">${expStr}</td>
+        <td style="color:var(--ink3);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.note||''}</td>
+        <td>
+          <div style="display:flex;gap:4px;justify-content:flex-end;">
+            <button class="btn btn-ghost btn-xs" onclick="openCostModal('${projId}','${item.type}','${item.id}')">編</button>
+            <button class="btn btn-red btn-xs" onclick="deleteCostItem('${item.id}')">刪</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+    
+    // ★ 表頭也分開
+    tableHTML = `<div style="overflow-x:auto;"><table class="cost-table">
+      <thead><tr>
+        <th>日期</th>
+        <th>分類</th>
+        <th>說明</th>
+        <th>執行人/廠商</th>
+        <th class="right">收入 (NT$)</th>
+        <th class="right">支出 (NT$)</th>
+        <th>備註</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+  }
+
+  const { income: catIncome, cost: catCost, profit: catProfit } = calcTotals(shown);
+  const { income: totalIncome, cost: totalCost, profit: totalProfit } = calcTotals(allItems);
+  const isFiltered = activeCat !== '全部';
+
+  const summaryHTML = `<div style="border-top:1px solid var(--line);">
+    ${isFiltered ? `
+    <div style="padding:8px 16px;background:rgba(180,83,9,.04);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:10px;color:var(--acc);font-weight:600;letter-spacing:.3px;">「${activeCat}」分類小計</span>
+      <div style="display:flex;gap:16px;">
+        ${activeCat==='收入'
+          ? `<span style="font-size:11px;font-family:var(--font-mono);color:#059669;">+${fmt(catIncome)}</span>`
+          : `<span style="font-size:11px;font-family:var(--font-mono);color:#b45309;">-${fmt(catCost)}</span>`
+        }
+        <span style="font-size:10px;color:var(--ink3);">${shown.length} 筆</span>
+      </div>
+    </div>` : ''}
+    <div class="summary-row" style="flex-wrap:wrap;gap:8px;">
+      <span style="font-size:10px;color:var(--ink3);font-weight:500;">區間合計</span>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div class="summary-item"><span class="summary-label">收入</span><span class="summary-value" style="color:#059669">${fmt(totalIncome)}</span></div>
+        <div class="summary-item"><span class="summary-label">成本</span><span class="summary-value" style="color:#b45309">${fmt(totalCost)}</span></div>
+        <div class="summary-item"><span class="summary-label">淨利</span><span class="summary-value" style="color:${totalProfit>=0?'#0369a1':'#dc2626'}">${fmt(totalProfit)}</span></div>
+      </div>
+    </div>
+  </div>`;
+
+  return `<div id="cost-table-wrap">${addBtn}${buildCostCatTabs(projId, allItems)}${tableHTML}${summaryHTML}</div>`;
+}
+
+function renderCostTable(projId, items) {
+  return buildCostTableWrap(projId, items);
+}
+
+function renderChartsHTML() {
+  return `<div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;font-weight:500;">各月份收支</div>
+      <div style="position:relative;height:200px;"><canvas id="bar-chart"></canvas></div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;font-weight:500;">成本結構</div>
+      <div style="position:relative;height:200px;"><canvas id="pie-chart"></canvas></div>
+    </div>
+  </div>`;
+}
+
+function renderCharts(projId) {
+  const allItems = costItems.filter(c => c.projId === projId); 
+  
+  let year = document.getElementById('sel-year').value;
+  if(currentView === 'all') year = new Date().getFullYear().toString(); 
+
+  const months = ['1','2','3','4','5','6','7','8','9','10','11','12'];
+  const incomeByMonth = months.map(m => {
+    const mm = m.padStart(2,'0');
+    return allItems.filter(c => c.type==='收入' && (c.date||'').startsWith(year+'-'+mm)).reduce((a,c)=>a+(+c.amount||0),0);
+  });
+  const costByMonth = months.map(m => {
+    const mm = m.padStart(2,'0');
+    return allItems.filter(c => c.type!=='收入' && (c.date||'').startsWith(year+'-'+mm)).reduce((a,c)=>a+(+c.amount||0),0);
+  });
+
+  const barCtx = document.getElementById('bar-chart');
+  if(!barCtx) return;
+  if(barChartInst) { barChartInst.destroy(); barChartInst = null; }
+  barChartInst = new Chart(barCtx, {
+    type: 'bar',
+    data: {
+      labels: months.map(m => m+'月'),
+      datasets: [
+        { label: '收入', data: incomeByMonth, backgroundColor: 'rgba(5,150,105,.7)', borderRadius: 3 },
+        { label: '成本', data: costByMonth,   backgroundColor: 'rgba(180,83,9,.7)',  borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { font: { size: 11 }, color: '#57534e' } } },
+      scales: {
+        x: { ticks: { font:{size:10}, color:'#a8a29e' }, grid: { color:'rgba(0,0,0,.04)' } },
+        y: { ticks: { font:{size:10}, color:'#a8a29e', callback: v => 'NT$'+(v/1000).toFixed(0)+'K' }, grid: { color:'rgba(0,0,0,.04)' } }
+      }
+    }
+  });
+
+  const currentFiltered = getFilteredItems(projId);
+  const cats = ['人力','材料','外包','雜支'];
+  const catColors = ['rgba(3,105,161,.7)','rgba(180,83,9,.7)','rgba(124,58,237,.7)','rgba(120,113,108,.7)'];
+  const catData = cats.map(cat => currentFiltered.filter(c=>c.cat===cat&&c.type!=='收入').reduce((a,c)=>a+(+c.amount||0),0));
+
+  const pieCtx = document.getElementById('pie-chart');
+  if(!pieCtx) return;
+  if(pieChartInst) { pieChartInst.destroy(); pieChartInst = null; }
+  pieChartInst = new Chart(pieCtx, {
+    type: 'doughnut',
+    data: {
+      labels: cats,
+      datasets: [{ data: catData, backgroundColor: catColors, borderWidth: 2, borderColor: '#fdfcfb' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 11 }, color: '#57534e', boxWidth: 12 } }
+      }
+    }
+  });
+}
+
+function switchTab(tab, projId, el) {
+  document.querySelectorAll('#proj-tabs .tab-item').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-detail').classList.toggle('active', tab === 'detail');
+  document.getElementById('tab-chart').classList.toggle('active', tab === 'chart');
+  if(tab === 'chart') setTimeout(() => renderCharts(projId), 50);
+}
+
+/* =============================================
+   PROJECT CRUD
+   ============================================= */
+function openProjectModal(id) {
+  const proj = id ? projects.find(p => p.id === id) : null;
+  document.getElementById('proj-modal-title').textContent = proj ? '編輯專案' : '新增專案';
+  document.getElementById('proj-id').value = proj ? proj.id : '';
+  document.getElementById('proj-name').value = proj ? proj.name : '';
+  document.getElementById('proj-status').value = proj ? (proj.status||'進行中') : '進行中';
+  document.getElementById('proj-start').value = proj ? (proj.start||'') : '';
+  document.getElementById('proj-end').value = proj ? (proj.end||'') : '';
+  document.getElementById('proj-note').value = proj ? (proj.note||'') : '';
+
+  populateClientSelect('proj-client', proj ? (proj.client||'') : '');
+  populateQuoteLinks(proj ? proj.quoteLink : '');
+
+  document.getElementById('proj-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('proj-name').focus(), 100);
+}
+
+function populateQuoteLinks(currentLink) {
+  const sel = document.getElementById('proj-quote-link');
+  sel.innerHTML = '<option value="">— 不連結 —</option>';
+  try {
+    const savedQuotes = JSON.parse(localStorage.getItem('saved_quotes') || '[]');
+    savedQuotes.forEach(q => {
+      const opt = document.createElement('option');
+      opt.value = q.id;
+      opt.textContent = `${q.number||q.id} — ${q.client||'未命名'} ${q.total ? '(NT$'+Math.round(q.total).toLocaleString()+')' : ''}`;
+      if(q.id === currentLink) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+
+function closeProj() { document.getElementById('proj-overlay').classList.remove('open'); }
+function closeProjIfBg(e) { if(e.target === document.getElementById('proj-overlay')) closeProj(); }
+
+async function saveProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  if(!name) { showToast('請輸入專案名稱', 'err'); return; }
+
+  const id = document.getElementById('proj-id').value || ('proj_' + Date.now());
+  const existing = projects.find(p => p.id === id);
+  const colorIdx = existing ? COLORS.indexOf(existing.color) : projects.length % COLORS.length;
+
+  const proj = {
+    id,
+    name,
+    client: document.getElementById('proj-client').value,
+    status: document.getElementById('proj-status').value,
+    start: document.getElementById('proj-start').value,
+    end: document.getElementById('proj-end').value,
+    note: document.getElementById('proj-note').value,
+    quoteLink: document.getElementById('proj-quote-link').value,
+    color: existing ? existing.color : COLORS[colorIdx < 0 ? projects.length % COLORS.length : colorIdx],
+    updatedAt: Date.now(),
+    createdAt: existing ? existing.createdAt : Date.now()
+  };
+
+  if(existing) {
+    const idx = projects.findIndex(p => p.id === id);
+    projects[idx] = proj;
+  } else {
+    projects.push(proj);
+  }
+
+  if(proj.quoteLink && !existing) {
+    try {
+      const quotes = JSON.parse(localStorage.getItem('saved_quotes') || '[]');
+      const q = quotes.find(q => q.id === proj.quoteLink);
+      if(q && q.total) {
+        const incomeItem = {
+          id: 'cost_' + Date.now(),
+          projId: id,
+          type: '收入',
+          cat: '收入',
+          desc: `報價單 ${q.number||q.id} — ${q.client||''}`,
+          amount: q.total,
+          date: new Date().toISOString().slice(0,10),
+          note: '從報價單自動帶入',
+          createdAt: Date.now()
+        };
+        costItems.push(incomeItem);
+        await saveCostToFb(incomeItem);
+      }
+    } catch(e) {}
+  }
+
+  await saveProjectToFb(proj);
+  closeProj();
+  showToast(`✓ 已儲存「${name}」`);
+  renderAll();
+  selectProject(id);
+}
+
+async function deleteProject(id) {
+  const proj = projects.find(p => p.id === id);
+  if(!proj) return;
+  if(!confirm(`確定刪除「${proj.name}」及其所有費用記錄？`)) return;
+  projects = projects.filter(p => p.id !== id);
+  costItems = costItems.filter(c => c.projId !== id);
+  await deleteProjFromFb(id);
+  if(currentProjId === id) {
+    currentProjId = null;
+    document.getElementById('right-panels').innerHTML = `<div class="no-proj">
+      <div class="no-proj-icon"><svg width="24" height="24" fill="none" stroke="#b45309" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg></div>
+      <div style="font-size:14px;font-weight:600;color:var(--ink2);margin-bottom:6px;">選擇或新增專案</div>
+      <div style="font-size:12px;color:var(--ink3);">從左側點選專案，查看收支明細與圖表分析</div>
+    </div>`;
+  }
+  showToast('已刪除專案', 'ok');
+  renderAll();
+}
+
+/* =============================================
+   COST ITEM CRUD
+   ============================================= */
+function openCostModal(projId, typeHint, itemId) {
+  const item = itemId ? costItems.find(c => c.id === itemId) : null;
+  document.getElementById('cost-modal-title').textContent = item ? '編輯項目' : '新增項目';
+  document.getElementById('cost-id').value = item ? item.id : '';
+  document.getElementById('cost-proj-id').value = projId;
+  document.getElementById('cost-type').value = item ? item.type : (typeHint === '收入' ? '收入' : '支出');
+  document.getElementById('cost-date').value = item ? (item.date||'') : new Date().toISOString().slice(0,10);
+  document.getElementById('cost-desc').value = item ? item.desc : '';
+  document.getElementById('cost-amount').value = item ? item.amount : '';
+  document.getElementById('cost-note').value = item ? (item.note||'') : '';
+  
+  onCostTypeChange(); // Initialize category list
+
+  if(item && item.cat) {
+    const catSel = document.getElementById('cost-cat');
+    if(![...catSel.options].some(o => o.value === item.cat)) {
+      catSel.appendChild(Object.assign(document.createElement('option'), {value: item.cat, textContent: item.cat}));
+    }
+    catSel.value = item.cat;
+  }
+  
+  // ★ 執行人/廠商下拉選單
+  populatePayeeSelect('cost-payee', item ? (item.payee||'') : '');
+
+  document.getElementById('cost-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('cost-desc').focus(), 100);
+}
+
+/* =============================================
+   CATEGORY MANAGEMENT
+   ============================================= */
+const DEFAULT_CATS = ['人力','材料','外包','雜支'];
+
+function getCustomCats() {
+  try { return JSON.parse(localStorage.getItem('custom_cats') || '[]'); } catch(e) { return []; }
+}
+function saveCustomCats(cats) {
+  localStorage.setItem('custom_cats', JSON.stringify(cats));
+}
+function getAllCats() {
+  return [...DEFAULT_CATS, ...getCustomCats()];
+}
+
+let _catTab = 'expense'; 
+
+function switchCatTab(tab) {
+  _catTab = tab;
+  const eBtn = document.getElementById('cat-tab-expense');
+  const iBtn = document.getElementById('cat-tab-income');
+  eBtn.style.borderBottomColor = tab === 'expense' ? 'var(--acc)' : 'transparent';
+  eBtn.style.color = tab === 'expense' ? 'var(--acc)' : 'var(--ink3)';
+  iBtn.style.borderBottomColor = tab === 'income' ? 'var(--acc)' : 'transparent';
+  iBtn.style.color = tab === 'income' ? 'var(--acc)' : 'var(--ink3)';
+  document.getElementById('new-cat-input').placeholder = tab === 'income' ? '輸入新收入分類...' : '輸入新支出分類...';
+  renderCatList();
+}
+
+function openCatManager() {
+  _catTab = 'expense';
+  switchCatTab('expense');
+  renderCatList();
+  document.getElementById('cat-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('new-cat-input').focus(), 100);
+}
+function closeCatManager() {
+  document.getElementById('cat-overlay').classList.remove('open');
+  onCostTypeChange();
+}
+function closeCatIfBg(e) { if(e.target === document.getElementById('cat-overlay')) closeCatManager(); }
+
+function renderCatList() {
+  const isIncome = _catTab === 'income';
+  const defaults = isIncome ? DEFAULT_INCOME_CATS : DEFAULT_CATS;
+  const customs  = isIncome ? getIncomeCats() : getCustomCats();
+  const list = document.getElementById('cat-list');
+
+  const allCats = [
+    ...defaults.map(c => ({name:c, custom:false})),
+    ...customs.map(c => ({name:c, custom:true}))
+  ];
+
+  list.innerHTML = allCats.map(({name, custom}) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r);background:${custom?'#faf9f7':'rgba(0,0,0,.03)'};border:1px solid var(--line);">
+      <span class="cat-badge cat-${name}" style="flex-shrink:0;">${name}</span>
+      <span style="flex:1;font-size:12px;color:var(--ink2);">${name}</span>
+      ${custom
+        ? `<button class="btn btn-red btn-xs" onclick="deleteCustomCat('${name}')">刪除</button>`
+        : `<span style="font-size:10px;color:var(--ink3);padding:2px 7px;border-radius:20px;background:rgba(0,0,0,.05);">預設</span>`
+      }
+    </div>
+  `).join('');
+}
+
+function addCustomCat() {
+  const input = document.getElementById('new-cat-input');
+  const name = input.value.trim();
+  if(!name) { showToast('請輸入分類名稱', 'err'); return; }
+  const all = _catTab === 'income' ? getAllIncomeCats() : getAllCats();
+  if(all.includes(name)) { showToast('此分類已存在', 'err'); return; }
+  if(name.length > 12) { showToast('分類名稱最多 12 字', 'err'); return; }
+
+  if(_catTab === 'income') {
+    const customs = getIncomeCats(); customs.push(name);
+    localStorage.setItem('custom_income_cats', JSON.stringify(customs));
+  } else {
+    const customs = getCustomCats(); customs.push(name);
+    saveCustomCats(customs);
+  }
+  input.value = '';
+  renderCatList();
+  showToast(`✓ 已新增分類「${name}」`);
+}
+
+function deleteCustomCat(name) {
+  if(!confirm(`確定刪除分類「${name}」？\n已使用此分類的費用記錄不受影響。`)) return;
+  if(_catTab === 'income') {
+    const customs = getIncomeCats().filter(c => c !== name);
+    localStorage.setItem('custom_income_cats', JSON.stringify(customs));
+  } else {
+    saveCustomCats(getCustomCats().filter(c => c !== name));
+  }
+  renderCatList();
+  showToast(`已刪除分類「${name}」`);
+}
+
+const DEFAULT_INCOME_CATS = ['專案款','訂金','尾款','其他收入'];
+
+function getIncomeCats() {
+  try { return JSON.parse(localStorage.getItem('custom_income_cats') || '[]'); } catch(e) { return []; }
+}
+function getAllIncomeCats() {
+  return [...DEFAULT_INCOME_CATS, ...getIncomeCats()];
+}
+
+function onCostTypeChange() {
+  const type = document.getElementById('cost-type').value;
+  const catSel = document.getElementById('cost-cat');
+  const prevVal = catSel.value;
+  
+  catSel.disabled = false;
+  if(type === '收入') {
+    catSel.innerHTML = getAllIncomeCats().map(c => `<option value="${c}">${c}</option>`).join('');
+  } else {
+    catSel.innerHTML = getAllCats().map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+  const allOpts = [...catSel.options].map(o => o.value);
+  if(prevVal && allOpts.includes(prevVal)) catSel.value = prevVal;
+}
+
+function closeCost() { document.getElementById('cost-overlay').classList.remove('open'); }
+function closeCostIfBg(e) { if(e.target === document.getElementById('cost-overlay')) closeCost(); }
+
+async function saveCostItem() {
+  const desc = document.getElementById('cost-desc').value.trim();
+  const amount = +document.getElementById('cost-amount').value;
+  if(!desc) { showToast('請輸入項目說明', 'err'); return; }
+  if(!amount || amount <= 0) { showToast('請輸入有效金額', 'err'); return; }
+
+  const id = document.getElementById('cost-id').value || ('cost_' + Date.now());
+  const projId = document.getElementById('cost-proj-id').value;
+  const type = document.getElementById('cost-type').value;
+  const cat = type === '收入' ? '收入' : document.getElementById('cost-cat').value;
+  const payee = document.getElementById('cost-payee').value; // ★ 儲存執行人
+
+  const item = {
+    id, projId, type, cat, desc, amount, payee,
+    date: document.getElementById('cost-date').value,
+    note: document.getElementById('cost-note').value,
+    updatedAt: Date.now(),
+    createdAt: costItems.find(c=>c.id===id)?.createdAt || Date.now()
+  };
+
+  const idx = costItems.findIndex(c => c.id === id);
+  if(idx >= 0) costItems[idx] = item; else costItems.push(item);
+
+  await saveCostToFb(item);
+  closeCost();
+  showToast(`✓ 已儲存「${desc}」`);
+  renderAll();
+}
+
+async function deleteCostItem(id) {
+  if(!confirm('確定刪除此項目？')) return;
+  costItems = costItems.filter(c => c.id !== id);
+  await deleteCostFromFb(id);
+  showToast('已刪除項目', 'ok');
+  renderAll();
+}
+
+/* =============================================
+   EXPORT (★ 匯出報表同步拆分收支欄位)
+   ============================================= */
+function exportExcel() {
+  if(!projects.length) { showToast('尚無專案資料', 'err'); return; }
+  const wb = XLSX.utils.book_new();
+
+  const summaryRows = [['專案名稱','客戶','狀態','總收入','總成本','淨利','利潤率']];
+  projects.forEach(p => {
+    const items = costItems.filter(c => c.projId === p.id);
+    const { income, cost, profit, margin } = calcTotals(items);
+    summaryRows.push([p.name, p.client||'', p.status||'', income, cost, profit, (margin||0).toFixed(1)+'%']);
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet(summaryRows);
+  ws1['!cols'] = [{wch:20},{wch:16},{wch:10},{wch:14},{wch:14},{wch:14},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws1, '專案總覽');
+
+  const itemRows = [['專案','日期','分類','說明','執行人/廠商','收入','支出','備註']];
+  projects.forEach(p => {
+    costItems.filter(c=>c.projId===p.id).forEach(c => {
+      const inc = c.type === '收入' ? +c.amount : '';
+      const exp = c.type !== '收入' ? +c.amount : '';
+      itemRows.push([p.name, c.date||'', c.cat, c.desc, c.payee||'', inc, exp, c.note||'']);
+    });
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(itemRows);
+  ws2['!cols'] = [{wch:20},{wch:12},{wch:8},{wch:28},{wch:14},{wch:10},{wch:10},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws2, '費用明細');
+
+  XLSX.writeFile(wb, `成本報表_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('✓ 已匯出 Excel');
+}
+
+/* =============================================
+   TOAST
+   ============================================= */
+function showToast(msg, type='ok') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+</script>
+</body>
+</html>
