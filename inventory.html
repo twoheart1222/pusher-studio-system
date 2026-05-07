@@ -225,14 +225,17 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 
     window._invFb = { collection, getDocs, doc, setDoc, deleteDoc, getDoc, fbDb };
     window._fbReady = true;
-
-    // 觸發初始化程序
-    if (window.initData) {
-      window.initData();
-    }
   } catch(e) {
     console.error("Firestore init error:", e);
+    window._fbReady = false;
   }
+
+  // 等 DOM 與主 script 都準備好後再觸發
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.initData === 'function') {
+      window.initData();
+    }
+  });
 </script>
 
 </head>
@@ -750,6 +753,9 @@ window.updateCurValueField = function() {
    FIREBASE
    ============================================= */
 window.initData = async function() {
+  if (window._initCalled) return;
+  window._initCalled = true;
+
   let waited = 0;
   while (!window._fbReady && waited < 5000) {
     await new Promise(r => setTimeout(r, 100));
@@ -825,6 +831,7 @@ function setSyncStatus(state, text) {
 }
 function setPill(state) {
   const p = document.getElementById('fb-status-pill');
+  if(!p) return; // 元素不存在時直接略過
   if(state==='ok'){ p.textContent='Firebase ✓'; p.style.color='#34d399'; p.style.borderColor='#34d399'; }
   else{ p.textContent='本機模式'; p.style.color='#d97706'; p.style.borderColor='#d97706'; }
 }
@@ -1624,6 +1631,24 @@ function downloadItemTemplate() {
   XLSX.utils.book_append_sheet(wb, ws, '器材清單');
   XLSX.writeFile(wb, '器材庫存範本.xlsx');
 }
+
+// ★ 確保 initData 在 DOM 準備好後被呼叫（若 Firebase module 已先完成，此處補觸發）
+document.addEventListener('DOMContentLoaded', () => {
+  // 給 Firebase module script 最多 3 秒完成初始化，否則以離線模式啟動
+  const startMs = Date.now();
+  const tryInit = () => {
+    if (window._fbReady !== undefined) {
+      // Firebase module 已回報結果，直接啟動
+      if (typeof window.initData === 'function') window.initData();
+    } else if (Date.now() - startMs < 3000) {
+      setTimeout(tryInit, 80);
+    } else {
+      // 逾時：離線模式
+      if (typeof window.initData === 'function') window.initData();
+    }
+  };
+  tryInit();
+});
 
 function exportItemsExcel() {
   if(!items.length){ showToast('目前無器材可匯出','err'); return; }

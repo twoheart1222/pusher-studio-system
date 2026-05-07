@@ -15,7 +15,15 @@
   .field input:focus { border-color: #b45309; background: rgba(255,255,255,.1); box-shadow: 0 0 0 3px rgba(180,83,9,.2); }
   .btn-login { width: 100%; background: #b45309; color: #fff; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 10px; transition: .15s; }
   .btn-login:hover { background: #d97706; }
-  #error-msg { color: #fca5a5; font-size: 12px; text-align: center; margin-top: 14px; display: none; background: rgba(220,38,38,.1); padding: 8px; border-radius: 6px; }
+  
+  /* 忘記密碼按鈕樣式 */
+  .forgot-pwd { text-align: center; margin-top: 16px; font-size: 11px; color: #a8a29e; cursor: pointer; transition: .15s; }
+  .forgot-pwd:hover { color: #e7e5e4; text-decoration: underline; }
+  
+  /* 訊息提示框樣式 */
+  #msg-box { font-size: 12px; text-align: center; margin-top: 14px; display: none; padding: 8px; border-radius: 6px; }
+  .msg-err { color: #fca5a5; background: rgba(220,38,38,.1); border: 1px solid rgba(220,38,38,.2); }
+  .msg-ok { color: #34d399; background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.2); }
 </style>
 </head>
 <body>
@@ -30,13 +38,18 @@
       <input type="password" id="pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()">
     </div>
     <button class="btn-login" onclick="doLogin()">登入</button>
-    <div id="error-msg">帳號或密碼錯誤</div>
+    
+    <div class="forgot-pwd" onclick="resetPwd()">忘記密碼？</div>
+    
+    <div id="msg-box"></div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    // ★ 這裡多引入了 sendPasswordResetEmail
+    import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+    // 你的專屬 Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
       authDomain: "company-system-6ea1a.firebaseapp.com",
@@ -49,12 +62,55 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
+    const msgBox = document.getElementById('msg-box');
+
+    function showMsg(text, isSuccess = false) {
+      msgBox.textContent = text;
+      msgBox.className = isSuccess ? 'msg-ok' : 'msg-err';
+      msgBox.style.display = 'block';
+    }
+
+    // 登入功能
     window.doLogin = function() {
       const e = document.getElementById('email').value;
       const p = document.getElementById('pwd').value;
+      
+      if (!e || !p) {
+        showMsg('請輸入帳號與密碼');
+        return;
+      }
+
       signInWithEmailAndPassword(auth, e, p)
-        .then(() => { window.location.href = 'index.html'; })
-        .catch(() => { document.getElementById('error-msg').style.display = 'block'; });
+        .then(() => {
+          window.location.href = 'index.html'; 
+        })
+        .catch((error) => {
+          showMsg('帳號或密碼錯誤');
+        });
+    }
+
+    // ★ 忘記密碼功能
+    window.resetPwd = function() {
+      const e = document.getElementById('email').value;
+      
+      // 檢查是否已輸入 Email
+      if (!e) {
+        showMsg('💡 請先在上方輸入您的 Email，再點擊忘記密碼。');
+        return;
+      }
+
+      // 呼叫 Firebase 發送重設信
+      sendPasswordResetEmail(auth, e)
+        .then(() => {
+          showMsg('✉️ 密碼重設信已發送！請去信箱收信（若沒看到請檢查垃圾信件匣）。', true);
+        })
+        .catch((error) => {
+          if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+            showMsg('找不到此 Email，請確認是否輸入正確。');
+          } else {
+            showMsg('發送失敗，請稍後再試。');
+          }
+        });
     }
   </script>
 </body>
