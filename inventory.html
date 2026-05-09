@@ -2024,7 +2024,9 @@ rebuild();
 <\/script>
 </body>
 </html>`;
-  const finalHtml = html.replace('ITEMS_JSON_PLACEHOLDER', itemsJSON);
+  // 安全替換：防止器材名稱含特殊字元（反斜線、</script>）導致頁面解析失敗
+  const safeJSON = itemsJSON.replace(/\\/g, '\\\\').replace(/<\/script>/gi, '<\\/script>');
+  const finalHtml = html.replace('ITEMS_JSON_PLACEHOLDER', safeJSON);
   const blob = new Blob([finalHtml], {type: 'text/html;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const win = window.open(url, '_blank');
