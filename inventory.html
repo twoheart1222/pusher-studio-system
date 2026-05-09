@@ -132,7 +132,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 /* LOAN LIST */
 .loan-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .loan-inner { min-width: 650px; }
-.loan-row{ display:grid; grid-template-columns:1fr 100px 100px 100px 100px 80px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
+.loan-row{ display:grid; grid-template-columns:1fr 100px 100px 100px 100px 110px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
 .loan-row:last-child{ border-bottom:none; }
 .loan-row:hover{ background:#faf9f7; }
 .loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#faf9f7; }
@@ -1164,6 +1164,7 @@ function renderLoans() {
       <div data-label="專案" style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
       <div style="display:flex;gap:4px;justify-content:flex-end;">
         <button class="btn btn-green btn-xs" onclick="returnLoan('${l.id}')">歸還</button>
+        <button class="btn btn-ghost-dark btn-xs" onclick="editLoan('${l.id}')">編</button>
         <button class="btn btn-red btn-xs" onclick="deleteLoan('${l.id}')">刪</button>
       </div>
     </div>`;
@@ -1449,6 +1450,7 @@ async function deleteItem(id) {
    ============================================= */
 function openLoanModal(preItemId) {
   document.getElementById('loan-id').value = '';
+  document.getElementById('loan-modal-title').textContent = '借出器材';
   const sel = document.getElementById('loan-item-id');
 
   // 只列出「在庫」或「借出」的器材（維修中、報廢不可借出）
@@ -1484,6 +1486,39 @@ function openLoanModal(preItemId) {
   document.getElementById('loan-note').value = '';
   document.getElementById('loan-overlay').classList.add('open');
 }
+
+function editLoan(loanId) {
+  const l = loans.find(lo => lo.id === loanId);
+  if(!l) return;
+
+  document.getElementById('loan-modal-title').textContent = '編輯借出紀錄';
+  document.getElementById('loan-id').value = l.id;
+
+  const sel = document.getElementById('loan-item-id');
+  // 編輯模式列出所有非報廢、非維修中器材，加上此筆原本的器材（以防狀態已變）
+  const loanableItems = items.filter(it => it.status !== '維修中' && it.status !== '報廢');
+  const hasOriginal = loanableItems.some(it => it.id === l.itemId);
+  const origItem = items.find(i => i.id === l.itemId);
+  const listItems = hasOriginal ? loanableItems : (origItem ? [origItem, ...loanableItems] : loanableItems);
+
+  sel.innerHTML = listItems.map(it => `<option value="${it.id}" ${it.id===l.itemId?'selected':''}>${it.name}${it.brand?' ('+it.brand+')':''} — ${it.status}</option>`).join('');
+  sel.value = l.itemId;
+
+  const psel = document.getElementById('loan-proj-id');
+  psel.innerHTML = `<option value="">— 不連結 —</option>` + projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  if(l.projId) psel.value = l.projId;
+
+  document.getElementById('loan-borrower').value = l.borrower || '';
+  document.getElementById('loan-qty').value = l.qty || 1;
+  document.getElementById('loan-out-date').value = l.outDate || '';
+  document.getElementById('loan-return-date').value = l.returnDate || '';
+  document.getElementById('loan-cost-mode').value = l.costMode || 'none';
+  document.getElementById('loan-fixed-amount').value = l.fixedAmount || '';
+  document.getElementById('loan-fixed-amount-field').style.display = (l.costMode === 'fixed') ? '' : 'none';
+  document.getElementById('loan-note').value = l.note || '';
+
+  document.getElementById('loan-overlay').classList.add('open');
+}
 function closeLoanModal() { document.getElementById('loan-overlay').classList.remove('open'); }
 function closeLoanIfBg(e) { if(e.target===document.getElementById('loan-overlay')) closeLoanModal(); }
 
@@ -1504,12 +1539,16 @@ async function saveLoan() {
     return;
   }
 
-  const id = 'loan_'+Date.now();
+  const existingId = document.getElementById('loan-id').value;
+  const id = existingId || ('loan_'+Date.now());
   const outDate    = document.getElementById('loan-out-date').value;
   const returnDate = document.getElementById('loan-return-date').value;
   const costMode   = document.getElementById('loan-cost-mode').value;
   const projId     = document.getElementById('loan-proj-id').value;
   const qty        = +document.getElementById('loan-qty').value||1;
+
+  const isEdit = !!existingId;
+  const existingLoan = isEdit ? loans.find(l=>l.id===existingId) : null;
 
   const loan = {
     id, itemId, borrower, qty,
@@ -1518,23 +1557,28 @@ async function saveLoan() {
     costMode,
     fixedAmount: +document.getElementById('loan-fixed-amount').value||0,
     note: document.getElementById('loan-note').value,
-    returned: false,
-    createdAt: Date.now()
+    returned: existingLoan ? existingLoan.returned : false,
+    actualReturnDate: existingLoan ? existingLoan.actualReturnDate : undefined,
+    createdAt: existingLoan ? existingLoan.createdAt : Date.now()
   };
-  loans.push(loan);
 
-  if(it && it.status==='在庫') {
-    it.status = '借出';
-    await fbSet('inv_items', it.id, it);
-  }
-
-  if(projId && costMode !== 'none') {
-    await createCostEntry(loan, it);
+  if(isEdit) {
+    const idx = loans.findIndex(l=>l.id===id);
+    if(idx>=0) loans[idx] = loan;
+  } else {
+    loans.push(loan);
+    if(it && it.status==='在庫') {
+      it.status = '借出';
+      await fbSet('inv_items', it.id, it);
+    }
+    if(projId && costMode !== 'none') {
+      await createCostEntry(loan, it);
+    }
   }
 
   await fbSet('inv_loans', id, loan);
   closeLoanModal();
-  showToast(`✓ 已登記借出給「${borrower}」`);
+  showToast(isEdit ? `✓ 已更新借出紀錄` : `✓ 已登記借出給「${borrower}」`);
   renderAll();
 }
 
