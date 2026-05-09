@@ -131,40 +131,12 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 
 /* LOAN LIST */
 .loan-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.loan-inner { min-width: 0; padding:8px 0; display:flex; flex-direction:column; gap:8px; }
-.overdue-tag{ display:inline-flex; align-items:center; gap:3px; font-size:11px; background:#dc2626; color:white; padding:2px 8px; border-radius:4px; font-weight:700; letter-spacing:.3px; }
-
-/* 專案群組卡片 */
-.loan-group { border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:0 12px; }
-.loan-group-header {
-  display:flex; align-items:center; gap:10px;
-  padding:10px 14px; cursor:pointer; user-select:none;
-  background:#f9f7f4; transition:background .15s;
-}
-.loan-group-header:hover { background:#f0ece6; }
-.loan-group-header.overdue-group { background:rgba(220,38,38,.07); border-left:4px solid #dc2626; }
-.loan-group-header.overdue-group:hover { background:rgba(220,38,38,.13); }
-.loan-group-chevron { font-size:11px; color:var(--ink3); transition:transform .2s; display:inline-block; }
-.loan-group-chevron.open { transform:rotate(90deg); }
-.loan-group-title { font-weight:600; font-size:13px; color:var(--ink); flex:1; }
-.loan-group-meta { font-size:11px; color:var(--ink3); display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.loan-group-count { font-size:10px; background:var(--acc); color:white; border-radius:20px; padding:1px 7px; font-weight:600; }
-.loan-group-count.red { background:#dc2626; }
-
-/* 群組內的明細 table */
-.loan-detail-wrap { display:none; border-top:1px solid var(--line); overflow-x:auto; }
-.loan-detail-wrap.open { display:block; }
-.loan-row{ display:grid; grid-template-columns:1fr 90px 90px 130px 110px; gap:10px; padding:9px 14px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
+.loan-inner { min-width: 650px; }
+.loan-row{ display:grid; grid-template-columns:1fr 100px 100px 100px 100px 80px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
 .loan-row:last-child{ border-bottom:none; }
 .loan-row:hover{ background:#faf9f7; }
-.loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#f9f7f4; }
-.loan-row.overdue-row{ background:rgba(220,38,38,.05); border-left:3px solid #dc2626; }
-.loan-row.overdue-row:hover{ background:rgba(220,38,38,.1); }
-
-/* 未連結專案的單筆卡片 */
-.loan-solo { border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:0 12px; }
-.loan-solo .loan-row { border-bottom:none; }
-.loan-solo.overdue-row-wrap { border-color:#dc2626; border-left-width:4px; }
+.loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#faf9f7; }
+.overdue-tag{ font-size:9px; background:rgba(220,38,38,.1); color:#dc2626; padding:1px 6px; border-radius:20px; font-weight:500; }
 
 /* MODAL */
 .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
@@ -286,6 +258,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       <span id="sync-text">連線中...</span>
     </span>
     <button class="btn btn-green btn-sm" onclick="openScanner()">📷 掃描借還</button>
+    <button class="btn btn-ghost btn-sm" onclick="printAllQR()" title="批量列印所有器材 QR Code">🖨️ 列印QR</button>
     <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
     <button class="btn btn-ghost btn-sm" onclick="openExcelImport()">📥 匯入</button>
     <button class="btn btn-ghost btn-sm" onclick="openLoanModal()">📤 借出</button>
@@ -359,6 +332,14 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       </div>
       <div class="loan-wrap">
         <div class="loan-inner">
+          <div class="loan-row loan-header">
+            <div>器材</div>
+            <div>借用人</div>
+            <div>借出日</div>
+            <div>預計歸還</div>
+            <div>連結專案</div>
+            <div></div>
+          </div>
           <div id="loan-list">
             <div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">目前無借出紀錄</div></div>
           </div>
@@ -694,18 +675,20 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 </div>
 
 <div class="overlay" id="qrcode-overlay" onclick="closeQRCodeIfBg(event)">
-  <div class="modal" style="width:300px; text-align:center;">
+  <div class="modal" style="width:320px; text-align:center;">
     <div class="modal-header">
       <span class="modal-title">器材 QR Code</span>
       <button class="btn btn-ghost btn-xs btn-icon" onclick="closeQRCode()">✕</button>
     </div>
     <div class="modal-body" style="align-items:center;">
-      <div style="font-size:14px; font-weight:600; margin-bottom:10px;" id="qr-item-name"></div>
-      <div id="qrcode-box" style="padding:10px; background:white; border-radius:8px; display:inline-block;"></div>
-      <div style="font-size:11px; color:var(--ink3); margin-top:10px;">請截圖或列印此條碼，並貼於器材上。<br>使用「手機掃描借還」功能時即可自動辨識。</div>
+      <div style="font-size:14px; font-weight:600; margin-bottom:4px;" id="qr-item-name"></div>
+      <div style="font-size:11px; color:var(--ink3); margin-bottom:10px;" id="qr-item-meta"></div>
+      <div id="qrcode-box" style="padding:12px; background:white; border-radius:8px; display:inline-block; box-shadow:0 2px 8px rgba(0,0,0,.1);"></div>
+      <div style="font-size:11px; color:var(--ink3); margin-top:10px;">掃描後可直接辨識器材，進行借出／歸還。</div>
     </div>
-    <div class="modal-footer" style="justify-content:center;">
+    <div class="modal-footer" style="justify-content:center; gap:8px;">
       <button class="btn btn-ghost-dark" onclick="closeQRCode()">關閉</button>
+      <button class="btn btn-amber" onclick="downloadSingleQR()">⬇ 下載圖片</button>
     </div>
   </div>
 </div>
@@ -835,16 +818,8 @@ async function fbSet(col, id, data) {
   if(!window._fbReady){ saveLocal(); return; }
   setSyncStatus('syncing','同步中...');
   const { doc, setDoc, fbDb } = window._invFb;
-  // Firestore 不允許 undefined 值，遞迴轉成 null
-  const clean = JSON.parse(JSON.stringify(data, (k, v) => v === undefined ? null : v));
-  try {
-    await setDoc(doc(fbDb, col, id), clean);
-    setSyncStatus('ok','已同步'); saveLocal();
-  } catch(e) {
-    console.error('fbSet error:', col, id, e);
-    setSyncStatus('err','同步失敗');
-    throw e;
-  }
+  await setDoc(doc(fbDb, col, id), data);
+  setSyncStatus('ok','已同步'); saveLocal();
 }
 async function fbDel(col, id) {
   if(!window._fbReady){ saveLocal(); return; }
@@ -1168,109 +1143,34 @@ function renderTable() {
    LOAN LIST
    ============================================= */
 function renderLoans() {
-  const active = loans.filter(l => !l.returned).sort((a,b) => (a.returnDate||'').localeCompare(b.returnDate||''));
+  const active = loans.filter(l=>!l.returned).sort((a,b)=>(a.returnDate||'').localeCompare(b.returnDate||''));
   const wrap = document.getElementById('loan-list');
   if(!active.length) {
     wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">目前無借出紀錄</div></div>`;
     return;
   }
   const today = new Date().toISOString().slice(0,10);
-
-  // 依專案分群
-  const groups = {};   // projId -> [loans]
-  const noProj = [];
-  active.forEach(l => {
-    if(l.projId) {
-      if(!groups[l.projId]) groups[l.projId] = [];
-      groups[l.projId].push(l);
-    } else {
-      noProj.push(l);
-    }
-  });
-
-  function overdueInfo(l) {
-    const od = l.returnDate && l.returnDate < today;
-    const days = od ? Math.round((new Date(today)-new Date(l.returnDate))/(864e5)) : 0;
-    return { od, days };
-  }
-
-  function loanRowHtml(l) {
-    const item = items.find(i => i.id === l.itemId);
-    const { od, days } = overdueInfo(l);
-    const returnDateHtml = od
-      ? `<div style="font-size:11px;font-family:var(--font-mono);color:#dc2626;font-weight:600;text-decoration:line-through;">${l.returnDate}</div><div style="margin-top:3px;"><span class="overdue-tag">⚠ 逾期 ${days} 天</span></div>`
-      : `<div style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'}</div>`;
-    return `<div class="loan-row${od?' overdue-row':''}">
+  wrap.innerHTML = active.map(l => {
+    const item = items.find(i=>i.id===l.itemId);
+    const proj = projects.find(p=>p.id===l.projId);
+    const overdue = l.returnDate && l.returnDate < today;
+    return `<div class="loan-row">
       <div data-label="器材">
-        <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
-        ${l.note?`<div style="font-size:10px;color:var(--ink3);">${l.note}</div>`:''}
+        <div>
+          <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
+          ${l.note?`<div style="font-size:10px;color:var(--ink3);">${l.note}</div>`:''}
+        </div>
       </div>
-      <div data-label="借用人" style="font-size:12px;${od?'font-weight:600;color:#dc2626;':''}">${l.borrower||'—'}</div>
+      <div data-label="借用人" style="font-size:12px;">${l.borrower||'—'}</div>
       <div data-label="借出日" style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);">${l.outDate||'—'}</div>
-      <div data-label="預計歸還">${returnDateHtml}</div>
+      <div data-label="預計歸還" style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'} ${overdue?'<span class="overdue-tag">逾期</span>':''}</div>
+      <div data-label="專案" style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
       <div style="display:flex;gap:4px;justify-content:flex-end;">
         <button class="btn btn-green btn-xs" onclick="returnLoan('${l.id}')">歸還</button>
-        <button class="btn btn-ghost-dark btn-xs" onclick="editLoan('${l.id}')">編</button>
         <button class="btn btn-red btn-xs" onclick="deleteLoan('${l.id}')">刪</button>
       </div>
     </div>`;
-  }
-
-  function groupCardHtml(projId, loanList) {
-    const proj = projects.find(p => p.id === projId);
-    const projName = proj ? proj.name : '未知專案';
-    const hasOverdue = loanList.some(l => overdueInfo(l).od);
-    const overdueCount = loanList.filter(l => overdueInfo(l).od).length;
-    const gid = 'lg_' + projId;
-    const detailRows = [
-      `<div class="loan-row loan-header"><div>器材</div><div>借用人</div><div>借出日</div><div>預計歸還</div><div></div></div>`,
-      ...loanList.map(loanRowHtml)
-    ].join('');
-    const countBadge = overdueCount > 0
-      ? `<span class="loan-group-count red">逾期 ${overdueCount} 件</span>`
-      : `<span class="loan-group-count">${loanList.length} 件</span>`;
-    const earliestReturn = loanList.map(l=>l.returnDate||'').filter(Boolean).sort()[0] || '';
-    const returnMeta = earliestReturn ? `最早歸還：${earliestReturn}` : '';
-    return `<div class="loan-group">
-      <div class="loan-group-header${hasOverdue?' overdue-group':''}" onclick="toggleLoanGroup('${gid}')">
-        <span class="loan-group-chevron" id="${gid}_chev">▶</span>
-        <span class="loan-group-title">📁 ${projName}</span>
-        ${countBadge}
-        <span class="loan-group-meta">${returnMeta}</span>
-      </div>
-      <div class="loan-detail-wrap" id="${gid}">
-        ${detailRows}
-      </div>
-    </div>`;
-  }
-
-  let html = '';
-
-  // 有專案的群組
-  Object.keys(groups).forEach(projId => {
-    html += groupCardHtml(projId, groups[projId]);
-  });
-
-  // 未連結專案的單筆
-  noProj.forEach(l => {
-    const { od } = overdueInfo(l);
-    const item = items.find(i => i.id === l.itemId);
-    const itemName = item ? item.name : '(已刪除)';
-    html += `<div class="loan-solo${od?' overdue-row-wrap':''}">
-      <div class="loan-row loan-header"><div>器材</div><div>借用人</div><div>借出日</div><div>預計歸還</div><div></div></div>
-      ${loanRowHtml(l)}
-    </div>`;
-  });
-
-  wrap.innerHTML = html;
-}
-
-function toggleLoanGroup(gid) {
-  const detail = document.getElementById(gid);
-  const chev = document.getElementById(gid + '_chev');
-  if(!detail) return;
-  const isOpen = detail.classList.toggle('open');
-  if(chev) chev.classList.toggle('open', isOpen);
+  }).join('');
 }
 
 /* =============================================
@@ -1552,7 +1452,6 @@ async function deleteItem(id) {
    ============================================= */
 function openLoanModal(preItemId) {
   document.getElementById('loan-id').value = '';
-  document.getElementById('loan-modal-title').textContent = '借出器材';
   const sel = document.getElementById('loan-item-id');
 
   // 只列出「在庫」或「借出」的器材（維修中、報廢不可借出）
@@ -1588,50 +1487,6 @@ function openLoanModal(preItemId) {
   document.getElementById('loan-note').value = '';
   document.getElementById('loan-overlay').classList.add('open');
 }
-
-function editLoan(loanId) {
-  const l = loans.find(lo => lo.id === loanId);
-  if(!l) return;
-
-  document.getElementById('loan-modal-title').textContent = '編輯借出紀錄';
-  document.getElementById('loan-id').value = l.id;
-
-  const sel = document.getElementById('loan-item-id');
-  // 編輯模式：列出所有非維修中、非報廢的器材，並確保原器材一定出現在清單中
-  const loanableItems = items.filter(it => it.status !== '維修中' && it.status !== '報廢');
-  const hasOriginal = loanableItems.some(it => it.id === l.itemId);
-  const origItem = items.find(i => i.id === l.itemId);
-  const listItems = hasOriginal ? loanableItems : (origItem ? [origItem, ...loanableItems] : loanableItems);
-
-  sel.innerHTML = listItems.map(it =>
-    `<option value="${it.id}">${it.name}${it.brand?' ('+it.brand+')':''} — ${it.status}</option>`
-  ).join('');
-  // 設定 value 必須在 innerHTML 完成後執行
-  sel.value = l.itemId;
-  // 若 value 設不上去（器材已被刪除），補一個 option
-  if(sel.value !== l.itemId && origItem) {
-    const opt = document.createElement('option');
-    opt.value = origItem.id;
-    opt.textContent = origItem.name + ' (已刪除/狀態異常)';
-    sel.prepend(opt);
-    sel.value = origItem.id;
-  }
-
-  const psel = document.getElementById('loan-proj-id');
-  psel.innerHTML = `<option value="">— 不連結 —</option>` + projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
-  if(l.projId) psel.value = l.projId;
-
-  document.getElementById('loan-borrower').value = l.borrower || '';
-  document.getElementById('loan-qty').value = l.qty || 1;
-  document.getElementById('loan-out-date').value = l.outDate || '';
-  document.getElementById('loan-return-date').value = l.returnDate || '';
-  document.getElementById('loan-cost-mode').value = l.costMode || 'none';
-  document.getElementById('loan-fixed-amount').value = l.fixedAmount || '';
-  document.getElementById('loan-fixed-amount-field').style.display = (l.costMode === 'fixed') ? '' : 'none';
-  document.getElementById('loan-note').value = l.note || '';
-
-  document.getElementById('loan-overlay').classList.add('open');
-}
 function closeLoanModal() { document.getElementById('loan-overlay').classList.remove('open'); }
 function closeLoanIfBg(e) { if(e.target===document.getElementById('loan-overlay')) closeLoanModal(); }
 
@@ -1647,22 +1502,17 @@ async function saveLoan() {
   if(!itemId || !borrower){ showToast('請填寫器材和借用人','err'); return; }
 
   const it = items.find(i=>i.id===itemId);
-  const existingId = document.getElementById('loan-id').value;
-  const isEdit = !!existingId;
-
-  if(!isEdit && it && (it.status==='維修中' || it.status==='報廢')) {
+  if(it && (it.status==='維修中' || it.status==='報廢')) {
     showToast(`「${it.name}」目前狀態為【${it.status}】，無法借出`, 'err');
     return;
   }
 
-  const id = existingId || ('loan_'+Date.now());
+  const id = 'loan_'+Date.now();
   const outDate    = document.getElementById('loan-out-date').value;
   const returnDate = document.getElementById('loan-return-date').value;
   const costMode   = document.getElementById('loan-cost-mode').value;
   const projId     = document.getElementById('loan-proj-id').value;
   const qty        = +document.getElementById('loan-qty').value||1;
-
-  const existingLoan = isEdit ? loans.find(l=>l.id===existingId) : null;
 
   const loan = {
     id, itemId, borrower, qty,
@@ -1671,33 +1521,24 @@ async function saveLoan() {
     costMode,
     fixedAmount: +document.getElementById('loan-fixed-amount').value||0,
     note: document.getElementById('loan-note').value,
-    returned: existingLoan ? existingLoan.returned : false,
-    actualReturnDate: existingLoan ? (existingLoan.actualReturnDate || null) : null,
-    createdAt: existingLoan ? existingLoan.createdAt : Date.now()
+    returned: false,
+    createdAt: Date.now()
   };
+  loans.push(loan);
 
-  try {
-    if(isEdit) {
-      const idx = loans.findIndex(l=>l.id===id);
-      if(idx>=0) loans[idx] = loan;
-    } else {
-      loans.push(loan);
-      if(it && it.status==='在庫') {
-        it.status = '借出';
-        await fbSet('inv_items', it.id, it);
-      }
-      if(projId && costMode !== 'none') {
-        await createCostEntry(loan, it);
-      }
-    }
-    await fbSet('inv_loans', id, loan);
-    closeLoanModal();
-    showToast(isEdit ? `✓ 已更新借出紀錄` : `✓ 已登記借出給「${borrower}」`);
-    renderAll();
-  } catch(err) {
-    console.error('saveLoan error:', err);
-    showToast('儲存失敗：' + err.message, 'err');
+  if(it && it.status==='在庫') {
+    it.status = '借出';
+    await fbSet('inv_items', it.id, it);
   }
+
+  if(projId && costMode !== 'none') {
+    await createCostEntry(loan, it);
+  }
+
+  await fbSet('inv_loans', id, loan);
+  closeLoanModal();
+  showToast(`✓ 已登記借出給「${borrower}」`);
+  renderAll();
 }
 
 async function createCostEntry(loan, item) {
@@ -1810,19 +1651,175 @@ async function deleteRepair(id) {
    ============================================= */
 let qrcodeInstance = null;
 
+let _currentQRItemId = null;
+
 function openQRCode(id, name) {
+  _currentQRItemId = id;
+  const it = items.find(i => i.id === id);
   document.getElementById('qr-item-name').innerText = name;
+  const metaParts = [it?.cat, it?.brand, it?.code].filter(Boolean);
+  document.getElementById('qr-item-meta').innerText = metaParts.join(' · ') || '';
   document.getElementById('qrcode-box').innerHTML = '';
   qrcodeInstance = new QRCode(document.getElementById("qrcode-box"), {
     text: id,
-    width: 150,
-    height: 150
+    width: 160,
+    height: 160,
+    correctLevel: QRCode.CorrectLevel.M
   });
   document.getElementById('qrcode-overlay').classList.add('open');
 }
 
 function closeQRCode() { document.getElementById('qrcode-overlay').classList.remove('open'); }
 function closeQRCodeIfBg(e) { if(e.target === document.getElementById('qrcode-overlay')) closeQRCode(); }
+
+function downloadSingleQR() {
+  const it = items.find(i => i.id === _currentQRItemId);
+  const name = it ? it.name : '器材';
+  setTimeout(() => {
+    const canvas = document.querySelector('#qrcode-box canvas');
+    if (!canvas) { showToast('QR Code 尚未生成', 'err'); return; }
+    // 建立帶名稱的合成圖
+    const pad = 14;
+    const fontSize = 13;
+    const labelH = fontSize + pad * 2;
+    const c2 = document.createElement('canvas');
+    c2.width = canvas.width + pad * 2;
+    c2.height = canvas.height + labelH + pad;
+    const ctx = c2.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, c2.width, c2.height);
+    ctx.drawImage(canvas, pad, pad);
+    ctx.fillStyle = '#1c1917';
+    ctx.font = `bold ${fontSize}px "Noto Sans TC", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(name.length > 20 ? name.slice(0,19)+'…' : name, c2.width / 2, canvas.height + pad + fontSize + 2);
+    const link = document.createElement('a');
+    link.download = `QR_${name}.png`;
+    link.href = c2.toDataURL('image/png');
+    link.click();
+    showToast(`✓ 已下載「${name}」QR Code`);
+  }, 300);
+}
+
+/* =============================================
+   批量列印 QR Code (開新視窗)
+   ============================================= */
+function printAllQR() {
+  const filtered = getFiltered();
+  if (!filtered.length) { showToast('目前無器材可列印', 'err'); return; }
+
+  // 每張標籤的 QR data 會在新視窗中生成
+  const itemsJSON = JSON.stringify(filtered.map(it => ({
+    id: it.id,
+    name: it.name,
+    cat: it.cat || '',
+    brand: it.brand || '',
+    code: it.code || '',
+    status: it.status || '在庫'
+  })));
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>器材 QR Code 列印</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; background: #fff; padding: 16px; }
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none !important; }
+    .label-grid { gap: 0; }
+    .label { border: 1px solid #ccc; break-inside: avoid; }
+    @page { margin: 10mm; size: A4; }
+  }
+  h1 { font-size: 16px; color: #1c1917; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .controls { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .btn { padding: 7px 16px; border-radius: 6px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; }
+  .btn-print { background: #b45309; color: white; }
+  .btn-print:hover { background: #d97706; }
+  .btn-close { background: #f5f5f4; color: #57534e; border: 1px solid #e7e3dc; }
+  .size-label { font-size: 12px; color: #78716c; }
+  select { padding: 5px 8px; border: 1px solid #e7e3dc; border-radius: 5px; font-size: 12px; font-family: inherit; background: #fafaf9; }
+  .label-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .label { background: #fff; border: 1.5px solid #e7e3dc; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 160px; }
+  .label.size-sm { width: 130px; }
+  .label.size-lg { width: 200px; }
+  .qr-wrap { background: white; padding: 4px; border-radius: 4px; }
+  .label-name { font-size: 11px; font-weight: 700; color: #1c1917; text-align: center; line-height: 1.35; word-break: break-all; }
+  .label.size-sm .label-name { font-size: 10px; }
+  .label.size-lg .label-name { font-size: 13px; }
+  .label-meta { font-size: 9px; color: #78716c; text-align: center; line-height: 1.3; }
+  .label.size-lg .label-meta { font-size: 11px; }
+  .label-cat { display: inline-block; font-size: 8px; padding: 1px 6px; border-radius: 10px; background: rgba(180,83,9,.1); color: #b45309; font-weight: 600; }
+  .label.size-lg .label-cat { font-size: 10px; }
+  .loading { color: #78716c; font-size: 13px; margin: 20px 0; }
+</style>
+</head>
+<body>
+<div class="no-print controls">
+  <span class="size-label">標籤尺寸：</span>
+  <select id="size-sel" onchange="changeSize()">
+    <option value="sm">小（每列較多張）</option>
+    <option value="md" selected>中（預設）</option>
+    <option value="lg">大（較清晰）</option>
+  </select>
+  <button class="btn btn-print" onclick="window.print()">🖨️ 列印</button>
+  <button class="btn btn-close" onclick="window.close()">✕ 關閉</button>
+</div>
+<div class="loading" id="loading">⏳ 正在生成 QR Code，請稍候…</div>
+<div class="label-grid" id="grid"></div>
+<script>
+const itemsData = ${itemsJSON};
+const QR_SIZES = { sm: 100, md: 130, lg: 160 };
+
+function buildGrid(size) {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const qrSize = QR_SIZES[size];
+  itemsData.forEach(it => {
+    const card = document.createElement('div');
+    card.className = 'label size-' + size;
+    const qrDiv = document.createElement('div');
+    qrDiv.className = 'qr-wrap';
+    const meta = [it.brand, it.code].filter(Boolean).join(' · ');
+    card.innerHTML = \`
+      <div class="label-cat">\${it.cat || '器材'}</div>
+    \`;
+    card.appendChild(qrDiv);
+    card.innerHTML += \`
+      <div class="label-name">\${it.name}</div>
+      \${meta ? '<div class="label-meta">' + meta + '</div>' : ''}
+    \`;
+    // re-append qrDiv since innerHTML replaced it
+    const qrDivNew = document.createElement('div');
+    qrDivNew.className = 'qr-wrap';
+    card.insertBefore(qrDivNew, card.children[1]);
+    new QRCode(qrDivNew, {
+      text: it.id,
+      width: qrSize,
+      height: qrSize,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    grid.appendChild(card);
+  });
+  document.getElementById('loading').style.display = 'none';
+}
+
+function changeSize() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('grid').innerHTML = '';
+  setTimeout(() => buildGrid(document.getElementById('size-sel').value), 50);
+}
+
+window.onload = () => setTimeout(() => buildGrid('md'), 100);
+<\/script>
+</body>
+</html>`);
+  win.document.close();
+}
 
 let html5QrCode = null;
 
