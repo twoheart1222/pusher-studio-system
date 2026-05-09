@@ -1495,14 +1495,25 @@ function editLoan(loanId) {
   document.getElementById('loan-id').value = l.id;
 
   const sel = document.getElementById('loan-item-id');
-  // 編輯模式列出所有非報廢、非維修中器材，加上此筆原本的器材（以防狀態已變）
+  // 編輯模式：列出所有非維修中、非報廢的器材，並確保原器材一定出現在清單中
   const loanableItems = items.filter(it => it.status !== '維修中' && it.status !== '報廢');
   const hasOriginal = loanableItems.some(it => it.id === l.itemId);
   const origItem = items.find(i => i.id === l.itemId);
   const listItems = hasOriginal ? loanableItems : (origItem ? [origItem, ...loanableItems] : loanableItems);
 
-  sel.innerHTML = listItems.map(it => `<option value="${it.id}" ${it.id===l.itemId?'selected':''}>${it.name}${it.brand?' ('+it.brand+')':''} — ${it.status}</option>`).join('');
+  sel.innerHTML = listItems.map(it =>
+    `<option value="${it.id}">${it.name}${it.brand?' ('+it.brand+')':''} — ${it.status}</option>`
+  ).join('');
+  // 設定 value 必須在 innerHTML 完成後執行
   sel.value = l.itemId;
+  // 若 value 設不上去（器材已被刪除），補一個 option
+  if(sel.value !== l.itemId && origItem) {
+    const opt = document.createElement('option');
+    opt.value = origItem.id;
+    opt.textContent = origItem.name + ' (已刪除/狀態異常)';
+    sel.prepend(opt);
+    sel.value = origItem.id;
+  }
 
   const psel = document.getElementById('loan-proj-id');
   psel.innerHTML = `<option value="">— 不連結 —</option>` + projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
@@ -1534,12 +1545,14 @@ async function saveLoan() {
   if(!itemId || !borrower){ showToast('請填寫器材和借用人','err'); return; }
 
   const it = items.find(i=>i.id===itemId);
-  if(it && (it.status==='維修中' || it.status==='報廢')) {
+  const existingId = document.getElementById('loan-id').value;
+  const isEdit = !!existingId;
+
+  if(!isEdit && it && (it.status==='維修中' || it.status==='報廢')) {
     showToast(`「${it.name}」目前狀態為【${it.status}】，無法借出`, 'err');
     return;
   }
 
-  const existingId = document.getElementById('loan-id').value;
   const id = existingId || ('loan_'+Date.now());
   const outDate    = document.getElementById('loan-out-date').value;
   const returnDate = document.getElementById('loan-return-date').value;
@@ -1547,7 +1560,6 @@ async function saveLoan() {
   const projId     = document.getElementById('loan-proj-id').value;
   const qty        = +document.getElementById('loan-qty').value||1;
 
-  const isEdit = !!existingId;
   const existingLoan = isEdit ? loans.find(l=>l.id===existingId) : null;
 
   const loan = {
