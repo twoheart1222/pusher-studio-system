@@ -1899,7 +1899,7 @@ body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeea
 </div>
 
 <script>
-const itemsData = ITEMS_JSON_PLACEHOLDER;
+const itemsData = JSON.parse(decodeURIComponent(escape(atob('ITEMS_JSON_PLACEHOLDER'))));
 const labelNames = {};
 let curSize = 'md', selectedIds = new Set(), filterCat = 'all', filterStatus = 'all', visibleItems = [];
 const QR_SIZES = {sm:90, md:120, lg:155};
@@ -2024,9 +2024,9 @@ rebuild();
 <\/script>
 </body>
 </html>`;
-  // 安全替換：防止器材名稱含特殊字元（反斜線、</script>）導致頁面解析失敗
-  const safeJSON = itemsJSON.replace(/\\/g, '\\\\').replace(/<\/script>/gi, '<\\/script>');
-  const finalHtml = html.replace('ITEMS_JSON_PLACEHOLDER', safeJSON);
+  // Base64 encode to safely embed any JSON (avoids all escaping issues)
+  const safeEncoded = btoa(unescape(encodeURIComponent(itemsJSON)));
+  const finalHtml = html.replace('ITEMS_JSON_PLACEHOLDER', safeEncoded);
   const blob = new Blob([finalHtml], {type: 'text/html;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const win = window.open(url, '_blank');
