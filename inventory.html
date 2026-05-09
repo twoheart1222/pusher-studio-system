@@ -131,14 +131,40 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 
 /* LOAN LIST */
 .loan-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.loan-inner { min-width: 650px; }
-.loan-row{ display:grid; grid-template-columns:1fr 100px 100px 100px 100px 110px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
+.loan-inner { min-width: 0; padding:8px 0; display:flex; flex-direction:column; gap:8px; }
+.overdue-tag{ display:inline-flex; align-items:center; gap:3px; font-size:11px; background:#dc2626; color:white; padding:2px 8px; border-radius:4px; font-weight:700; letter-spacing:.3px; }
+
+/* 專案群組卡片 */
+.loan-group { border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:0 12px; }
+.loan-group-header {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px; cursor:pointer; user-select:none;
+  background:#f9f7f4; transition:background .15s;
+}
+.loan-group-header:hover { background:#f0ece6; }
+.loan-group-header.overdue-group { background:rgba(220,38,38,.07); border-left:4px solid #dc2626; }
+.loan-group-header.overdue-group:hover { background:rgba(220,38,38,.13); }
+.loan-group-chevron { font-size:11px; color:var(--ink3); transition:transform .2s; display:inline-block; }
+.loan-group-chevron.open { transform:rotate(90deg); }
+.loan-group-title { font-weight:600; font-size:13px; color:var(--ink); flex:1; }
+.loan-group-meta { font-size:11px; color:var(--ink3); display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.loan-group-count { font-size:10px; background:var(--acc); color:white; border-radius:20px; padding:1px 7px; font-weight:600; }
+.loan-group-count.red { background:#dc2626; }
+
+/* 群組內的明細 table */
+.loan-detail-wrap { display:none; border-top:1px solid var(--line); overflow-x:auto; }
+.loan-detail-wrap.open { display:block; }
+.loan-row{ display:grid; grid-template-columns:1fr 90px 90px 130px 110px; gap:10px; padding:9px 14px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
 .loan-row:last-child{ border-bottom:none; }
 .loan-row:hover{ background:#faf9f7; }
-.loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#faf9f7; }
-.overdue-tag{ display:inline-flex; align-items:center; gap:3px; font-size:11px; background:#dc2626; color:white; padding:2px 8px; border-radius:4px; font-weight:700; letter-spacing:.3px; }
+.loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#f9f7f4; }
 .loan-row.overdue-row{ background:rgba(220,38,38,.05); border-left:3px solid #dc2626; }
 .loan-row.overdue-row:hover{ background:rgba(220,38,38,.1); }
+
+/* 未連結專案的單筆卡片 */
+.loan-solo { border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:0 12px; }
+.loan-solo .loan-row { border-bottom:none; }
+.loan-solo.overdue-row-wrap { border-color:#dc2626; border-left-width:4px; }
 
 /* MODAL */
 .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
@@ -333,14 +359,6 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       </div>
       <div class="loan-wrap">
         <div class="loan-inner">
-          <div class="loan-row loan-header">
-            <div>器材</div>
-            <div>借用人</div>
-            <div>借出日</div>
-            <div>預計歸還</div>
-            <div>連結專案</div>
-            <div></div>
-          </div>
           <div id="loan-list">
             <div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">目前無借出紀錄</div></div>
           </div>
@@ -1150,45 +1168,109 @@ function renderTable() {
    LOAN LIST
    ============================================= */
 function renderLoans() {
-  const active = loans.filter(l=>!l.returned).sort((a,b)=>(a.returnDate||'').localeCompare(b.returnDate||''));
+  const active = loans.filter(l => !l.returned).sort((a,b) => (a.returnDate||'').localeCompare(b.returnDate||''));
   const wrap = document.getElementById('loan-list');
   if(!active.length) {
     wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">目前無借出紀錄</div></div>`;
     return;
   }
   const today = new Date().toISOString().slice(0,10);
-  wrap.innerHTML = active.map(l => {
-    const item = items.find(i=>i.id===l.itemId);
-    const proj = projects.find(p=>p.id===l.projId);
-    const overdue = l.returnDate && l.returnDate < today;
-    let overdueDays = 0;
-    if(overdue) {
-      overdueDays = Math.round((new Date(today) - new Date(l.returnDate)) / (1000*60*60*24));
+
+  // 依專案分群
+  const groups = {};   // projId -> [loans]
+  const noProj = [];
+  active.forEach(l => {
+    if(l.projId) {
+      if(!groups[l.projId]) groups[l.projId] = [];
+      groups[l.projId].push(l);
+    } else {
+      noProj.push(l);
     }
-    const overdueTag = overdue
-      ? `<span class="overdue-tag">⚠ 逾期 ${overdueDays} 天</span>`
-      : '';
-    const returnDateHtml = overdue
-      ? `<div style="font-size:11px;font-family:var(--font-mono);color:#dc2626;font-weight:600;text-decoration:line-through;">${l.returnDate}</div><div style="margin-top:3px;">${overdueTag}</div>`
+  });
+
+  function overdueInfo(l) {
+    const od = l.returnDate && l.returnDate < today;
+    const days = od ? Math.round((new Date(today)-new Date(l.returnDate))/(864e5)) : 0;
+    return { od, days };
+  }
+
+  function loanRowHtml(l) {
+    const item = items.find(i => i.id === l.itemId);
+    const { od, days } = overdueInfo(l);
+    const returnDateHtml = od
+      ? `<div style="font-size:11px;font-family:var(--font-mono);color:#dc2626;font-weight:600;text-decoration:line-through;">${l.returnDate}</div><div style="margin-top:3px;"><span class="overdue-tag">⚠ 逾期 ${days} 天</span></div>`
       : `<div style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'}</div>`;
-    return `<div class="loan-row${overdue?' overdue-row':''}">
+    return `<div class="loan-row${od?' overdue-row':''}">
       <div data-label="器材">
-        <div>
-          <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
-          ${l.note?`<div style="font-size:10px;color:var(--ink3);">${l.note}</div>`:''}
-        </div>
+        <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
+        ${l.note?`<div style="font-size:10px;color:var(--ink3);">${l.note}</div>`:''}
       </div>
-      <div data-label="借用人" style="font-size:12px;${overdue?'font-weight:600;color:#dc2626;':''}">${l.borrower||'—'}</div>
+      <div data-label="借用人" style="font-size:12px;${od?'font-weight:600;color:#dc2626;':''}">${l.borrower||'—'}</div>
       <div data-label="借出日" style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);">${l.outDate||'—'}</div>
       <div data-label="預計歸還">${returnDateHtml}</div>
-      <div data-label="專案" style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
       <div style="display:flex;gap:4px;justify-content:flex-end;">
         <button class="btn btn-green btn-xs" onclick="returnLoan('${l.id}')">歸還</button>
         <button class="btn btn-ghost-dark btn-xs" onclick="editLoan('${l.id}')">編</button>
         <button class="btn btn-red btn-xs" onclick="deleteLoan('${l.id}')">刪</button>
       </div>
     </div>`;
-  }).join('');
+  }
+
+  function groupCardHtml(projId, loanList) {
+    const proj = projects.find(p => p.id === projId);
+    const projName = proj ? proj.name : '未知專案';
+    const hasOverdue = loanList.some(l => overdueInfo(l).od);
+    const overdueCount = loanList.filter(l => overdueInfo(l).od).length;
+    const gid = 'lg_' + projId;
+    const detailRows = [
+      `<div class="loan-row loan-header"><div>器材</div><div>借用人</div><div>借出日</div><div>預計歸還</div><div></div></div>`,
+      ...loanList.map(loanRowHtml)
+    ].join('');
+    const countBadge = overdueCount > 0
+      ? `<span class="loan-group-count red">逾期 ${overdueCount} 件</span>`
+      : `<span class="loan-group-count">${loanList.length} 件</span>`;
+    const earliestReturn = loanList.map(l=>l.returnDate||'').filter(Boolean).sort()[0] || '';
+    const returnMeta = earliestReturn ? `最早歸還：${earliestReturn}` : '';
+    return `<div class="loan-group">
+      <div class="loan-group-header${hasOverdue?' overdue-group':''}" onclick="toggleLoanGroup('${gid}')">
+        <span class="loan-group-chevron" id="${gid}_chev">▶</span>
+        <span class="loan-group-title">📁 ${projName}</span>
+        ${countBadge}
+        <span class="loan-group-meta">${returnMeta}</span>
+      </div>
+      <div class="loan-detail-wrap" id="${gid}">
+        ${detailRows}
+      </div>
+    </div>`;
+  }
+
+  let html = '';
+
+  // 有專案的群組
+  Object.keys(groups).forEach(projId => {
+    html += groupCardHtml(projId, groups[projId]);
+  });
+
+  // 未連結專案的單筆
+  noProj.forEach(l => {
+    const { od } = overdueInfo(l);
+    const item = items.find(i => i.id === l.itemId);
+    const itemName = item ? item.name : '(已刪除)';
+    html += `<div class="loan-solo${od?' overdue-row-wrap':''}">
+      <div class="loan-row loan-header"><div>器材</div><div>借用人</div><div>借出日</div><div>預計歸還</div><div></div></div>
+      ${loanRowHtml(l)}
+    </div>`;
+  });
+
+  wrap.innerHTML = html;
+}
+
+function toggleLoanGroup(gid) {
+  const detail = document.getElementById(gid);
+  const chev = document.getElementById(gid + '_chev');
+  if(!detail) return;
+  const isOpen = detail.classList.toggle('open');
+  if(chev) chev.classList.toggle('open', isOpen);
 }
 
 /* =============================================
