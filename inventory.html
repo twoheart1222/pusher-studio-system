@@ -1777,8 +1777,8 @@ body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeea
 .lcat{font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(180,83,9,.1);color:#b45309;font-weight:600;}
 .lqr{background:white;padding:3px;border-radius:4px;line-height:0;}
 .lname{font-size:11px;font-weight:700;color:#1c1917;text-align:center;line-height:1.4;white-space:pre-line;word-break:break-word;max-width:100%;}
-.lname-edit-hint{font-size:8px;color:#d97706;opacity:0.5;transition:.2s;text-align:center;margin-top:-2px;cursor:pointer;border:1px dashed #d97706;border-radius:4px;padding:1px 5px;}
-.label-card:hover .lname-edit-hint{opacity:1;background:rgba(217,119,6,.08);}
+.lname-edit-hint{font-size:8px;color:#d97706;opacity:0;transition:.2s;text-align:center;margin-top:-2px;cursor:pointer;}
+.label-card:hover .lname-edit-hint{opacity:1;}
 .lbrand{font-size:9px;color:#78716c;text-align:center;}
 .lcode{font-size:9px;color:#a8a29e;text-align:center;font-family:monospace;}
 .lstatus{font-size:8px;padding:1px 6px;border-radius:10px;}
@@ -1910,7 +1910,7 @@ function openNE(id, e) { e.stopPropagation(); _eid=id; const it=itemsData.find(i
 function closeNE() { document.getElementById('ne-ov').classList.remove('open'); _eid=null; }
 function updateNEPreview() { document.getElementById('ne-prev').textContent=document.getElementById('ne-ta').value||'（空白）'; }
 function resetNE() { const it=itemsData.find(i=>i.id===_eid); document.getElementById('ne-ta').value=it?it.name:''; updateNEPreview(); }
-function saveNE() { if(!_eid) return; const val=document.getElementById('ne-ta').value; const it=itemsData.find(i=>i.id===_eid); if(it&&val===it.name) delete labelNames[_eid]; else labelNames[_eid]=val; closeNE(); rebuild(); }
+function saveNE() { if(!_eid) return; const val=document.getElementById('ne-ta').value; const it=itemsData.find(i=>i.id===_eid); if(it&&val===it.name) delete labelNames[_eid]; else labelNames[_eid]=val; const el=document.querySelector('.label-card[data-id="'+_eid+'"] .lname'); if(el) el.textContent=val; closeNE(); }
 
 /* filters */
 function initFilters() {
@@ -1943,7 +1943,7 @@ function rebuild() {
     new QRCode(qw,{text:it.id,width:qrSize,height:qrSize,correctLevel:QRCode.CorrectLevel.M});
     if(f.name){
       const n=document.createElement('div');n.className='lname';n.textContent=labelNames[it.id]!==undefined?labelNames[it.id]:it.name;card.appendChild(n);
-      const eh=document.createElement('div');eh.className='lname-edit-hint';eh.textContent='✏ 點擊換行';eh.onclick=(e)=>openNE(it.id,e);card.appendChild(eh);
+      const eh=document.createElement('div');eh.className='lname-edit-hint';eh.textContent='✏ 自訂換行';eh.onclick=(e)=>openNE(it.id,e);card.appendChild(eh);
     }
     if(f.brand&&it.brand){const b=document.createElement('div');b.className='lbrand';b.textContent=it.brand;card.appendChild(b);}
     if(f.code&&it.code){const c=document.createElement('div');c.className='lcode';c.textContent=it.code;card.appendChild(c);}
