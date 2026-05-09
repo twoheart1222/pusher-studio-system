@@ -1705,10 +1705,9 @@ function downloadSingleQR() {
    QR 管理頁面（新視窗）
    ============================================= */
 function printAllQR() {
-  const allItems = items;
-  if (!allItems.length) { showToast('目前無器材', 'err'); return; }
+  if (!items.length) { showToast('目前無器材', 'err'); return; }
 
-  const itemsJSON = JSON.stringify(allItems.map(it => ({
+  const payload = items.map(it => ({
     id: it.id,
     name: it.name,
     cat: it.cat || '',
@@ -1718,7 +1717,10 @@ function printAllQR() {
     buyDate: it.buyDate || '',
     note: it.note || '',
     dayRate: it.dayRate || ''
-  })));
+  }));
+
+  // 用 sessionStorage 傳遞資料，避免任何 JSON 嵌入字串的跳脫問題
+  sessionStorage.setItem('qr_items', JSON.stringify(payload));
 
   const html = `<!DOCTYPE html>
 <html lang="zh-TW">
@@ -1793,7 +1795,6 @@ body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeea
 .prog-bar-outer{flex:1;height:6px;background:rgba(0,0,0,.1);border-radius:3px;overflow:hidden;}
 .prog-bar-inner{height:100%;background:#38bdf8;border-radius:3px;transition:width .2s;}
 .prog-text{font-size:11px;color:#38bdf8;white-space:nowrap;}
-/* 名稱編輯彈窗 */
 .ne-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
 .ne-ov.open{display:flex;}
 .ne-box{background:#fff;border-radius:12px;padding:22px;width:340px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.3);}
@@ -1881,7 +1882,6 @@ body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeea
 </div>
 </div>
 
-<!-- 名稱換行編輯彈窗 -->
 <div class="ne-ov" id="ne-ov" onclick="if(event.target===this)closeNE()">
   <div class="ne-box">
     <h3>✏️ 自訂標籤名稱換行</h3>
@@ -1899,12 +1899,19 @@ body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeea
 </div>
 
 <script>
-const itemsData = JSON.parse(decodeURIComponent(escape(atob('ITEMS_JSON_PLACEHOLDER'))));
+// 從父視窗的 sessionStorage 讀取器材資料
+let itemsData = [];
+try {
+  const raw = window.opener && window.opener.sessionStorage.getItem('qr_items');
+  if (raw) itemsData = JSON.parse(raw);
+} catch(e) {
+  console.error('讀取器材資料失敗', e);
+}
+
 const labelNames = {};
 let curSize = 'md', selectedIds = new Set(), filterCat = 'all', filterStatus = 'all', visibleItems = [];
 const QR_SIZES = {sm:90, md:120, lg:155};
 
-/* name edit */
 let _eid = null;
 function openNE(id, e) { e.stopPropagation(); _eid=id; const it=itemsData.find(i=>i.id===id); document.getElementById('ne-ta').value=labelNames[id]!==undefined?labelNames[id]:it.name; updateNEPreview(); document.getElementById('ne-ov').classList.add('open'); setTimeout(()=>document.getElementById('ne-ta').focus(),80); }
 function closeNE() { document.getElementById('ne-ov').classList.remove('open'); _eid=null; }
@@ -1912,7 +1919,6 @@ function updateNEPreview() { document.getElementById('ne-prev').textContent=docu
 function resetNE() { const it=itemsData.find(i=>i.id===_eid); document.getElementById('ne-ta').value=it?it.name:''; updateNEPreview(); }
 function saveNE() { if(!_eid) return; const val=document.getElementById('ne-ta').value; const it=itemsData.find(i=>i.id===_eid); if(it&&val===it.name) delete labelNames[_eid]; else labelNames[_eid]=val; const el=document.querySelector('.label-card[data-id="'+_eid+'"] .lname'); if(el) el.textContent=val; closeNE(); }
 
-/* filters */
 function initFilters() {
   const cats=['all',...new Set(itemsData.map(i=>i.cat).filter(Boolean))];
   document.getElementById('cat-filter').innerHTML=cats.map(c=>'<span class="fpill '+(c==='all'?'on':'')+'" onclick="setCF(\''+c+'\',this)">'+(c==='all'?'全部':c)+'</span>').join('');
@@ -1924,7 +1930,6 @@ function setSF(v,el){filterStatus=v;document.querySelectorAll('#status-filter .f
 function getFiltered(){return itemsData.filter(it=>(filterCat==='all'||it.cat===filterCat)&&(filterStatus==='all'||it.status===filterStatus));}
 function showF(){return{cat:document.getElementById('show-cat').checked,name:document.getElementById('show-name').checked,brand:document.getElementById('show-brand').checked,code:document.getElementById('show-code').checked,status:document.getElementById('show-status').checked,date:document.getElementById('show-date').checked,rate:document.getElementById('show-rate').checked};}
 
-/* rebuild */
 function rebuild() {
   visibleItems=getFiltered();
   const grid=document.getElementById('grid');
@@ -1956,7 +1961,6 @@ function rebuild() {
   updateCount();
 }
 
-/* selection */
 function toggleCard(id){if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);const c=document.querySelector('.label-card[data-id="'+id+'"]');if(c){c.classList.toggle('selected',selectedIds.has(id));c.querySelector('.chk').checked=selectedIds.has(id);}updateCount();}
 function toggleAll(chk){chk.checked?selectAll():deselectAll();}
 function selectAll(){visibleItems.forEach(it=>selectedIds.add(it.id));document.querySelectorAll('.label-card').forEach(c=>{c.classList.add('selected');c.querySelector('.chk').checked=true;});document.getElementById('chk-all').checked=true;updateCount();}
@@ -1964,7 +1968,6 @@ function deselectAll(){selectedIds.clear();document.querySelectorAll('.label-car
 function updateCount(){document.getElementById('sel-count').textContent='已選 '+selectedIds.size+' / '+visibleItems.length+' 件';const btn=document.getElementById('btn-dl-zip');if(btn)btn.disabled=selectedIds.size===0;}
 function setSize(sz,el){curSize=sz;document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');rebuild();}
 
-/* download zip */
 async function downloadZip(){
   const toDownload=[...selectedIds];
   if(!toDownload.length){alert('請先勾選要下載的器材');return;}
@@ -1989,7 +1992,7 @@ async function downloadZip(){
         if(canvas){
           const pad=16,fSize=13;
           const displayName=labelNames[id]!==undefined?labelNames[id]:it.name;
-          const lines=displayName.split('\n');
+          const lines=displayName.split('\\n');
           const lineH=fSize*1.5;
           const c2=document.createElement('canvas');
           c2.width=canvas.width+pad*2;
@@ -1999,8 +2002,8 @@ async function downloadZip(){
           ctx.drawImage(canvas,pad,pad);
           ctx.fillStyle='#1c1917';ctx.font='bold '+fSize+'px sans-serif';ctx.textAlign='center';
           lines.forEach((line,i)=>{ctx.fillText(line,c2.width/2,canvas.height+pad+(i+1)*lineH);});
-          const b64=c2.toDataURL('image/png').replace(/^data:image\/png;base64,/,'');
-          const safe=it.name.replace(/[\/\\?%*:|"<>]/g,'_').slice(0,40);
+          const b64=c2.toDataURL('image/png').replace(/^data:image\\/png;base64,/,'');
+          const safe=it.name.replace(/[\\/\\\\?%*:|"<>]/g,'_').slice(0,40);
           zip.file(safe+'.png',b64,{base64:true});
         }
         document.body.removeChild(tmp);done++;resolve();
@@ -2024,13 +2027,10 @@ rebuild();
 <\/script>
 </body>
 </html>`;
-  // Base64 encode to safely embed any JSON (avoids all escaping issues)
-  const safeEncoded = btoa(unescape(encodeURIComponent(itemsJSON)));
-  const finalHtml = html.replace('ITEMS_JSON_PLACEHOLDER', safeEncoded);
-  const blob = new Blob([finalHtml], {type: 'text/html;charset=utf-8'});
+
+  const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const win = window.open(url, '_blank');
-  // 開啟後釋放 URL（延遲確保已載入）
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
