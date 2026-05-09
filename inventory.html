@@ -258,7 +258,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       <span id="sync-text">連線中...</span>
     </span>
     <button class="btn btn-green btn-sm" onclick="openScanner()">📷 掃描借還</button>
-    <button class="btn btn-ghost btn-sm" onclick="printAllQR()" title="批量列印所有器材 QR Code">🖨️ 列印QR</button>
+    <button class="btn btn-ghost btn-sm" onclick="openQRManager()">🖨️ QR 管理</button>
     <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
     <button class="btn btn-ghost btn-sm" onclick="openExcelImport()">📥 匯入</button>
     <button class="btn btn-ghost btn-sm" onclick="openLoanModal()">📤 借出</button>
@@ -1647,10 +1647,9 @@ async function deleteRepair(id) {
 }
 
 /* =============================================
-   QR CODE & DIRECT SCANNER (一鍵啟動掃描)
+   QR CODE (單顆) & QR 管理頁面
    ============================================= */
 let qrcodeInstance = null;
-
 let _currentQRItemId = null;
 
 function openQRCode(id, name) {
@@ -1668,7 +1667,6 @@ function openQRCode(id, name) {
   });
   document.getElementById('qrcode-overlay').classList.add('open');
 }
-
 function closeQRCode() { document.getElementById('qrcode-overlay').classList.remove('open'); }
 function closeQRCodeIfBg(e) { if(e.target === document.getElementById('qrcode-overlay')) closeQRCode(); }
 
@@ -1678,21 +1676,17 @@ function downloadSingleQR() {
   setTimeout(() => {
     const canvas = document.querySelector('#qrcode-box canvas');
     if (!canvas) { showToast('QR Code 尚未生成', 'err'); return; }
-    // 建立帶名稱的合成圖
-    const pad = 14;
-    const fontSize = 13;
-    const labelH = fontSize + pad * 2;
+    const pad = 14, fontSize = 13;
     const c2 = document.createElement('canvas');
     c2.width = canvas.width + pad * 2;
-    c2.height = canvas.height + labelH + pad;
+    c2.height = canvas.height + pad * 2 + fontSize + 6;
     const ctx = c2.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, c2.width, c2.height);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c2.width, c2.height);
     ctx.drawImage(canvas, pad, pad);
     ctx.fillStyle = '#1c1917';
     ctx.font = `bold ${fontSize}px "Noto Sans TC", sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText(name.length > 20 ? name.slice(0,19)+'…' : name, c2.width / 2, canvas.height + pad + fontSize + 2);
+    ctx.fillText(name.length > 22 ? name.slice(0,21)+'…' : name, c2.width/2, canvas.height + pad + fontSize + 2);
     const link = document.createElement('a');
     link.download = `QR_${name}.png`;
     link.href = c2.toDataURL('image/png');
@@ -1701,14 +1695,12 @@ function downloadSingleQR() {
   }, 300);
 }
 
-/* =============================================
-   QR 管理頁面（新視窗）
-   ============================================= */
-function printAllQR() {
-  const allItems = items;
-  if (!allItems.length) { showToast('目前無器材', 'err'); return; }
+/* ── QR 管理頁面（新視窗，用 sessionStorage 傳資料） ── */
+function openQRManager() {
+  if (!items.length) { showToast('目前無器材', 'err'); return; }
 
-  const itemsJSON = JSON.stringify(allItems.map(it => ({
+  // 將資料存入 sessionStorage，子視窗直接讀取，完全避免 JSON 嵌入字串的跳脫問題
+  sessionStorage.setItem('qr_items', JSON.stringify(items.map(it => ({
     id: it.id,
     name: it.name,
     cat: it.cat || '',
@@ -1716,155 +1708,173 @@ function printAllQR() {
     code: it.code || '',
     status: it.status || '在庫',
     buyDate: it.buyDate || '',
-    note: it.note || '',
-    dayRate: it.dayRate || ''
-  })));
+    dayRate: it.dayRate || 0,
+    note: it.note || ''
+  }))));
 
-  const html = `<!DOCTYPE html>
+  const html = buildQRManagerHTML();
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+}
+
+function buildQRManagerHTML() {
+  return `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>器材 QR Code 管理</title>
+<title>QR Code 管理</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeeae4;color:#1c1917;font-size:13px;min-height:100vh;}
-::-webkit-scrollbar{width:5px;height:5px;}
-::-webkit-scrollbar-thumb{background:#c4bdb6;border-radius:3px;}
+::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-thumb{background:#c4bdb6;border-radius:3px;}
 .layout{display:flex;height:100vh;overflow:hidden;}
-.sidebar{width:270px;min-width:270px;background:#1c1917;color:#e7e5e4;display:flex;flex-direction:column;overflow-y:auto;}
-.sidebar-head{padding:16px 18px 12px;border-bottom:1px solid rgba(255,255,255,.08);}
-.sidebar-head h2{font-size:14px;font-weight:600;color:#fafaf9;margin-bottom:2px;}
-.sidebar-head p{font-size:10px;color:#78716c;}
-.section{padding:13px 18px;border-bottom:1px solid rgba(255,255,255,.06);}
-.section-title{font-size:10px;font-weight:600;color:#78716c;letter-spacing:.5px;text-transform:uppercase;margin-bottom:9px;}
-.toggle-row{display:flex;align-items:center;padding:4px 0;}
-.toggle-row label{font-size:12px;color:#d6d3d1;cursor:pointer;display:flex;align-items:center;gap:7px;}
-.toggle-row label input{accent-color:#d97706;width:14px;height:14px;cursor:pointer;}
-.size-btns{display:flex;gap:5px;}
-.size-btn{flex:1;padding:5px;border:1px solid rgba(255,255,255,.15);border-radius:5px;background:none;color:#a8a29e;font-size:11px;cursor:pointer;font-family:inherit;transition:.15s;}
-.size-btn:hover{color:#fafaf9;border-color:rgba(255,255,255,.35);}
-.size-btn.active{background:rgba(180,83,9,.3);color:#d97706;border-color:#d97706;}
-.filter-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;}
-.fpill{padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.15);font-size:10px;color:#a8a29e;cursor:pointer;transition:.15s;background:none;}
-.fpill:hover{color:#fafaf9;border-color:rgba(255,255,255,.3);}
-.fpill.on{background:rgba(180,83,9,.25);color:#d97706;border-color:#b45309;}
-.action-btns{display:flex;flex-direction:column;gap:7px;padding:14px 18px;}
-.abtn{padding:9px 14px;border-radius:6px;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;transition:.15s;}
-.abtn-amber{background:#b45309;color:white;}
-.abtn-amber:hover{background:#d97706;}
-.abtn-blue{background:rgba(3,105,161,.25);color:#38bdf8;border:1px solid rgba(56,189,248,.25);}
-.abtn-blue:hover{background:rgba(3,105,161,.4);}
-.abtn-green{background:rgba(5,150,105,.2);color:#34d399;border:1px solid rgba(52,211,153,.25);}
-.abtn-green:hover{background:rgba(5,150,105,.35);}
-.abtn-ghost{background:rgba(255,255,255,.06);color:#a8a29e;border:1px solid rgba(255,255,255,.1);}
-.abtn-ghost:hover{background:rgba(255,255,255,.12);color:#e7e5e4;}
-.abtn:disabled{opacity:.4;cursor:not-allowed;}
+/* ── SIDEBAR ── */
+.sidebar{width:260px;min-width:260px;background:#1c1917;color:#e7e5e4;display:flex;flex-direction:column;overflow-y:auto;}
+.sb-head{padding:16px 18px 12px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sb-head h2{font-size:14px;font-weight:600;color:#fafaf9;margin-bottom:2px;}
+.sb-head p{font-size:10px;color:#78716c;}
+.sb-sec{padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.06);}
+.sb-sec-title{font-size:10px;font-weight:600;color:#78716c;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;}
+/* 尺寸按鈕 */
+.sz-row{display:flex;gap:5px;}
+.sz-btn{flex:1;padding:5px;border:1px solid rgba(255,255,255,.15);border-radius:5px;background:none;color:#a8a29e;font-size:11px;cursor:pointer;font-family:inherit;transition:.15s;}
+.sz-btn:hover{color:#fafaf9;border-color:rgba(255,255,255,.35);}
+.sz-btn.on{background:rgba(180,83,9,.3);color:#d97706;border-color:#d97706;}
+/* 顯示欄位 toggle */
+.tog-row{display:flex;align-items:center;padding:3px 0;}
+.tog-row label{font-size:12px;color:#d6d3d1;cursor:pointer;display:flex;align-items:center;gap:7px;}
+.tog-row label input{accent-color:#d97706;width:14px;height:14px;cursor:pointer;}
+/* 篩選 pills */
+.fp-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+.fp{padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.15);font-size:10px;color:#a8a29e;cursor:pointer;transition:.15s;background:none;}
+.fp:hover{color:#fafaf9;border-color:rgba(255,255,255,.3);}
+.fp.on{background:rgba(180,83,9,.25);color:#d97706;border-color:#b45309;}
+/* 動作按鈕 */
+.sb-actions{display:flex;flex-direction:column;gap:7px;padding:14px 18px;}
+.ab{padding:9px 14px;border-radius:6px;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;transition:.15s;}
+.ab-amber{background:#b45309;color:white;}.ab-amber:hover{background:#d97706;}
+.ab-blue{background:rgba(3,105,161,.25);color:#38bdf8;border:1px solid rgba(56,189,248,.25);}.ab-blue:hover{background:rgba(3,105,161,.4);}
+.ab-green{background:rgba(5,150,105,.2);color:#34d399;border:1px solid rgba(52,211,153,.25);}.ab-green:hover{background:rgba(5,150,105,.35);}
+.ab-ghost{background:rgba(255,255,255,.06);color:#a8a29e;border:1px solid rgba(255,255,255,.1);}.ab-ghost:hover{background:rgba(255,255,255,.12);color:#e7e5e4;}
+.ab:disabled{opacity:.4;cursor:not-allowed;}
 .sel-count{font-size:10px;color:#78716c;text-align:center;padding:4px 18px;}
+/* ── MAIN ── */
 .main{flex:1;overflow-y:auto;padding:18px;}
 .top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
 .top-bar h3{font-size:13px;font-weight:600;}
 .sel-all-row{display:flex;align-items:center;gap:8px;font-size:12px;color:#57534e;}
 .sel-all-row input{accent-color:#b45309;width:14px;height:14px;cursor:pointer;}
-.label-grid{display:flex;flex-wrap:wrap;gap:10px;}
-.label-card{position:relative;background:#fff;border:1.5px solid #e7e3dc;border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:.15s;user-select:none;}
-.label-card:hover{border-color:#b45309;box-shadow:0 2px 8px rgba(180,83,9,.15);}
-.label-card.selected{border-color:#d97706;box-shadow:0 0 0 2px rgba(217,119,6,.35);background:#fffbf5;}
-.label-card .chk{position:absolute;top:7px;left:7px;width:16px;height:16px;accent-color:#b45309;}
-.label-card .sdot{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;}
-.dot-在庫{background:#059669;}.dot-借出{background:#0369a1;}.dot-維修中{background:#dc2626;}.dot-報廢{background:#78716c;}
+/* ── CARDS GRID ── */
+.grid{display:flex;flex-wrap:wrap;gap:10px;}
+.card{position:relative;background:#fff;border:1.5px solid #e7e3dc;border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:.15s;user-select:none;}
+.card:hover{border-color:#b45309;box-shadow:0 2px 8px rgba(180,83,9,.15);}
+.card.sel{border-color:#d97706;box-shadow:0 0 0 2px rgba(217,119,6,.35);background:#fffbf5;}
+.card .chk{position:absolute;top:7px;left:7px;width:16px;height:16px;accent-color:#b45309;}
+.card .sdot{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;}
+.d-在庫{background:#059669;}.d-借出{background:#0369a1;}.d-維修中{background:#dc2626;}.d-報廢{background:#78716c;}
 .lcat{font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(180,83,9,.1);color:#b45309;font-weight:600;}
 .lqr{background:white;padding:3px;border-radius:4px;line-height:0;}
+/* 名稱可換行顯示 */
 .lname{font-size:11px;font-weight:700;color:#1c1917;text-align:center;line-height:1.4;white-space:pre-line;word-break:break-word;max-width:100%;}
-.lname-edit-hint{font-size:8px;color:#d97706;opacity:0;transition:.2s;text-align:center;margin-top:-2px;cursor:pointer;}
-.label-card:hover .lname-edit-hint{opacity:1;}
+/* 「✏ 編輯換行」提示 */
+.edit-hint{font-size:8px;color:#d97706;opacity:0;transition:.2s;text-align:center;cursor:pointer;border:1px dashed rgba(217,119,6,.5);border-radius:4px;padding:1px 6px;margin-top:-2px;}
+.card:hover .edit-hint{opacity:1;}
 .lbrand{font-size:9px;color:#78716c;text-align:center;}
 .lcode{font-size:9px;color:#a8a29e;text-align:center;font-family:monospace;}
 .lstatus{font-size:8px;padding:1px 6px;border-radius:10px;}
-.lstatus-在庫{background:rgba(5,150,105,.1);color:#059669;}.lstatus-借出{background:rgba(3,105,161,.1);color:#0369a1;}.lstatus-維修中{background:rgba(220,38,38,.1);color:#dc2626;}.lstatus-報廢{background:rgba(120,113,108,.1);color:#78716c;}
-.ldate{font-size:8px;color:#a8a29e;}.lrate{font-size:9px;color:#b45309;font-weight:600;}
-.label-card.sz-sm{width:118px;}.label-card.sz-md{width:152px;}.label-card.sz-lg{width:192px;}
-.label-card.sz-sm .lname{font-size:10px;}.label-card.sz-lg .lname{font-size:13px;}
-.label-card.sz-lg .lbrand{font-size:10px;}.label-card.sz-lg .lcat{font-size:9px;}
+.ls-在庫{background:rgba(5,150,105,.1);color:#059669;}.ls-借出{background:rgba(3,105,161,.1);color:#0369a1;}.ls-維修中{background:rgba(220,38,38,.1);color:#dc2626;}.ls-報廢{background:rgba(120,113,108,.1);color:#78716c;}
+.ldate,.lrate{font-size:8px;color:#a8a29e;text-align:center;}
+.lrate{color:#b45309;font-weight:600;}
+.card.sz-sm{width:118px;}.card.sz-md{width:152px;}.card.sz-lg{width:192px;}
+.card.sz-sm .lname{font-size:10px;}.card.sz-lg .lname{font-size:13px;}
 .empty{padding:60px 20px;text-align:center;color:#78716c;font-size:13px;}
-.prog-wrap{display:none;align-items:center;gap:8px;padding:10px 16px;background:rgba(3,105,161,.1);border-radius:6px;margin-bottom:12px;border:1px solid rgba(3,105,161,.2);}
-.prog-wrap.show{display:flex;}
-.prog-bar-outer{flex:1;height:6px;background:rgba(0,0,0,.1);border-radius:3px;overflow:hidden;}
-.prog-bar-inner{height:100%;background:#38bdf8;border-radius:3px;transition:width .2s;}
-.prog-text{font-size:11px;color:#38bdf8;white-space:nowrap;}
-/* 名稱編輯彈窗 */
+/* 進度條 */
+.prog{display:none;align-items:center;gap:8px;padding:10px 16px;background:rgba(3,105,161,.1);border-radius:6px;margin-bottom:12px;border:1px solid rgba(3,105,161,.2);}
+.prog.show{display:flex;}
+.prog-bar{flex:1;height:6px;background:rgba(0,0,0,.1);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;background:#38bdf8;border-radius:3px;transition:width .2s;}
+.prog-txt{font-size:11px;color:#38bdf8;white-space:nowrap;}
+/* ── 換行編輯彈窗 ── */
 .ne-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
 .ne-ov.open{display:flex;}
-.ne-box{background:#fff;border-radius:12px;padding:22px;width:340px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.ne-box{background:#fff;border-radius:12px;padding:22px;width:360px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.3);}
 .ne-box h3{font-size:14px;font-weight:600;color:#1c1917;margin-bottom:4px;}
-.ne-box p{font-size:11px;color:#78716c;margin-bottom:10px;line-height:1.5;}
-.ne-box textarea{width:100%;padding:9px 11px;border:1.5px solid #e7e3dc;border-radius:7px;font-size:13px;font-family:inherit;color:#1c1917;resize:vertical;min-height:72px;outline:none;background:#fafaf9;transition:.15s;line-height:1.5;}
-.ne-box textarea:focus{border-color:#b45309;background:#fff;box-shadow:0 0 0 3px rgba(180,83,9,.1);}
+.ne-box p{font-size:11px;color:#78716c;margin-bottom:10px;line-height:1.6;}
+.ne-box textarea{width:100%;padding:9px 11px;border:1.5px solid #e7e3dc;border-radius:7px;font-size:13px;font-family:inherit;color:#1c1917;resize:vertical;min-height:80px;outline:none;background:#fafaf9;transition:.15s;line-height:1.5;}
+.ne-box textarea:focus{border-color:#b45309;box-shadow:0 0 0 3px rgba(180,83,9,.1);}
 .ne-hint{font-size:10px;color:#a8a29e;margin:5px 0 10px;line-height:1.5;}
-.ne-prev-label{font-size:9px;color:#a8a29e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
-.ne-prev{background:#f9f7f4;border:1px dashed #e7e3dc;border-radius:7px;padding:8px;text-align:center;font-size:12px;font-weight:700;color:#1c1917;white-space:pre-line;word-break:break-word;margin-bottom:14px;min-height:30px;line-height:1.4;}
-.ne-actions{display:flex;justify-content:flex-end;gap:8px;}
-.nebtn{padding:7px 13px;border-radius:6px;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;}
-.nebtn-cancel{background:#f5f5f4;color:#57534e;border:1px solid #e7e3dc;}
-.nebtn-reset{background:rgba(220,38,38,.08);color:#dc2626;border:1px solid rgba(220,38,38,.2);}
-.nebtn-save{background:#b45309;color:white;}
-.nebtn-save:hover{background:#d97706;}
+.ne-prev-lbl{font-size:9px;color:#a8a29e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.ne-prev{background:#f9f7f4;border:1px dashed #e7e3dc;border-radius:7px;padding:10px;text-align:center;font-size:12px;font-weight:700;color:#1c1917;white-space:pre-line;word-break:break-word;margin-bottom:14px;min-height:36px;line-height:1.4;}
+.ne-acts{display:flex;justify-content:flex-end;gap:8px;}
+.ne-btn{padding:7px 13px;border-radius:6px;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;}
+.ne-cancel{background:#f5f5f4;color:#57534e;border:1px solid #e7e3dc;}
+.ne-reset{background:rgba(220,38,38,.08);color:#dc2626;border:1px solid rgba(220,38,38,.2);}
+.ne-save{background:#b45309;color:white;}.ne-save:hover{background:#d97706;}
+/* ── 列印 ── */
 @media print{
-  .sidebar{display:none!important;}
+  .sidebar,.top-bar,.prog,.edit-hint,.chk,.sdot{display:none!important;}
   .layout{display:block;}
   .main{padding:0;overflow:visible;}
-  .top-bar{display:none!important;}
-  .prog-wrap{display:none!important;}
-  .label-card{break-inside:avoid;cursor:default;border:1px solid #ccc!important;box-shadow:none!important;}
-  .label-card .chk,.label-card .sdot,.lname-edit-hint{display:none!important;}
-  .label-card:not(.selected){display:none!important;}
-  .label-card.selected{display:flex!important;}
+  .card{break-inside:avoid;cursor:default;border:1px solid #ccc!important;box-shadow:none!important;}
+  .card:not(.sel){display:none!important;}
+  .card.sel{display:flex!important;}
   @page{margin:8mm;size:A4;}
 }
 </style>
 </head>
 <body>
 <div class="layout">
+
 <div class="sidebar">
-  <div class="sidebar-head">
+  <div class="sb-head">
     <h2>🔲 QR Code 管理</h2>
-    <p>自訂標籤、選取器材、列印或下載</p>
+    <p>選取器材 · 自訂標籤 · 列印或下載</p>
   </div>
-  <div class="section">
-    <div class="section-title">標籤尺寸</div>
-    <div class="size-btns">
-      <button class="size-btn" onclick="setSize('sm',this)">小</button>
-      <button class="size-btn active" onclick="setSize('md',this)">中</button>
-      <button class="size-btn" onclick="setSize('lg',this)">大</button>
+
+  <div class="sb-sec">
+    <div class="sb-sec-title">標籤尺寸</div>
+    <div class="sz-row">
+      <button class="sz-btn" onclick="setSize('sm',this)">小</button>
+      <button class="sz-btn on" onclick="setSize('md',this)">中</button>
+      <button class="sz-btn" onclick="setSize('lg',this)">大</button>
     </div>
   </div>
-  <div class="section">
-    <div class="section-title">標籤顯示內容</div>
-    <div class="toggle-row"><label><input type="checkbox" id="show-cat" checked onchange="rebuild()"> 類別標籤</label></div>
-    <div class="toggle-row"><label><input type="checkbox" id="show-name" checked onchange="rebuild()"> 器材名稱</label></div>
-    <div class="toggle-row"><label><input type="checkbox" id="show-brand" checked onchange="rebuild()"> 品牌</label></div>
-    <div class="toggle-row"><label><input type="checkbox" id="show-code" checked onchange="rebuild()"> 型號 / 編號</label></div>
-    <div class="toggle-row"><label><input type="checkbox" id="show-status" onchange="rebuild()"> 狀態</label></div>
-    <div class="toggle-row"><label><input type="checkbox" id="show-date" onchange="rebuild()"> 購入日期</label></div>
-    <div class="toggle-row"><label><input type="checkbox" id="show-rate" onchange="rebuild()"> 日租金</label></div>
+
+  <div class="sb-sec">
+    <div class="sb-sec-title">標籤顯示內容</div>
+    <div class="tog-row"><label><input type="checkbox" id="tog-cat" checked onchange="rebuild()"> 類別標籤</label></div>
+    <div class="tog-row"><label><input type="checkbox" id="tog-name" checked onchange="rebuild()"> 器材名稱</label></div>
+    <div class="tog-row"><label><input type="checkbox" id="tog-brand" checked onchange="rebuild()"> 品牌</label></div>
+    <div class="tog-row"><label><input type="checkbox" id="tog-code" checked onchange="rebuild()"> 型號 / 編號</label></div>
+    <div class="tog-row"><label><input type="checkbox" id="tog-status" onchange="rebuild()"> 狀態</label></div>
+    <div class="tog-row"><label><input type="checkbox" id="tog-date" onchange="rebuild()"> 購入日期</label></div>
+    <div class="tog-row"><label><input type="checkbox" id="tog-rate" onchange="rebuild()"> 日租金</label></div>
   </div>
-  <div class="section">
-    <div class="section-title">篩選類別</div>
-    <div id="cat-filter" class="filter-pills"></div>
-    <div style="margin-top:8px;"><div class="section-title" style="margin-bottom:5px;">篩選狀態</div>
-    <div id="status-filter" class="filter-pills"></div></div>
+
+  <div class="sb-sec">
+    <div class="sb-sec-title">篩選類別</div>
+    <div id="fp-cat" class="fp-wrap"></div>
+    <div style="margin-top:10px;">
+      <div class="sb-sec-title" style="margin-bottom:5px;">篩選狀態</div>
+      <div id="fp-status" class="fp-wrap"></div>
+    </div>
   </div>
+
   <div style="flex:1;"></div>
   <div class="sel-count" id="sel-count">已選 0 / 0 件</div>
-  <div class="action-btns">
-    <button class="abtn abtn-amber" onclick="window.print()">🖨️ 列印已選取</button>
-    <button class="abtn abtn-blue" id="btn-dl-zip" onclick="downloadZip()" disabled>⬇ 下載已選取 (ZIP)</button>
-    <button class="abtn abtn-green" onclick="selectAll()">☑ 全選</button>
-    <button class="abtn abtn-ghost" onclick="deselectAll()">☐ 取消全選</button>
-    <button class="abtn abtn-ghost" onclick="window.close()">✕ 關閉</button>
+  <div class="sb-actions">
+    <button class="ab ab-amber" onclick="window.print()">🖨️ 列印已選取</button>
+    <button class="ab ab-blue" id="btn-zip" onclick="downloadZip()" disabled>⬇ 下載已選 (ZIP)</button>
+    <button class="ab ab-green" onclick="selectAll()">☑ 全選</button>
+    <button class="ab ab-ghost" onclick="deselectAll()">☐ 取消全選</button>
+    <button class="ab ab-ghost" onclick="window.close()">✕ 關閉</button>
   </div>
 </div>
+
 <div class="main">
   <div class="top-bar">
     <h3 id="main-title">所有器材</h3>
@@ -1873,112 +1883,145 @@ body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeea
       <label for="chk-all" style="cursor:pointer;">全選目前顯示</label>
     </div>
   </div>
-  <div class="prog-wrap" id="prog-wrap">
-    <div class="prog-bar-outer"><div class="prog-bar-inner" id="prog-bar"></div></div>
-    <div class="prog-text" id="prog-text">準備中…</div>
+  <div class="prog" id="prog">
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+    <div class="prog-txt" id="prog-txt">準備中…</div>
   </div>
-  <div class="label-grid" id="grid"></div>
+  <div class="grid" id="grid"></div>
 </div>
 </div>
 
-<!-- 名稱換行編輯彈窗 -->
+<!-- 換行編輯彈窗 -->
 <div class="ne-ov" id="ne-ov" onclick="if(event.target===this)closeNE()">
   <div class="ne-box">
     <h3>✏️ 自訂標籤名稱換行</h3>
-    <p>在想換行的位置按 Enter，標籤名稱就會照你的方式斷行。</p>
-    <textarea id="ne-ta" oninput="updateNEPreview()" placeholder="在此輸入，Enter = 換行"></textarea>
-    <div class="ne-hint">💡 只影響標籤顯示，不會修改器材原始名稱。</div>
-    <div class="ne-prev-label">預覽</div>
+    <p>在想換行的位置按 Enter，標籤就會照你的方式斷行。<br>只影響標籤顯示，不修改器材原始名稱。</p>
+    <textarea id="ne-ta" oninput="updateNEPrev()" placeholder="在此輸入，Enter = 換行"></textarea>
+    <div class="ne-hint">💡 若要還原，點「還原原始」即可。</div>
+    <div class="ne-prev-lbl">預覽</div>
     <div class="ne-prev" id="ne-prev"></div>
-    <div class="ne-actions">
-      <button class="nebtn nebtn-reset" onclick="resetNE()">還原原始</button>
-      <button class="nebtn nebtn-cancel" onclick="closeNE()">取消</button>
-      <button class="nebtn nebtn-save" onclick="saveNE()">套用</button>
+    <div class="ne-acts">
+      <button class="ne-btn ne-reset" onclick="resetNE()">還原原始</button>
+      <button class="ne-btn ne-cancel" onclick="closeNE()">取消</button>
+      <button class="ne-btn ne-save" onclick="saveNE()">套用</button>
     </div>
   </div>
 </div>
 
 <script>
-const itemsData = ITEMS_JSON_PLACEHOLDER;
-const labelNames = {};
-let curSize = 'md', selectedIds = new Set(), filterCat = 'all', filterStatus = 'all', visibleItems = [];
-const QR_SIZES = {sm:90, md:120, lg:155};
+// ── 從父視窗 sessionStorage 讀取資料 ──
+let itemsData = [];
+try {
+  const raw = window.opener && window.opener.sessionStorage.getItem('qr_items');
+  if (raw) itemsData = JSON.parse(raw);
+} catch(e) { console.error('讀取資料失敗', e); }
 
-/* name edit */
-let _eid = null;
-function openNE(id, e) { e.stopPropagation(); _eid=id; const it=itemsData.find(i=>i.id===id); document.getElementById('ne-ta').value=labelNames[id]!==undefined?labelNames[id]:it.name; updateNEPreview(); document.getElementById('ne-ov').classList.add('open'); setTimeout(()=>document.getElementById('ne-ta').focus(),80); }
-function closeNE() { document.getElementById('ne-ov').classList.remove('open'); _eid=null; }
-function updateNEPreview() { document.getElementById('ne-prev').textContent=document.getElementById('ne-ta').value||'（空白）'; }
-function resetNE() { const it=itemsData.find(i=>i.id===_eid); document.getElementById('ne-ta').value=it?it.name:''; updateNEPreview(); }
-function saveNE() { if(!_eid) return; const val=document.getElementById('ne-ta').value; const it=itemsData.find(i=>i.id===_eid); if(it&&val===it.name) delete labelNames[_eid]; else labelNames[_eid]=val; const el=document.querySelector('.label-card[data-id="'+_eid+'"] .lname'); if(el) el.textContent=val; closeNE(); }
+const labelNames = {}; // 自訂換行名稱（暫存，不影響原始資料）
+let curSize = 'md', selIds = new Set(), fCat = 'all', fStatus = 'all', visible = [];
+const QR_SZ = { sm: 90, md: 120, lg: 155 };
 
-/* filters */
+// ── 篩選 pills 初始化 ──
 function initFilters() {
-  const cats=['all',...new Set(itemsData.map(i=>i.cat).filter(Boolean))];
-  document.getElementById('cat-filter').innerHTML=cats.map(c=>'<span class="fpill '+(c==='all'?'on':'')+'" onclick="setCF(\''+c+'\',this)">'+(c==='all'?'全部':c)+'</span>').join('');
-  const ss=['all','在庫','借出','維修中','報廢'];
-  document.getElementById('status-filter').innerHTML=ss.map(s=>'<span class="fpill '+(s==='all'?'on':'')+'" onclick="setSF(\''+s+'\',this)">'+(s==='all'?'全部':s)+'</span>').join('');
+  const cats = ['all', ...new Set(itemsData.map(i=>i.cat).filter(Boolean))];
+  document.getElementById('fp-cat').innerHTML = cats.map(c =>
+    \`<span class="fp \${c==='all'?'on':''}" onclick="setCat('\${c}',this)">\${c==='all'?'全部':c}</span>\`).join('');
+  const ss = ['all','在庫','借出','維修中','報廢'];
+  document.getElementById('fp-status').innerHTML = ss.map(s =>
+    \`<span class="fp \${s==='all'?'on':''}" onclick="setSt('\${s}',this)">\${s==='all'?'全部':s}</span>\`).join('');
 }
-function setCF(v,el){filterCat=v;document.querySelectorAll('#cat-filter .fpill').forEach(p=>p.classList.remove('on'));el.classList.add('on');rebuild();}
-function setSF(v,el){filterStatus=v;document.querySelectorAll('#status-filter .fpill').forEach(p=>p.classList.remove('on'));el.classList.add('on');rebuild();}
-function getFiltered(){return itemsData.filter(it=>(filterCat==='all'||it.cat===filterCat)&&(filterStatus==='all'||it.status===filterStatus));}
-function showF(){return{cat:document.getElementById('show-cat').checked,name:document.getElementById('show-name').checked,brand:document.getElementById('show-brand').checked,code:document.getElementById('show-code').checked,status:document.getElementById('show-status').checked,date:document.getElementById('show-date').checked,rate:document.getElementById('show-rate').checked};}
+function setCat(v,el){fCat=v;document.querySelectorAll('#fp-cat .fp').forEach(p=>p.classList.remove('on'));el.classList.add('on');rebuild();}
+function setSt(v,el){fStatus=v;document.querySelectorAll('#fp-status .fp').forEach(p=>p.classList.remove('on'));el.classList.add('on');rebuild();}
+function getFiltered(){return itemsData.filter(it=>(fCat==='all'||it.cat===fCat)&&(fStatus==='all'||it.status===fStatus));}
+function showF(){return{cat:document.getElementById('tog-cat').checked,name:document.getElementById('tog-name').checked,brand:document.getElementById('tog-brand').checked,code:document.getElementById('tog-code').checked,status:document.getElementById('tog-status').checked,date:document.getElementById('tog-date').checked,rate:document.getElementById('tog-rate').checked};}
 
-/* rebuild */
+// ── 重新渲染 grid ──
 function rebuild() {
-  visibleItems=getFiltered();
-  const grid=document.getElementById('grid');
-  grid.innerHTML='';
-  if(!visibleItems.length){grid.innerHTML='<div class="empty">沒有符合條件的器材</div>';updateCount();return;}
-  const f=showF(), qrSize=QR_SIZES[curSize];
-  visibleItems.forEach(it=>{
-    const card=document.createElement('div');
-    card.className='label-card sz-'+curSize+(selectedIds.has(it.id)?' selected':'');
-    card.dataset.id=it.id;
-    card.onclick=(e)=>{if(e.target.type!=='checkbox'&&!e.target.classList.contains('lname-edit-hint'))toggleCard(it.id);};
-    const chk=document.createElement('input');chk.type='checkbox';chk.className='chk';chk.checked=selectedIds.has(it.id);chk.onchange=()=>toggleCard(it.id);card.appendChild(chk);
-    const dot=document.createElement('div');dot.className='sdot dot-'+(it.status||'在庫');card.appendChild(dot);
-    if(f.cat&&it.cat){const c=document.createElement('div');c.className='lcat';c.textContent=it.cat;card.appendChild(c);}
-    const qw=document.createElement('div');qw.className='lqr';card.appendChild(qw);
-    new QRCode(qw,{text:it.id,width:qrSize,height:qrSize,correctLevel:QRCode.CorrectLevel.M});
-    if(f.name){
-      const n=document.createElement('div');n.className='lname';n.textContent=labelNames[it.id]!==undefined?labelNames[it.id]:it.name;card.appendChild(n);
-      const eh=document.createElement('div');eh.className='lname-edit-hint';eh.textContent='✏ 自訂換行';eh.onclick=(e)=>openNE(it.id,e);card.appendChild(eh);
+  visible = getFiltered();
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  if (!visible.length) { grid.innerHTML = '<div class="empty">沒有符合條件的器材</div>'; updateCount(); return; }
+  const f = showF(), qrSz = QR_SZ[curSize];
+  visible.forEach(it => {
+    const card = document.createElement('div');
+    card.className = 'card sz-' + curSize + (selIds.has(it.id) ? ' sel' : '');
+    card.dataset.id = it.id;
+    card.onclick = e => { if(e.target.type!=='checkbox' && !e.target.classList.contains('edit-hint')) toggleCard(it.id); };
+
+    const chk = document.createElement('input'); chk.type='checkbox'; chk.className='chk';
+    chk.checked = selIds.has(it.id); chk.onchange = ()=>toggleCard(it.id); card.appendChild(chk);
+
+    const dot = document.createElement('div'); dot.className='sdot d-'+(it.status||'在庫'); card.appendChild(dot);
+
+    if (f.cat && it.cat) { const c=document.createElement('div'); c.className='lcat'; c.textContent=it.cat; card.appendChild(c); }
+
+    const qw = document.createElement('div'); qw.className='lqr'; card.appendChild(qw);
+    new QRCode(qw, { text: it.id, width: qrSz, height: qrSz, correctLevel: QRCode.CorrectLevel.M });
+
+    if (f.name) {
+      const n = document.createElement('div'); n.className='lname';
+      n.textContent = labelNames[it.id] !== undefined ? labelNames[it.id] : it.name;
+      card.appendChild(n);
+      const eh = document.createElement('div'); eh.className='edit-hint'; eh.textContent='✏ 編輯換行';
+      eh.onclick = e => openNE(it.id, e); card.appendChild(eh);
     }
-    if(f.brand&&it.brand){const b=document.createElement('div');b.className='lbrand';b.textContent=it.brand;card.appendChild(b);}
-    if(f.code&&it.code){const c=document.createElement('div');c.className='lcode';c.textContent=it.code;card.appendChild(c);}
-    if(f.status){const s=document.createElement('div');s.className='lstatus lstatus-'+(it.status||'在庫');s.textContent=it.status||'在庫';card.appendChild(s);}
-    if(f.date&&it.buyDate){const d=document.createElement('div');d.className='ldate';d.textContent='購入 '+it.buyDate;card.appendChild(d);}
-    if(f.rate&&it.dayRate){const r=document.createElement('div');r.className='lrate';r.textContent='NT$'+it.dayRate+'/天';card.appendChild(r);}
+    if (f.brand && it.brand) { const b=document.createElement('div'); b.className='lbrand'; b.textContent=it.brand; card.appendChild(b); }
+    if (f.code && it.code) { const c=document.createElement('div'); c.className='lcode'; c.textContent=it.code; card.appendChild(c); }
+    if (f.status) { const s=document.createElement('div'); s.className='lstatus ls-'+(it.status||'在庫'); s.textContent=it.status||'在庫'; card.appendChild(s); }
+    if (f.date && it.buyDate) { const d=document.createElement('div'); d.className='ldate'; d.textContent='購入 '+it.buyDate; card.appendChild(d); }
+    if (f.rate && it.dayRate) { const r=document.createElement('div'); r.className='lrate'; r.textContent='NT$'+it.dayRate+'/天'; card.appendChild(r); }
+
     grid.appendChild(card);
   });
-  document.getElementById('main-title').textContent=(filterCat!=='all'?filterCat+' · ':'')+(filterStatus!=='all'?filterStatus+' · ':'')+'共 '+visibleItems.length+' 件';
+  document.getElementById('main-title').textContent =
+    (fCat!=='all'?fCat+' · ':'')+(fStatus!=='all'?fStatus+' · ':'')+'共 '+visible.length+' 件';
   updateCount();
 }
 
-/* selection */
-function toggleCard(id){if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);const c=document.querySelector('.label-card[data-id="'+id+'"]');if(c){c.classList.toggle('selected',selectedIds.has(id));c.querySelector('.chk').checked=selectedIds.has(id);}updateCount();}
-function toggleAll(chk){chk.checked?selectAll():deselectAll();}
-function selectAll(){visibleItems.forEach(it=>selectedIds.add(it.id));document.querySelectorAll('.label-card').forEach(c=>{c.classList.add('selected');c.querySelector('.chk').checked=true;});document.getElementById('chk-all').checked=true;updateCount();}
-function deselectAll(){selectedIds.clear();document.querySelectorAll('.label-card').forEach(c=>{c.classList.remove('selected');c.querySelector('.chk').checked=false;});document.getElementById('chk-all').checked=false;updateCount();}
-function updateCount(){document.getElementById('sel-count').textContent='已選 '+selectedIds.size+' / '+visibleItems.length+' 件';const btn=document.getElementById('btn-dl-zip');if(btn)btn.disabled=selectedIds.size===0;}
-function setSize(sz,el){curSize=sz;document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');rebuild();}
+// ── 選取 ──
+function toggleCard(id){if(selIds.has(id))selIds.delete(id);else selIds.add(id);const c=document.querySelector('.card[data-id="'+id+'"]');if(c){c.classList.toggle('sel',selIds.has(id));c.querySelector('.chk').checked=selIds.has(id);}updateCount();}
+function toggleAll(cb){cb.checked?selectAll():deselectAll();}
+function selectAll(){visible.forEach(it=>selIds.add(it.id));document.querySelectorAll('.card').forEach(c=>{c.classList.add('sel');c.querySelector('.chk').checked=true;});document.getElementById('chk-all').checked=true;updateCount();}
+function deselectAll(){selIds.clear();document.querySelectorAll('.card').forEach(c=>{c.classList.remove('sel');c.querySelector('.chk').checked=false;});document.getElementById('chk-all').checked=false;updateCount();}
+function updateCount(){document.getElementById('sel-count').textContent='已選 '+selIds.size+' / '+visible.length+' 件';document.getElementById('btn-zip').disabled=selIds.size===0;}
+function setSize(sz,el){curSize=sz;document.querySelectorAll('.sz-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');rebuild();}
 
-/* download zip */
-async function downloadZip(){
-  const toDownload=[...selectedIds];
-  if(!toDownload.length){alert('請先勾選要下載的器材');return;}
-  const prog=document.getElementById('prog-wrap'),bar=document.getElementById('prog-bar'),txt=document.getElementById('prog-text');
+// ── 換行編輯 ──
+let _eid = null;
+function openNE(id, e) {
+  e.stopPropagation(); _eid = id;
+  const it = itemsData.find(i=>i.id===id);
+  document.getElementById('ne-ta').value = labelNames[id] !== undefined ? labelNames[id] : it.name;
+  updateNEPrev();
+  document.getElementById('ne-ov').classList.add('open');
+  setTimeout(()=>document.getElementById('ne-ta').focus(), 80);
+}
+function closeNE(){ document.getElementById('ne-ov').classList.remove('open'); _eid=null; }
+function updateNEPrev(){ document.getElementById('ne-prev').textContent=document.getElementById('ne-ta').value||'（空白）'; }
+function resetNE(){ const it=itemsData.find(i=>i.id===_eid); document.getElementById('ne-ta').value=it?it.name:''; updateNEPrev(); }
+function saveNE(){
+  if(!_eid) return;
+  const val = document.getElementById('ne-ta').value;
+  const it = itemsData.find(i=>i.id===_eid);
+  if(it && val===it.name) delete labelNames[_eid]; else labelNames[_eid]=val;
+  closeNE();
+  rebuild(); // 重新渲染讓換行生效
+}
+
+// ── 下載 ZIP ──
+async function downloadZip() {
+  const todl = [...selIds];
+  if(!todl.length){ alert('請先勾選器材'); return; }
+  const prog=document.getElementById('prog'), fill=document.getElementById('prog-fill'), txt=document.getElementById('prog-txt');
   prog.classList.add('show');
-  await new Promise(r=>setTimeout(r,200));
+  await new Promise(r=>setTimeout(r,150));
   let zip;
-  try{zip=new JSZip();}catch(e){alert('JSZip 載入失敗');prog.classList.remove('show');return;}
+  try{ zip=new JSZip(); }catch(e){ alert('JSZip 載入失敗'); prog.classList.remove('show'); return; }
   let done=0;
-  for(const id of toDownload){
+  for(const id of todl){
     const it=itemsData.find(i=>i.id===id);
     if(!it){done++;continue;}
-    txt.textContent='正在生成：'+it.name;
-    bar.style.width=Math.round((done/toDownload.length)*100)+'%';
+    txt.textContent='生成中：'+it.name;
+    fill.style.width=Math.round((done/todl.length)*100)+'%';
     await new Promise(resolve=>{
       const tmp=document.createElement('div');
       tmp.style.cssText='position:fixed;left:-9999px;top:-9999px;';
@@ -1987,36 +2030,36 @@ async function downloadZip(){
       setTimeout(()=>{
         const canvas=tmp.querySelector('canvas');
         if(canvas){
-          const pad=16,fSize=13;
+          const pad=16,fs=13;
           const displayName=labelNames[id]!==undefined?labelNames[id]:it.name;
-          const lines=displayName.split('\n');
-          const lineH=fSize*1.5;
+          const lines=displayName.split('\\n');
+          const lineH=fs*1.5;
           const c2=document.createElement('canvas');
           c2.width=canvas.width+pad*2;
           c2.height=canvas.height+pad+lines.length*lineH+pad;
           const ctx=c2.getContext('2d');
           ctx.fillStyle='#ffffff';ctx.fillRect(0,0,c2.width,c2.height);
           ctx.drawImage(canvas,pad,pad);
-          ctx.fillStyle='#1c1917';ctx.font='bold '+fSize+'px sans-serif';ctx.textAlign='center';
-          lines.forEach((line,i)=>{ctx.fillText(line,c2.width/2,canvas.height+pad+(i+1)*lineH);});
-          const b64=c2.toDataURL('image/png').replace(/^data:image\/png;base64,/,'');
-          const safe=it.name.replace(/[\/\\?%*:|"<>]/g,'_').slice(0,40);
+          ctx.fillStyle='#1c1917';ctx.font='bold '+fs+'px sans-serif';ctx.textAlign='center';
+          lines.forEach((line,i)=>ctx.fillText(line,c2.width/2,canvas.height+pad+(i+1)*lineH));
+          const b64=c2.toDataURL('image/png').replace(/^data:image\\/png;base64,/,'');
+          const safe=it.name.replace(/[\\/\\\\?%*:|"<>]/g,'_').slice(0,40);
           zip.file(safe+'.png',b64,{base64:true});
         }
-        document.body.removeChild(tmp);done++;resolve();
+        document.body.removeChild(tmp); done++; resolve();
       },250);
     });
   }
-  bar.style.width='100%';txt.textContent='打包中…';
+  fill.style.width='100%'; txt.textContent='打包中…';
   await new Promise(r=>setTimeout(r,100));
   try{
     const blob=await zip.generateAsync({type:'blob'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=url;a.download='器材QRCode.zip';a.click();
+    const a=document.createElement('a'); a.href=url; a.download='器材QRCode.zip'; a.click();
     URL.revokeObjectURL(url);
-    txt.textContent='✓ 已下載 '+toDownload.length+' 張';
+    txt.textContent='✓ 已下載 '+todl.length+' 張';
     setTimeout(()=>prog.classList.remove('show'),2500);
-  }catch(e){alert('打包失敗：'+e.message);prog.classList.remove('show');}
+  }catch(e){ alert('打包失敗：'+e.message); prog.classList.remove('show'); }
 }
 
 initFilters();
@@ -2024,14 +2067,7 @@ rebuild();
 <\/script>
 </body>
 </html>`;
-  const finalHtml = html.replace('ITEMS_JSON_PLACEHOLDER', itemsJSON);
-  const blob = new Blob([finalHtml], {type: 'text/html;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const win = window.open(url, '_blank');
-  // 開啟後釋放 URL（延遲確保已載入）
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
-
 
 let html5QrCode = null;
 
