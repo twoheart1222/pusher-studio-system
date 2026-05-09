@@ -1798,7 +1798,27 @@ body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeea
 
 .lcat{font-size:8px;padding:1px 7px;border-radius:10px;background:rgba(180,83,9,.1);color:#b45309;font-weight:600;}
 .lqr{background:white;padding:3px;border-radius:4px;line-height:0;}
-.lname{font-size:11px;font-weight:700;color:#1c1917;text-align:center;line-height:1.35;word-break:break-all;max-width:100%;}
+.lname{font-size:11px;font-weight:700;color:#1c1917;text-align:center;line-height:1.35;white-space:pre-line;word-break:break-word;max-width:100%;}
+/* 名稱編輯彈窗 */
+.name-edit-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.name-edit-overlay.open{display:flex;}
+.name-edit-box{background:#fff;border-radius:12px;padding:22px;width:360px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.name-edit-box h3{font-size:14px;font-weight:600;color:#1c1917;margin-bottom:4px;}
+.name-edit-box p{font-size:11px;color:#78716c;margin-bottom:12px;line-height:1.5;}
+.name-edit-box textarea{width:100%;padding:9px 11px;border:1.5px solid #e7e3dc;border-radius:7px;font-size:13px;font-family:inherit;color:#1c1917;resize:vertical;min-height:80px;outline:none;background:#fafaf9;transition:.15s;line-height:1.5;}
+.name-edit-box textarea:focus{border-color:#b45309;background:#fff;box-shadow:0 0 0 3px rgba(180,83,9,.1);}
+.name-edit-hint{font-size:10px;color:#a8a29e;margin-top:5px;margin-bottom:14px;line-height:1.5;}
+.name-edit-preview{background:#f9f7f4;border:1px dashed #e7e3dc;border-radius:7px;padding:8px;text-align:center;font-size:12px;font-weight:700;color:#1c1917;white-space:pre-line;word-break:break-word;margin-bottom:14px;min-height:32px;line-height:1.4;}
+.name-edit-preview-label{font-size:9px;color:#a8a29e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.name-edit-actions{display:flex;justify-content:flex-end;gap:8px;}
+.nebtn{padding:7px 14px;border-radius:6px;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;}
+.nebtn-cancel{background:#f5f5f4;color:#57534e;border:1px solid #e7e3dc;}
+.nebtn-reset{background:rgba(220,38,38,.08);color:#dc2626;border:1px solid rgba(220,38,38,.2);}
+.nebtn-save{background:#b45309;color:white;}
+.nebtn-save:hover{background:#d97706;}
+/* 名稱區域的編輯提示 */
+.lname-edit-hint{font-size:8px;color:#d97706;opacity:0;transition:.2s;text-align:center;margin-top:-2px;}
+.label-card:hover .lname-edit-hint{opacity:1;}
 .lbrand{font-size:9px;color:#78716c;text-align:center;}
 .lcode{font-size:9px;color:#a8a29e;text-align:center;font-family:monospace;}
 .lstatus{font-size:8px;padding:1px 6px;border-radius:10px;}
@@ -1910,8 +1930,62 @@ body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeea
 
 </div>
 
+<!-- 名稱換行編輯彈窗 -->
+<div class="name-edit-overlay" id="name-edit-overlay" onclick="if(event.target===this)closeNameEdit()">
+  <div class="name-edit-box">
+    <h3>✏️ 自訂標籤名稱換行</h3>
+    <p>直接在想換行的位置按 Enter，標籤上的名稱就會依照你設定的方式斷行。</p>
+    <textarea id="name-edit-ta" oninput="updateNamePreview()" placeholder="在此輸入，Enter = 換行"></textarea>
+    <div class="name-edit-hint">💡 原始器材名稱不受影響，只影響此標籤的顯示方式。<br>點「還原」可恢復原始名稱。</div>
+    <div class="name-edit-preview-label">預覽效果</div>
+    <div class="name-edit-preview" id="name-edit-preview"></div>
+    <div class="name-edit-actions">
+      <button class="nebtn nebtn-reset" onclick="resetNameEdit()">還原原始</button>
+      <button class="nebtn nebtn-cancel" onclick="closeNameEdit()">取消</button>
+      <button class="nebtn nebtn-save" onclick="saveNameEdit()">套用</button>
+    </div>
+  </div>
+</div>
 <script>
 const itemsData = ${itemsJSON};
+// 自訂換行名稱（key=item.id, value=帶換行的顯示名稱）
+const labelNames = {};
+
+/* ---- name edit modal ---- */
+let _editingId = null;
+function openNameEdit(id, e) {
+  e.stopPropagation();
+  _editingId = id;
+  const it = itemsData.find(i => i.id === id);
+  const current = labelNames[id] !== undefined ? labelNames[id] : it.name;
+  document.getElementById('name-edit-ta').value = current;
+  updateNamePreview();
+  document.getElementById('name-edit-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('name-edit-ta').focus(), 80);
+}
+function closeNameEdit() {
+  document.getElementById('name-edit-overlay').classList.remove('open');
+  _editingId = null;
+}
+function updateNamePreview() {
+  document.getElementById('name-edit-preview').textContent = document.getElementById('name-edit-ta').value || '（空白）';
+}
+function resetNameEdit() {
+  const it = itemsData.find(i => i.id === _editingId);
+  document.getElementById('name-edit-ta').value = it ? it.name : '';
+  updateNamePreview();
+}
+function saveNameEdit() {
+  if (!_editingId) return;
+  const val = document.getElementById('name-edit-ta').value;
+  const it = itemsData.find(i => i.id === _editingId);
+  if (it && val === it.name) delete labelNames[_editingId];
+  else labelNames[_editingId] = val;
+  closeNameEdit();
+  const nameEl = document.querySelector(\`.label-card[data-id="\${_editingId}"] .lname\`);
+  if (nameEl) nameEl.textContent = val;
+}
+
 let curSize = 'md';
 let selectedIds = new Set();
 let filterCat = 'all';
@@ -2010,8 +2084,15 @@ function rebuild() {
     if (f.name) {
       const n = document.createElement('div');
       n.className = 'lname';
-      n.textContent = it.name.length > 22 ? it.name.slice(0,21)+'…' : it.name;
+      const displayName = labelNames[it.id] !== undefined ? labelNames[it.id] : it.name;
+      n.textContent = displayName;
       card.appendChild(n);
+      // 編輯換行按鈕
+      const editHint = document.createElement('div');
+      editHint.className = 'lname-edit-hint';
+      editHint.textContent = '✏ 點此自訂換行';
+      editHint.onclick = (e) => openNameEdit(it.id, e);
+      card.appendChild(editHint);
     }
     if (f.brand && it.brand) {
       const b = document.createElement('div'); b.className = 'lbrand'; b.textContent = it.brand; card.appendChild(b);
@@ -2135,7 +2216,7 @@ async function downloadZip() {
           ctx.fillStyle = '#1c1917';
           ctx.font = \`bold \${fSize}px sans-serif\`;
           ctx.textAlign = 'center';
-          const label = [it.name, it.brand, it.code].filter(Boolean).join(' · ');
+          const label = [labelNames[it.id] !== undefined ? labelNames[it.id].replace(/\n/g,' ') : it.name, it.brand, it.code].filter(Boolean).join(' · ');
           const disp = label.length > 30 ? label.slice(0,29)+'…' : label;
           ctx.fillText(disp, c2.width / 2, canvas.height + pad + fSize + 2);
 
