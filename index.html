@@ -467,6 +467,46 @@ input[type="date"] { cursor: pointer; }
   #wm-layer { display: block !important; pointer-events: none !important; }
   #wm-layer[style*="display: none"] { display: none !important; }
 }
+
+/* ========== PRINT PREVIEW ========== */
+#page-boundary {
+  display:none; position:absolute; top:0; left:0;
+  width:100%; height:297mm;
+  border:2.5px dashed rgba(245,158,11,.65);
+  pointer-events:none; z-index:100; box-sizing:border-box;
+}
+#page-boundary::after {
+  content:'A4 列印範圍';
+  position:absolute; bottom:-1px; right:10px;
+  font-size:9px; letter-spacing:1.5px; color:rgba(245,158,11,.85);
+  background:var(--paper,#fdfcfb); padding:0 6px;
+  font-family:monospace; text-transform:uppercase;
+}
+#page-boundary.over { border-color:rgba(248,113,113,.75); }
+#page-boundary.over::after { content:'⚠ 內容已超出 A4'; color:rgba(248,113,113,.9); }
+#page-boundary.visible { display:block; }
+#print-preview-bar {
+  display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  background:#0c0a09; color:#e7e5e4;
+  border:1px solid rgba(255,255,255,.15); border-radius:12px;
+  padding:9px 18px; font-size:11px; z-index:9999;
+  box-shadow:0 8px 40px rgba(0,0,0,.6);
+  align-items:center; gap:14px; white-space:nowrap;
+}
+#print-preview-bar.visible { display:flex; }
+.ppb-dot { width:8px; height:8px; border-radius:50%; background:#f59e0b; flex-shrink:0; transition:.3s; }
+.ppb-dot.ok { background:#34d399; }
+.ppb-dot.over { background:#f87171; animation:ppb-pulse .8s ease infinite alternate; }
+@keyframes ppb-pulse { from{opacity:1} to{opacity:.4} }
+.ppb-text { font-size:11px; }
+.ppb-text.ok { color:#34d399; }
+.ppb-text.over { color:#f87171; }
+.ppb-text.warn { color:#f59e0b; }
+.ppb-sep { width:1px; height:16px; background:rgba(255,255,255,.1); }
+.ppb-label { color:#78716c; font-size:10px; }
+.ppb-val { font-family:monospace; color:#e7e5e4; }
+.ppb-close { background:none; border:none; color:#57534e; cursor:pointer; font-size:15px; padding:0 2px; line-height:1; margin-left:2px; }
+.ppb-close:hover { color:#fca5a5; }
 </style>
 
 <!-- 加入登入防護腳本 -->
@@ -525,12 +565,21 @@ input[type="date"] { cursor: pointer; }
     </button>
     <button class="btn btn-ghost" onclick="loadSample()">範例</button>
     <button class="btn btn-red btn-sm" onclick="clearAll()">清空</button>
-    <button class="btn btn-amber" onclick="window.print()">
+    <button class="btn btn-ghost" id="preview-btn" onclick="togglePrintPreview()" title="顯示 A4 列印範圍線">
+      <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="1.5" stroke-dasharray="3 2"/></svg>
+      預覽範圍
+    </button>
+    <button class="btn btn-amber" onclick="doPrint()">
       <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
       列印 / PDF
     </button>
     <!-- ★ 登出按鈕放在最後面 -->
-    <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
+    <div style="width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 4px;"></div>
+    <div id="cloud-status" style="display:flex;align-items:center;gap:5px;font-size:10px;color:#78716c;letter-spacing:.3px;padding:0 4px;">
+      <span id="cloud-dot" style="width:6px;height:6px;border-radius:50%;background:#78716c;flex-shrink:0;transition:background .4s;"></span>
+      <span id="cloud-label">連線中…</span>
+    </div>
+    <div style="width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 4px;"></div>
     <button class="btn btn-ghost" style="color: #fca5a5; border-color: rgba(220,38,38,0.3); padding: 4px 10px;" onclick="logout()">登出</button>
   </div>
 </header>
@@ -622,6 +671,7 @@ input[type="date"] { cursor: pointer; }
 <!-- CANVAS -->
 <main class="canvas">
   <div class="paper t-classic" id="paper">
+    <div id="page-boundary"></div>
     <!-- 浮水印層 -->
     <div id="wm-layer" style="
       display:none;
@@ -1173,11 +1223,7 @@ let colState = { unit: false, remark: false, discount: false };
 window.onload = async () => {
   loadSample();
 
-  const loadingEl = document.createElement('div');
-  loadingEl.id = 'fb-loading';
-  loadingEl.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#1c1917;color:#e7e5e4;text-align:center;padding:8px 20px;font-size:12px;font-family:sans-serif;border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.35);pointer-events:none;';
-  loadingEl.textContent = '☁️ 背景正在同步雲端資料庫…';
-  document.body.appendChild(loadingEl);
+  setCloudStatus('connecting');
 
   // 初始化 LOGO 拖拉調整大小的功能
   const lb = document.getElementById('logo-box');
@@ -1208,16 +1254,12 @@ window.onload = async () => {
 
   try {
     await Promise.all([loadDBFromStorage(), loadVendorDBFromStorage()]);
-    loadingEl.style.background = '#059669';
-    loadingEl.textContent = '✅ 雲端資料同步完成';
+    setCloudStatus('ok');
     if(document.getElementById('db-overlay').classList.contains('open')) renderDB();
     if(document.getElementById('vdb-overlay').classList.contains('open')) renderVendorDB();
-    setTimeout(() => loadingEl.remove(), 1800);
   } catch(e) {
-    loadingEl.style.background = '#dc2626';
-    loadingEl.textContent = '⚠️ 雲端連線失敗，請檢查網路或資料庫權限';
+    setCloudStatus('error');
     console.error('Firebase Error:', e);
-    setTimeout(() => loadingEl.remove(), 3000);
   }
 
   // 接收來自 contacts.html 的「套用」指令
@@ -1252,6 +1294,10 @@ window.onload = async () => {
 
 /* ===== Print handling ===== */
 window.addEventListener('beforeprint', () => {
+  // 確保字型已載入，避免列印時等待
+  if(document.fonts && document.fonts.status !== 'loaded') {
+    // 非同步字型不影響列印流程，繼續執行
+  }
   document.querySelectorAll('.item-table td').forEach(td => {
     const inp = td.querySelector('input, textarea');
     if (inp) {
@@ -1291,6 +1337,36 @@ window.addEventListener('afterprint', () => {
 
 /* ===== Helpers ===== */
 const $ = id => document.getElementById(id);
+function doPrint() {
+  // 等字型載入完成再列印，避免 dialog 卡住
+  if(document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function(){ window.print(); });
+  } else {
+    window.print();
+  }
+}
+function setCloudStatus(state) {
+  // state: 'connecting' | 'ok' | 'error'
+  var dot = document.getElementById('cloud-dot');
+  var lbl = document.getElementById('cloud-label');
+  if(!dot || !lbl) return;
+  if(state === 'ok') {
+    dot.style.background = '#34d399';
+    dot.style.boxShadow = '0 0 4px rgba(52,211,153,.6)';
+    lbl.style.color = '#34d399';
+    lbl.textContent = '雲端已連線';
+  } else if(state === 'error') {
+    dot.style.background = '#f87171';
+    dot.style.boxShadow = '0 0 4px rgba(248,113,113,.6)';
+    lbl.style.color = '#f87171';
+    lbl.textContent = '雲端未連線';
+  } else {
+    dot.style.background = '#f59e0b';
+    dot.style.boxShadow = '0 0 4px rgba(245,158,11,.5)';
+    lbl.style.color = '#a8a29e';
+    lbl.textContent = '連線中…';
+  }
+}
 const fmt = n => Number(n).toLocaleString('en-US');
 function ar(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
 function genNo() {
@@ -2598,6 +2674,73 @@ window._fbSetDoc = setDoc;
 window._fbReady = true;
 
 window.onload(); // 手動觸發因為 type="module" 會延遲執行
+</script>
+<!-- 列印預覽底部資訊列 -->
+<div id="print-preview-bar">
+  <div style="display:flex;align-items:center;gap:6px;">
+    <div class="ppb-dot" id="ppb-dot"></div>
+    <span class="ppb-text" id="ppb-text">檢查中...</span>
+  </div>
+  <div class="ppb-sep"></div>
+  <span class="ppb-label">內容高度</span>
+  <span class="ppb-val" id="ppb-height">—</span>
+  <div class="ppb-sep"></div>
+  <span class="ppb-label">A4 可用高度</span>
+  <span class="ppb-val">269 mm</span>
+  <div class="ppb-sep"></div>
+  <span class="ppb-label">剩餘</span>
+  <span class="ppb-val" id="ppb-remain">—</span>
+  <button class="ppb-close" onclick="togglePrintPreview()">✕</button>
+</div>
+<script>
+/* ===== PRINT PREVIEW ===== */
+var _ppActive=false, _ppTimer=null;
+function togglePrintPreview(){
+  _ppActive=!_ppActive;
+  var b=document.getElementById('page-boundary');
+  var bar=document.getElementById('print-preview-bar');
+  var btn=document.getElementById('preview-btn');
+  if(_ppActive){
+    b.classList.add('visible'); bar.classList.add('visible');
+    if(btn){btn.style.color='#f59e0b';btn.style.borderColor='rgba(245,158,11,.5)';btn.style.background='rgba(245,158,11,.1)';}
+    updatePP(); _ppTimer=setInterval(updatePP,600);
+  } else {
+    b.classList.remove('visible'); bar.classList.remove('visible');
+    if(btn){btn.style.color='';btn.style.borderColor='';btn.style.background='';}
+    clearInterval(_ppTimer);
+  }
+}
+function updatePP(){
+  var paper=document.getElementById('paper');
+  var b=document.getElementById('page-boundary');
+  var dot=document.getElementById('ppb-dot');
+  var txt=document.getElementById('ppb-text');
+  var hEl=document.getElementById('ppb-height');
+  var rEl=document.getElementById('ppb-remain');
+  if(!paper||!b) return;
+  var mm=3.7795;
+  var usableMm=269; // 297 - 14mm top - 14mm bottom (print padding)
+  var usablePx=usableMm*mm;
+  var paperRect=paper.getBoundingClientRect();
+  var maxBottom=0;
+  Array.from(paper.children).forEach(function(el){
+    if(el.id==='page-boundary'||el.id==='wm-layer') return;
+    var r=el.getBoundingClientRect();
+    var bot=r.bottom-paperRect.top;
+    if(bot>maxBottom) maxBottom=bot;
+  });
+  var contentMm=Math.round(maxBottom/mm);
+  var remainMm=usableMm-contentMm;
+  var isOver=maxBottom>usablePx;
+  var isWarn=!isOver&&remainMm<25;
+  b.classList.toggle('over',isOver);
+  hEl.textContent=contentMm+' mm';
+  rEl.textContent=isOver?'超出 '+Math.abs(remainMm)+' mm':'剩 '+remainMm+' mm';
+  rEl.style.color=isOver?'#f87171':isWarn?'#f59e0b':'#34d399';
+  dot.className='ppb-dot'+(isOver?' over':isWarn?'':' ok');
+  txt.className='ppb-text'+(isOver?' over':isWarn?' warn':' ok');
+  txt.textContent=isOver?'內容超出 A4！':isWarn?'空間快不夠了':'可完整列印 ✓';
+}
 </script>
 </body>
 </html>
