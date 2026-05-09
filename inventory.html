@@ -136,7 +136,9 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .loan-row:last-child{ border-bottom:none; }
 .loan-row:hover{ background:#faf9f7; }
 .loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#faf9f7; }
-.overdue-tag{ font-size:9px; background:rgba(220,38,38,.1); color:#dc2626; padding:1px 6px; border-radius:20px; font-weight:500; }
+.overdue-tag{ display:inline-flex; align-items:center; gap:3px; font-size:11px; background:#dc2626; color:white; padding:2px 8px; border-radius:4px; font-weight:700; letter-spacing:.3px; }
+.loan-row.overdue-row{ background:rgba(220,38,38,.05); border-left:3px solid #dc2626; }
+.loan-row.overdue-row:hover{ background:rgba(220,38,38,.1); }
 
 /* MODAL */
 .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
@@ -1159,16 +1161,26 @@ function renderLoans() {
     const item = items.find(i=>i.id===l.itemId);
     const proj = projects.find(p=>p.id===l.projId);
     const overdue = l.returnDate && l.returnDate < today;
-    return `<div class="loan-row">
+    let overdueDays = 0;
+    if(overdue) {
+      overdueDays = Math.round((new Date(today) - new Date(l.returnDate)) / (1000*60*60*24));
+    }
+    const overdueTag = overdue
+      ? `<span class="overdue-tag">⚠ 逾期 ${overdueDays} 天</span>`
+      : '';
+    const returnDateHtml = overdue
+      ? `<div style="font-size:11px;font-family:var(--font-mono);color:#dc2626;font-weight:600;text-decoration:line-through;">${l.returnDate}</div><div style="margin-top:3px;">${overdueTag}</div>`
+      : `<div style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'}</div>`;
+    return `<div class="loan-row${overdue?' overdue-row':''}">
       <div data-label="器材">
         <div>
           <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
           ${l.note?`<div style="font-size:10px;color:var(--ink3);">${l.note}</div>`:''}
         </div>
       </div>
-      <div data-label="借用人" style="font-size:12px;">${l.borrower||'—'}</div>
+      <div data-label="借用人" style="font-size:12px;${overdue?'font-weight:600;color:#dc2626;':''}">${l.borrower||'—'}</div>
       <div data-label="借出日" style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);">${l.outDate||'—'}</div>
-      <div data-label="預計歸還" style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'} ${overdue?'<span class="overdue-tag">逾期</span>':''}</div>
+      <div data-label="預計歸還">${returnDateHtml}</div>
       <div data-label="專案" style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
       <div style="display:flex;gap:4px;justify-content:flex-end;">
         <button class="btn btn-green btn-xs" onclick="returnLoan('${l.id}')">歸還</button>
