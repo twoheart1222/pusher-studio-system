@@ -815,8 +815,16 @@ async function fbSet(col, id, data) {
   if(!window._fbReady){ saveLocal(); return; }
   setSyncStatus('syncing','同步中...');
   const { doc, setDoc, fbDb } = window._invFb;
-  await setDoc(doc(fbDb, col, id), data);
-  setSyncStatus('ok','已同步'); saveLocal();
+  // Firestore 不允許 undefined 值，遞迴轉成 null
+  const clean = JSON.parse(JSON.stringify(data, (k, v) => v === undefined ? null : v));
+  try {
+    await setDoc(doc(fbDb, col, id), clean);
+    setSyncStatus('ok','已同步'); saveLocal();
+  } catch(e) {
+    console.error('fbSet error:', col, id, e);
+    setSyncStatus('err','同步失敗');
+    throw e;
+  }
 }
 async function fbDel(col, id) {
   if(!window._fbReady){ saveLocal(); return; }
@@ -1570,28 +1578,32 @@ async function saveLoan() {
     fixedAmount: +document.getElementById('loan-fixed-amount').value||0,
     note: document.getElementById('loan-note').value,
     returned: existingLoan ? existingLoan.returned : false,
-    actualReturnDate: existingLoan ? existingLoan.actualReturnDate : undefined,
+    actualReturnDate: existingLoan ? (existingLoan.actualReturnDate || null) : null,
     createdAt: existingLoan ? existingLoan.createdAt : Date.now()
   };
 
-  if(isEdit) {
-    const idx = loans.findIndex(l=>l.id===id);
-    if(idx>=0) loans[idx] = loan;
-  } else {
-    loans.push(loan);
-    if(it && it.status==='在庫') {
-      it.status = '借出';
-      await fbSet('inv_items', it.id, it);
+  try {
+    if(isEdit) {
+      const idx = loans.findIndex(l=>l.id===id);
+      if(idx>=0) loans[idx] = loan;
+    } else {
+      loans.push(loan);
+      if(it && it.status==='在庫') {
+        it.status = '借出';
+        await fbSet('inv_items', it.id, it);
+      }
+      if(projId && costMode !== 'none') {
+        await createCostEntry(loan, it);
+      }
     }
-    if(projId && costMode !== 'none') {
-      await createCostEntry(loan, it);
-    }
+    await fbSet('inv_loans', id, loan);
+    closeLoanModal();
+    showToast(isEdit ? `✓ 已更新借出紀錄` : `✓ 已登記借出給「${borrower}」`);
+    renderAll();
+  } catch(err) {
+    console.error('saveLoan error:', err);
+    showToast('儲存失敗：' + err.message, 'err');
   }
-
-  await fbSet('inv_loans', id, loan);
-  closeLoanModal();
-  showToast(isEdit ? `✓ 已更新借出紀錄` : `✓ 已登記借出給「${borrower}」`);
-  renderAll();
 }
 
 async function createCostEntry(loan, item) {
