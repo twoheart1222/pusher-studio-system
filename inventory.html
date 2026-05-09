@@ -1720,7 +1720,6 @@ function printAllQR() {
     dayRate: it.dayRate || ''
   })));
 
-  const win = window.open('', '_blank');
   const html = `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -2025,8 +2024,12 @@ rebuild();
 <\/script>
 </body>
 </html>`;
-  win.document.write(html.replace('ITEMS_JSON_PLACEHOLDER', itemsJSON));
-  win.document.close();
+  const finalHtml = html.replace('ITEMS_JSON_PLACEHOLDER', itemsJSON);
+  const blob = new Blob([finalHtml], {type: 'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  // 開啟後釋放 URL（延遲確保已載入）
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 
