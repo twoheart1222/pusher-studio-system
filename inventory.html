@@ -136,7 +136,18 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .loan-row{ display:grid; grid-template-columns:1fr 100px 100px 100px 100px 80px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
 .loan-row:last-child{ border-bottom:none; }
 .loan-row:hover{ background:#faf9f7; }
-.loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#faf9f7; }
+/* 逾期醒目提示 */
+.loan-row.is-overdue {
+  border: 2px solid #dc2626 !important;
+  background: rgba(220, 38, 38, 0.04);
+  border-radius: 6px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.loan-row.is-overdue:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+.loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#faf9f7; margin-top:0 !important; border:none !important;}
 .overdue-tag{ font-size:9px; background:rgba(220,38,38,.1); color:#dc2626; padding:1px 6px; border-radius:20px; font-weight:500; }
 
 /* MODAL */
@@ -341,8 +352,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
             <th>狀態</th>
             <th>數量</th>
             <th>可用</th>
-            <th>購入價</th>
-            <th>折損後現值</th>
+            <th>購入價 / 現值</th>
             <th>日租金 / 行情</th>
             <th>購入日期</th>
             <th style="text-align:right;">操作</th>
@@ -1238,7 +1248,7 @@ function renderTable() {
       }
     }
 
-    // 嚴格對應標題順序: 名稱(1) > 類別(2) > 狀態(3) > 數量(4) > 可用(5) > 購入價(6) > 折損後現值(7) > 日租金(8) > 購入日期(9) > 操作(10)
+    // 將購入價與折損後現值合併在同一個 td 中上下顯示
     return `<tr>
       <td>
         <div class="item-name">${it.name}</div>
@@ -1249,8 +1259,10 @@ function renderTable() {
       <td><span class="status-badge s-${it.status||'在庫'}">${it.status||'在庫'}</span></td>
       <td class="qty-cell">${it.qty||1}</td>
       <td class="qty-cell ${avail<=0?'qty-low':'qty-avail'}">${avail}</td>
-      <td class="price-cell">${it.buyPrice?'NT$'+(+it.buyPrice).toLocaleString():'—'}</td>
-      <td class="price-cell" style="color:#b45309; font-weight:500;">${curValHtml}</td>
+      <td class="price-cell">
+        <div style="color:var(--ink2);">${it.buyPrice?'NT$'+(+it.buyPrice).toLocaleString():'—'}</div>
+        <div style="color:#b45309; font-weight:600; margin-top:3px; font-size:12px;">${curValHtml}</div>
+      </td>
       <td class="price-cell">
         <div style="display:flex; align-items:center;">
           ${it.dayRate?'NT$'+(+it.dayRate).toLocaleString()+'/天':'—'}
@@ -1286,7 +1298,9 @@ function renderLoans() {
     const item = items.find(i=>i.id===l.itemId);
     const proj = projects.find(p=>p.id===l.projId);
     const overdue = l.returnDate && l.returnDate < today;
-    return `<div class="loan-row">
+    
+    // 依逾期狀態加上 class 即可呈現醒目的外框與底色
+    return `<div class="loan-row ${overdue ? 'is-overdue' : ''}">
       <div data-label="器材">
         <div>
           <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
@@ -1733,7 +1747,7 @@ async function deleteLoan(id) {
 }
 
 /* =============================================
-   EDIT LOAN (新增：編輯借出紀錄專用)
+   EDIT LOAN (獨立 modal，最高管理員專用)
    ============================================= */
 function openEditLoanModal(loanId) {
   const loan = loans.find(l => l.id === loanId);
@@ -1741,14 +1755,13 @@ function openEditLoanModal(loanId) {
 
   document.getElementById('el-loan-id').value = loanId;
 
-  // 器材下拉：包含所有器材（含借出中），讓管理員可以自由切換綁定的器材
+  // 器材下拉：包含所有器材（含借出中），讓管理員可以修正
   const itemSel = document.getElementById('el-item-id');
   itemSel.innerHTML = items
     .filter(it => it.status !== '報廢')
     .map(it => `<option value="${esc(it.id)}" ${it.id === loan.itemId ? 'selected' : ''}>${esc(it.name)}${it.brand ? ' ('+esc(it.brand)+')' : ''} — ${it.status}</option>`)
     .join('');
-  
-  // 若原始紀錄器材被報廢但仍存在，補入選項避免空值
+  // 若現有器材被報廢但仍有紀錄，補入選項避免空值
   if (!items.filter(it => it.status !== '報廢').find(it => it.id === loan.itemId)) {
     const ghost = items.find(i => i.id === loan.itemId);
     if (ghost) itemSel.innerHTML = `<option value="${esc(ghost.id)}" selected>${esc(ghost.name)} — ${ghost.status}</option>` + itemSel.innerHTML;
@@ -1802,7 +1815,7 @@ async function saveEditLoan() {
   loan.note        = document.getElementById('el-note').value;
   loan.updatedAt   = Date.now();
 
-  // 若借用紀錄綁定的器材更換了，需連帶修正舊器材與新器材的「庫存狀態」
+  // 若器材更換，修正舊器材狀態
   if (oldItemId !== newItemId) {
     const oldItem = items.find(i => i.id === oldItemId);
     const newItem = items.find(i => i.id === newItemId);
@@ -1822,6 +1835,7 @@ async function saveEditLoan() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 編輯借出 modal 的固定金額顯示切換
   const elCostMode = document.getElementById('el-cost-mode');
   if (elCostMode) {
     elCostMode.addEventListener('change', function() {
