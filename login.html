@@ -2,7 +2,6 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com; worker-src blob:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>登入 — 公司管理系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -14,143 +13,118 @@
   .field label { display: block; font-size: 11px; color: #a8a29e; margin-bottom: 6px; letter-spacing: 1px; }
   .field input { width: 100%; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 6px; color: #fff; padding: 12px; font-size: 13px; outline: none; box-sizing: border-box; transition: .15s; }
   .field input:focus { border-color: #b45309; background: rgba(255,255,255,.1); box-shadow: 0 0 0 3px rgba(180,83,9,.2); }
-  .btn-login { width: 100%; background: #b45309; color: #fff; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 10px; transition: .15s; }
+  .btn-login { width: 100%; background: #b45309; color: #fff; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; margin-top: 10px; transition: .15s; font-family: inherit; }
   .btn-login:hover { background: #d97706; }
-  
-  /* 忘記密碼按鈕樣式 */
+  .btn-login:disabled { background: #57534e; cursor: not-allowed; }
   .forgot-pwd { text-align: center; margin-top: 16px; font-size: 11px; color: #a8a29e; cursor: pointer; transition: .15s; }
   .forgot-pwd:hover { color: #e7e5e4; text-decoration: underline; }
-  
-  /* 訊息提示框樣式 */
   #msg-box { font-size: 12px; text-align: center; margin-top: 14px; display: none; padding: 8px; border-radius: 6px; }
   .msg-err { color: #fca5a5; background: rgba(220,38,38,.1); border: 1px solid rgba(220,38,38,.2); }
-  .msg-ok { color: #34d399; background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.2); }
+  .msg-ok  { color: #34d399;  background: rgba(52,211,153,.1);  border: 1px solid rgba(52,211,153,.2); }
 
-  /* 登入遮罩（防止未驗證時閃爍） */
-  #auth-overlay { position:fixed;inset:0;background:#eeeae4;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#78716c; }
+  /* 載入指示器 */
+  .loading-bar { height: 2px; background: #b45309; width: 0; transition: width .4s; border-radius: 1px; margin-bottom: 20px; }
+  .loading-bar.active { width: 100%; }
 </style>
 </head>
 <body>
-<div id="auth-overlay">驗證中…</div>
   <div class="login-box">
     <h2>管理系統登入</h2>
+    <div class="loading-bar" id="loading-bar"></div>
     <div class="field">
-      <label>Email 帳號</label>
-      <input type="email" id="email" placeholder="輸入管理員 Email">
+      <label>EMAIL 帳號</label>
+      <input type="email" id="email" placeholder="輸入管理員 Email" autocomplete="email">
     </div>
     <div class="field">
       <label>密碼</label>
-      <input type="password" id="pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()">
+      <input type="password" id="pwd" placeholder="••••••••" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter') doLogin()">
     </div>
-    <button class="btn-login" onclick="doLogin()">登入</button>
-    
+    <button class="btn-login" id="login-btn" onclick="doLogin()">登入</button>
     <div class="forgot-pwd" onclick="resetPwd()">忘記密碼？</div>
-    
     <div id="msg-box"></div>
   </div>
 
+  <!-- ★ 改用 importmap + 一般 script，避免 type="module" 作用域問題 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "firebase/app":  "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+      "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
+    }
+  }
+  </script>
+
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { initializeApp }                                    from "firebase/app";
+    import { getAuth, signInWithEmailAndPassword,
+             sendPasswordResetEmail, onAuthStateChanged }       from "firebase/auth";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
-      authDomain: "company-system-6ea1a.firebaseapp.com",
-      projectId: "company-system-6ea1a",
-      storageBucket: "company-system-6ea1a.firebasestorage.app",
+      apiKey:            "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
+      authDomain:        "company-system-6ea1a.firebaseapp.com",
+      projectId:         "company-system-6ea1a",
+      storageBucket:     "company-system-6ea1a.firebasestorage.app",
       messagingSenderId: "865462311535",
-      appId: "1:865462311535:web:033e059bc0e86fa902cb9a"
+      appId:             "1:865462311535:web:033e059bc0e86fa902cb9a"
     };
 
-    const app = initializeApp(firebaseConfig);
+    const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const msgBox = document.getElementById('msg-box');
 
-    // ── 已登入則直接跳轉，並移除遮罩 ──────────────
+    // 若已登入，直接跳轉
     onAuthStateChanged(auth, (user) => {
-      if (user) {
-        window.location.href = 'index.html';
-      } else {
-        document.getElementById('auth-overlay').remove();
-      }
+      if (user) window.location.href = 'index.html';
     });
 
-    // ── 速率限制：5 次錯誤後鎖定 30 秒 ──────────
-    const RATE_KEY = '_loginAttempts';
-    const MAX_ATT  = 5;
-    const LOCK_MS  = 30 * 1000;
-
-    function getRateData() {
-      try { return JSON.parse(sessionStorage.getItem(RATE_KEY) || '{"count":0,"lockUntil":0}'); }
-      catch { return { count: 0, lockUntil: 0 }; }
-    }
-    function setRateData(d) { sessionStorage.setItem(RATE_KEY, JSON.stringify(d)); }
-    function isLocked() {
-      const d = getRateData();
-      if (d.lockUntil && Date.now() < d.lockUntil) return d.lockUntil;
-      if (d.lockUntil && Date.now() >= d.lockUntil) { setRateData({ count: 0, lockUntil: 0 }); }
-      return false;
-    }
-    function recordFail() {
-      const d = getRateData();
-      d.count++;
-      if (d.count >= MAX_ATT) { d.lockUntil = Date.now() + LOCK_MS; d.count = 0; }
-      setRateData(d);
-    }
-    function recordSuccess() { setRateData({ count: 0, lockUntil: 0 }); }
+    const msgBox   = document.getElementById('msg-box');
+    const loginBtn = document.getElementById('login-btn');
+    const loadBar  = document.getElementById('loading-bar');
 
     function showMsg(text, isSuccess = false) {
       msgBox.textContent = text;
-      msgBox.className = isSuccess ? 'msg-ok' : 'msg-err';
+      msgBox.className   = isSuccess ? 'msg-ok' : 'msg-err';
       msgBox.style.display = 'block';
     }
 
-    // ── 登入 ──────────────────────────────────────
-    window.doLogin = function() {
-      const lockUntil = isLocked();
-      if (lockUntil) {
-        const sec = Math.ceil((lockUntil - Date.now()) / 1000);
-        showMsg(\`登入失敗次數過多，請等待 \${sec} 秒後再試。\`);
-        return;
-      }
+    function setLoading(on) {
+      loginBtn.disabled     = on;
+      loginBtn.textContent  = on ? '登入中…' : '登入';
+      loadBar.classList.toggle('active', on);
+    }
 
+    // ★ 掛到 window，讓 HTML onclick 能呼叫
+    window.doLogin = function () {
       const e = document.getElementById('email').value.trim();
       const p = document.getElementById('pwd').value;
-      if (!e || !p) { showMsg('請輸入帳號與密碼'); return; }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { showMsg('請輸入有效的 Email 格式'); return; }
 
-      const btn = document.querySelector('.btn-login');
-      btn.disabled = true;
-      btn.textContent = '登入中…';
+      if (!e || !p) { showMsg('請輸入帳號與密碼'); return; }
+
+      setLoading(true);
+      msgBox.style.display = 'none';
 
       signInWithEmailAndPassword(auth, e, p)
-        .then(() => { recordSuccess(); window.location.href = 'index.html'; })
+        .then(() => { window.location.href = 'index.html'; })
         .catch(() => {
-          recordFail();
-          const d = getRateData();
-          const remain = MAX_ATT - d.count;
-          const lockUntilNow = isLocked();
-          if (lockUntilNow) {
-            showMsg(\`帳號或密碼錯誤，已達上限，請等待 30 秒。\`);
-          } else {
-            showMsg(\`帳號或密碼錯誤（還剩 \${remain} 次機會）\`);
-          }
-          btn.disabled = false;
-          btn.textContent = '登入';
+          setLoading(false);
+          showMsg('帳號或密碼錯誤，請重新確認。');
         });
     };
 
-    // ── 忘記密碼 ──────────────────────────────────
-    window.resetPwd = function() {
+    window.resetPwd = function () {
       const e = document.getElementById('email').value.trim();
-      if (!e) { showMsg('💡 請先在上方輸入您的 Email，再點擊忘記密碼。'); return; }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { showMsg('請輸入有效的 Email 格式'); return; }
+      if (!e) { showMsg('💡 請先在上方輸入您的 Email，再點「忘記密碼」。'); return; }
 
       sendPasswordResetEmail(auth, e)
-        .then(() => { showMsg('✉️ 密碼重設信已發送！請檢查信箱（含垃圾信件匣）。', true); })
-        .catch((error) => {
-          // 不透露帳號是否存在（防帳號枚舉）
-          showMsg('若此 Email 已註冊，重設信將在幾分鐘內送達。', true);
+        .then(() => {
+          showMsg('✉️ 重設信已發送，請去信箱收信（若未收到請檢查垃圾信件匣）。', true);
+        })
+        .catch((err) => {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
+            showMsg('找不到此 Email，請確認是否正確。');
+          } else {
+            showMsg('發送失敗，請稍後再試。');
+          }
         });
     };
   </script>
