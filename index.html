@@ -513,6 +513,9 @@ input[type="date"] { cursor: pointer; }
   #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
 
+<!-- 職等權限系統 -->
+<script src="roles.js"></script>
+
 <!-- 加入登入防護腳本 -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -527,10 +530,14 @@ input[type="date"] { cursor: pointer; }
   const auth = getAuth(app);
 
   onAuthStateChanged(auth, (user) => {
-    if (!user) { window.location.href = 'login.html'; } else { var ov=document.getElementById('auth-overlay'); if(ov) ov.remove(); }
+    if (!user) { window.location.href = 'login.html'; return; }
+    var ov = document.getElementById('auth-overlay'); if(ov) ov.remove();
+    RoleGuard.guardPage();
+    RoleGuard.applyAll();
   });
 
   window.logout = function() {
+    RoleGuard.clearSession();
     signOut(auth).then(() => { window.location.href = 'login.html'; });
   };
 </script>
@@ -550,8 +557,11 @@ input[type="date"] { cursor: pointer; }
     <a href="cost.html" class="nav-tab">成本計算</a>
     <a href="inventory.html" class="nav-tab">器材庫存</a>
     <a href="contacts.html" class="nav-tab">客戶與廠商管理</a>
+    <a href="admin-roles.html" class="nav-tab">帳號管理</a>
   </div>
   <div class="topbar-actions">
+    <span id="user-display-name" style="font-size:11px;color:#78716c;"></span>
+    <span id="role-badge" style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;background:rgba(180,83,9,.15);color:#d97706;border:1px solid rgba(180,83,9,.3);"></span>
     <button class="btn btn-ghost" onclick="openDB()">
       <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       客戶資料庫
@@ -569,12 +579,12 @@ input[type="date"] { cursor: pointer; }
       儲存報價方
     </button>
     <button class="btn btn-ghost" onclick="loadSample()">範例</button>
-    <button class="btn btn-red btn-sm" onclick="clearAll()">清空</button>
+    <button class="btn btn-red btn-sm" data-role-section="quote-delete" onclick="clearAll()">清空</button>
     <button class="btn btn-ghost" id="preview-btn" onclick="togglePrintPreview()" title="顯示 A4 列印範圍線">
       <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><line x1="3" y1="12" x2="21" y2="12" stroke-width="1.5" stroke-dasharray="3 2"/></svg>
       預覽範圍
     </button>
-    <button class="btn btn-amber" onclick="doPrint()">
+    <button class="btn btn-amber" data-role-section="quote-export" onclick="doPrint()">
       <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
       列印 / PDF
     </button>
@@ -1128,8 +1138,8 @@ input[type="date"] { cursor: pointer; }
     <div class="db-foot">
       <span class="db-count" id="db-count"></span>
       <div style="display:flex;gap:7px">
-        <button class="btn btn-ghost btn-sm" onclick="exportDB()">⬇ 匯出 Excel</button>
-        <button class="btn btn-red btn-sm" onclick="clearDB()">清空全部</button>
+        <button class="btn btn-ghost btn-sm" data-role-section="quote-export" onclick="exportDB()">⬇ 匯出 Excel</button>
+        <button class="btn btn-red btn-sm" data-role-section="quote-delete" onclick="clearDB()">清空全部</button>
       </div>
     </div>
   </div>
@@ -1188,8 +1198,8 @@ input[type="date"] { cursor: pointer; }
     <div class="db-foot">
       <span class="db-count" id="vdb-count"></span>
       <div style="display:flex;gap:7px">
-        <button class="btn btn-ghost btn-sm" onclick="exportVendorDB()">⬇ 匯出 Excel</button>
-        <button class="btn btn-red btn-sm" onclick="clearVendorDB()">清空全部</button>
+        <button class="btn btn-ghost btn-sm" data-role-section="quote-export" onclick="exportVendorDB()">⬇ 匯出 Excel</button>
+        <button class="btn btn-red btn-sm" data-role-section="quote-delete" onclick="clearVendorDB()">清空全部</button>
       </div>
     </div>
   </div>
@@ -2288,7 +2298,7 @@ function renderDB(){
        <div class="db-card-actions">
          <button class="btn btn-ghost btn-sm" onclick="editClientFromCard(this, event)">編輯</button>
          <button class="btn btn-ghost btn-sm" onclick="applyClientFromCard(this, event)">套用</button>
-         <button class="btn btn-red btn-sm" onclick="deleteClientFromCard(this, event)">刪除</button>
+         <button class="btn btn-red btn-sm" data-role-section="quote-delete" onclick="deleteClientFromCard(this, event)">刪除</button>
        </div>
      </div>`;
   }
@@ -2446,7 +2456,7 @@ function renderVendorDB(){
        <div class="db-card-actions">
          <button class="btn btn-ghost btn-sm" onclick="editVendorFromCard(this, event)">編輯</button>
          <button class="btn btn-ghost btn-sm" onclick="applyVendorFromCard(this, event)">套用</button>
-         <button class="btn btn-red btn-sm" onclick="deleteVendorFromCard(this, event)">刪除</button>
+         <button class="btn btn-red btn-sm" data-role-section="quote-delete" onclick="deleteVendorFromCard(this, event)">刪除</button>
        </div>
      </div>`;
   }
