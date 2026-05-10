@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com; worker-src blob:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.cloudfunctions.net; worker-src blob:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>客戶與廠商管理 — 公司系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -575,7 +575,7 @@ window.onFbReady = async function() {
 
 async function saveDB() {
   const clients = clientDB.filter(c => c.type === 'client' || c.type === 'both').map(({type, ...rest}) => ({...rest, type}));
-  const vendors = clientDB.filter(c => c.type === 'vendor').map(({type, ...rest}) => ({...rest, type}));
+  const vendors = clientDB.filter(c => c.type === 'vendor' || c.type === 'both').map(({type, ...rest}) => ({...rest, type}));
   
   try {
     await window._fbSetDoc(window._fbDoc(window._fbDb, 'databases', 'clientDB'), {list: clients});
@@ -1000,10 +1000,16 @@ function downloadTemplate() {
 
 window.onload = () => {
   initYearSelect();
-  // 如果 Firebase module 比 onload 先完成但 onFbReady 當時還沒定義，在這裡補觸發
-  if (window._fbReady && clientDB.length === 0) {
-    window.onFbReady();
-  }
+  // Firebase module 可能在 onload 之前或之後完成，用 polling 確保一定能觸發
+  (function pollFbReady(elapsed) {
+    if (typeof window.onFbReady === 'function' && window._fbReady) {
+      window.onFbReady();
+    } else if (elapsed < 8000) {
+      setTimeout(() => pollFbReady(elapsed + 50), 50);
+    } else {
+      console.error('Firebase 初始化超時，請重新整理頁面');
+    }
+  })(0);
 };
 </script>
 </body>
