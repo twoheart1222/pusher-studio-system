@@ -199,24 +199,58 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  // 加上這行：引入 Firestore 來查詢細部權限
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+  // 1. Firebase 基礎設定
   const firebaseConfig = {
     apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
     authDomain: "company-system-6ea1a.firebaseapp.com",
     projectId: "company-system-6ea1a"
   };
+  
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  const db = getFirestore(app);
 
-  onAuthStateChanged(auth, (user) => {
-    if (!user) { window.location.href = 'login.html'; return; }
-    var ov=document.getElementById('auth-overlay'); if(ov) ov.remove();
-    RoleGuard.guardPage();
-    RoleGuard.applyAll();
+  // 2. 監聽登入狀態
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = 'login.html';
+    } else {
+      try {
+        // 從資料庫抓取使用者的自訂權限
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.exists() ? userDoc.data() : {};
+        
+        const myRole = userData.role || 'viewer';
+        const myName = user.displayName || user.email.split('@')[0];
+        const myPerms = userData.permissions || {}; 
+
+        // 將權限交給 roles.js 判斷
+        if (window.RoleGuard && window.RoleGuard.setSession) {
+          window.RoleGuard.setSession(user.uid, myRole, myName, myPerms);
+          
+          if (!window.RoleGuard.guardPage()) return;
+          window.RoleGuard.applyAll();
+        }
+        
+        // 移除載入中的遮罩
+        var ov = document.getElementById('auth-overlay');
+        if (ov) ov.remove();
+      } catch (e) {
+        console.error("權限載入失敗", e);
+        var ov = document.getElementById('auth-overlay');
+        if (ov) ov.remove(); // 就算出錯也把遮罩拿掉，避免卡白畫面
+      }
+    }
   });
 
+  // 3. 登出功能
   window.logout = function() {
-    RoleGuard.clearSession();
+    if (window.RoleGuard && window.RoleGuard.clearSession) {
+      window.RoleGuard.clearSession();
+    }
     signOut(auth).then(() => { window.location.href = 'login.html'; });
   };
 </script>
