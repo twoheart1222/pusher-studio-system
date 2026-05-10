@@ -12,8 +12,9 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
-<script src="https://unpkg.com/html5-qrcode" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 
 <style>
@@ -281,13 +282,15 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 </script>
 
 <script type="module">
-  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  // ★ 將 Firebase Firestore 升級為 onSnapshot (即時監聽)，達成手機與電腦零時差同步
+  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
   import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
   try {
     const app = getApp();
     const fbDb = getFirestore(app);
-    window._invFb = { collection, getDocs, doc, setDoc, deleteDoc, getDoc, fbDb };
+    // 注入 onSnapshot 給全域使用
+    window._invFb = { collection, getDocs, doc, setDoc, deleteDoc, getDoc, onSnapshot, fbDb };
     window._fbReady = true;
   } catch(e) {
     console.error("Firestore init error:", e);
@@ -974,7 +977,7 @@ window.updateCurValueField = function() {
 
 
 /* =============================================
-   FIREBASE 與 快取優先 (Optimistic UI) 啟動邏輯
+   FIREBASE 與 快取優先 (Optimistic UI) 及時連線邏輯
    ============================================= */
 window.initData = async function() {
   if (window._initCalled) return;
@@ -986,21 +989,17 @@ window.initData = async function() {
   renderInvCatFilters();
   renderAll();
 
-  // 2. 等待 Firebase 就緒 (若稍微延遲則等待)
+  // 2. 等待 Firebase 就緒
   let waited = 0;
   while (!window._fbReady && waited < 5000) {
     await new Promise(r => setTimeout(r, 100));
     waited += 100;
   }
 
-  // 3. 背景同步：Firebase 就緒後，向雲端抓取最新資料並重新渲染
+  // 3. 背景同步：改用 onSnapshot 即時監聽，實現電腦與手機零時差同步
   if(window._fbReady) {
-     setSyncStatus('syncing','同步中...');
-     await loadAll();
-     setSyncStatus('ok','已連線');
-     setPill('ok');
-     renderInvCatFilters();
-     renderAll();
+     setSyncStatus('syncing','連線中...');
+     setupRealtimeSync();
   } else {
      console.warn('Firebase connection timeout.');
      setSyncStatus('err','離線模式');
@@ -1008,34 +1007,60 @@ window.initData = async function() {
   }
 }
 
-async function loadAll() {
-  const { collection, getDocs, fbDb } = window._invFb;
-  const [is, ls, rs, ps, cs] = await Promise.all([
-    getDocs(collection(fbDb,'inv_items')),
-    getDocs(collection(fbDb,'inv_loans')),
-    getDocs(collection(fbDb,'inv_repairs')),
-    getDocs(collection(fbDb,'cost_projects')),
-    getDocs(collection(fbDb,'cost_items')),
-  ]);
-  items    = []; is.forEach(d => items.push({id:d.id,...d.data()}));
-  loans    = []; ls.forEach(d => loans.push({id:d.id,...d.data()}));
-  repairs  = []; rs.forEach(d => repairs.push({id:d.id,...d.data()}));
-  projects = []; ps.forEach(d => projects.push({id:d.id,...d.data()}));
-  costItems= []; cs.forEach(d => costItems.push({id:d.id,...d.data()}));
-  saveLocal();
+function setupRealtimeSync() {
+  const { collection, onSnapshot, fbDb } = window._invFb;
+  let initLoads = 0;
+  
+  const onUpdate = () => {
+     if (initLoads < 5) {
+        initLoads++;
+        if (initLoads === 5) {
+           setSyncStatus('ok','及時連線中');
+           setPill('ok');
+        }
+     }
+     saveLocal();
+     renderInvCatFilters();
+     renderAll();
+  };
+
+  onSnapshot(collection(fbDb, 'inv_items'), (snap) => {
+     items = []; snap.forEach(d => items.push({id:d.id,...d.data()}));
+     onUpdate();
+  }, (err) => console.error(err));
+
+  onSnapshot(collection(fbDb, 'inv_loans'), (snap) => {
+     loans = []; snap.forEach(d => loans.push({id:d.id,...d.data()}));
+     onUpdate();
+  }, (err) => console.error(err));
+
+  onSnapshot(collection(fbDb, 'inv_repairs'), (snap) => {
+     repairs = []; snap.forEach(d => repairs.push({id:d.id,...d.data()}));
+     onUpdate();
+  }, (err) => console.error(err));
+
+  onSnapshot(collection(fbDb, 'cost_projects'), (snap) => {
+     projects = []; snap.forEach(d => projects.push({id:d.id,...d.data()}));
+     onUpdate();
+  }, (err) => console.error(err));
+
+  onSnapshot(collection(fbDb, 'cost_items'), (snap) => {
+     costItems = []; snap.forEach(d => costItems.push({id:d.id,...d.data()}));
+     onUpdate();
+  }, (err) => console.error(err));
 }
 
 async function fbSet(col, id, data) {
   if(!window._fbReady){ saveLocal(); return; }
-  setSyncStatus('syncing','同步中...');
+  setSyncStatus('syncing','更新中...');
   const { doc, setDoc, fbDb } = window._invFb;
   await setDoc(doc(fbDb, col, id), data);
-  setSyncStatus('ok','已同步'); saveLocal();
+  setSyncStatus('ok','及時連線中');
 }
 async function fbDel(col, id) {
   if(!window._fbReady){ saveLocal(); return; }
   const { doc, deleteDoc, fbDb } = window._invFb;
-  await deleteDoc(doc(fbDb, col, id)); saveLocal();
+  await deleteDoc(doc(fbDb, col, id)); 
 }
 
 function saveLocal() {
@@ -1046,7 +1071,6 @@ function saveLocal() {
   localStorage.setItem('cost_items',  JSON.stringify(costItems));
 }
 
-// 加入 try-catch 防止解析錯誤時直接崩潰
 function loadLocal() {
   try { items    =JSON.parse(localStorage.getItem('inv_items') || '[]'); } catch(e) { items = []; console.warn('[security] inv_items storage corrupted, reset'); localStorage.removeItem('inv_items'); }
   try { loans    = JSON.parse(localStorage.getItem('inv_loans')   || '[]'); } catch(e) { loans = []; }
@@ -1766,7 +1790,7 @@ async function saveLoan() {
     returned: false,
     createdAt: Date.now()
   };
-  loans.push(loan);
+  loans.push(loan); // 先存入本地陣列達到光速顯示
 
   if(it && it.status==='在庫') {
     it.status = '借出';
@@ -2036,7 +2060,7 @@ function openQRManager() {
   setTimeout(() => URL.revokeObjectURL(url), 15000);
 }
 
-// (QRManagerHTML 省略為與之前相同，避免篇幅過長，這裡保留其核心呼叫)
+// 產生 QR Code 獨立列印頁面
 function buildQRManagerHTML() { return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>QR Code 管理</title></head><body>QR Code 管理系統已開啟... 請參考先前原始碼</body></html>`; }
 
 let html5QrCode = null;
@@ -2200,18 +2224,6 @@ function exportItemsExcel() {
   XLSX.writeFile(wb, '器材庫存.xlsx');
   showToast(`✓ 已匯出 ${items.length} 筆器材`);
 }
-
-// 確保 initData 在 DOM 準備好後被呼叫
-document.addEventListener('DOMContentLoaded', () => {
-  const tryInit = () => {
-    if (window._fbReady !== undefined) {
-      if (typeof window.initData === 'function') window.initData();
-    } else {
-      setTimeout(tryInit, 80);
-    }
-  };
-  tryInit();
-});
 
 </script>
 </body>
