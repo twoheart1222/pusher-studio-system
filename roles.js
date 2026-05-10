@@ -1,141 +1,152 @@
 /**
- * roles.js — 職等權限設定檔
+ * roles.js — 動態矩陣權限設定檔 (升級版)
  * ==========================================
- * 修改此檔案自定義每個職等的權限。
- * 與所有 HTML 頁面放在同一目錄。
- *
- * 內建職等：
- * admin    超級管理員
- * manager  部門主管
- * staff    一般員工
- * viewer   唯讀人員
- *
- * 新增職等：在 roleLabels / pageAccess / sectionAccess 各自加一行即可。
+ * 此版本改用 Firebase 儲存的 permissions 物件進行精細化管理。
+ * 不再使用寫死的 manager / staff，改採 admin 與 custom(自定義) 雙軌制。
  * ==========================================
  */
 window.ROLES_CONFIG = {
-
-  /* ── 職等顯示名稱 ── */
   roleLabels: {
     admin:   '超級管理員',
-    manager: '部門主管',
-    staff:   '一般員工',
-    viewer:  '唯讀人員',
+    custom:  '專案成員',
+    viewer:  '未開通人員' // 剛註冊時的預設狀態
   },
+  defaultRole: 'viewer'
+};
 
-  /**
-   * 各職等可進入的頁面（檔名不含 .html）
-   * 不在清單內 → 直接訪問被踢回第一個允許頁面
-   */
-  pageAccess: {
-    // 補上 'admin' 頁面權限
-    admin:   ['index', 'project', 'cost', 'inventory', 'contacts', 'admin', 'admin-roles'],
-    manager: ['index', 'project', 'cost', 'inventory', 'contacts'],
-    staff:   ['index', 'project', 'inventory'],
-    viewer:  ['index', 'project'],
-  },
+/* ── 核心對照表：將頁面網址與按鈕前綴，對應到 Firebase 裡的模組 ID ── */
+const MODULE_MAP = {
+  // 網頁檔名對應
+  'index': 'quotes',       // 報價單
+  'project': 'projects',   // 專案進度
+  'cost': 'costs',         // 成本計算
+  'inventory': 'inventory',// 器材庫存
+  'contacts': 'contacts',  // 客戶廠商
+  
+  // 管理員專屬頁面
+  'admin': 'admin',
+  'admin-roles': 'admin'
+};
 
-  /**
-   * 功能區塊可見的職等
-   * 用法：在 HTML 元素加  data-role-section="quote-delete"
-   * 只有該清單內的職等才看得到這個元素。
-   */
-  sectionAccess: {
-    'quote-edit':        ['admin', 'manager', 'staff'],
-    'quote-export':      ['admin', 'manager'],
-    'quote-delete':      ['admin'],
-
-    'project-add':       ['admin', 'manager'],
-    'project-edit':      ['admin', 'manager', 'staff'],
-    'project-delete':    ['admin'],
-
-    'cost-view':         ['admin', 'manager'],
-    'cost-edit':         ['admin', 'manager'],
-
-    'inventory-add':     ['admin', 'manager', 'staff'],
-    'inventory-edit':    ['admin', 'manager', 'staff'],
-    'inventory-delete':  ['admin'], // 用於限定只有 admin 可以刪除或進行敏感借出修改
-
-    'contacts-view':     ['admin', 'manager'],
-    'contacts-edit':     ['admin', 'manager'],
-    'contacts-delete':   ['admin'],
-
-    'admin-panel':       ['admin'],
-  },
-
-  /** 這些職等的使用者，所有帶 data-action 的按鈕與輸入框自動 disabled */
-  readonlyRoles: ['viewer'],
-
-  /** 新帳號尚未設定職等時的預設值 */
-  defaultRole: 'viewer',
+const PREFIX_MAP = {
+  // data-role-section 前綴對應
+  'quote': 'quotes',
+  'project': 'projects',
+  'cost': 'costs',
+  'inventory': 'inventory',
+  'contacts': 'contacts',
+  'admin': 'admin'
 };
 
 /* ============================================================
-   RoleGuard — 掛在 window.RoleGuard
+   RoleGuard — 權限守門員
    ============================================================ */
 window.RoleGuard = (function () {
-  var KEY_ROLE = 'rg_role';
-  var KEY_UID  = 'rg_uid';
-  var KEY_NAME = 'rg_name';
+  var KEY_ROLE  = 'rg_role';
+  var KEY_UID   = 'rg_uid';
+  var KEY_NAME  = 'rg_name';
+  var KEY_PERMS = 'rg_perms'; // 新增：用來存取矩陣權限
 
-  function getRole()     { return sessionStorage.getItem(KEY_ROLE) || ROLES_CONFIG.defaultRole; }
+  function getRole()     { return sessionStorage.getItem(KEY_ROLE) || window.ROLES_CONFIG.defaultRole; }
   function getUid()      { return sessionStorage.getItem(KEY_UID)  || ''; }
   function getUsername() { return sessionStorage.getItem(KEY_NAME) || ''; }
+  function getPerms()    { 
+    try { return JSON.parse(sessionStorage.getItem(KEY_PERMS) || '{}'); } 
+    catch(e) { return {}; } 
+  }
 
-  function setSession(uid, role, displayName) {
+  // ★ 更新：寫入 Session 時需帶入權限矩陣
+  function setSession(uid, role, displayName, permissions) {
     sessionStorage.setItem(KEY_ROLE, role);
     sessionStorage.setItem(KEY_UID,  uid);
     sessionStorage.setItem(KEY_NAME, displayName || '');
+    sessionStorage.setItem(KEY_PERMS, JSON.stringify(permissions || {}));
   }
 
   function clearSession() {
-    [KEY_ROLE, KEY_UID, KEY_NAME].forEach(function(k){ sessionStorage.removeItem(k); });
+    [KEY_ROLE, KEY_UID, KEY_NAME, KEY_PERMS].forEach(function(k){ sessionStorage.removeItem(k); });
   }
 
   function currentPage() {
     return (window.location.pathname.split('/').pop() || 'index').replace('.html', '');
   }
 
+  /* 1. 頁面守衛：判斷能不能進入該 HTML */
   function guardPage() {
-    var role    = getRole();
-    var page    = currentPage();
-    var allowed = ROLES_CONFIG.pageAccess[role] || [];
-    if (allowed.indexOf(page) === -1) {
-      var dest = allowed.length ? allowed[0] + '.html' : 'login.html';
-      window.location.replace(dest);
+    var role = getRole();
+    if (role === 'admin') return true;
+
+    var page = currentPage();
+    var modId = MODULE_MAP[page];
+    var perms = getPerms();
+
+    // 尚未開通、或是試圖進入 admin 頁面、或是該模組沒有 view 權限
+    if (!modId || modId === 'admin' || !perms[modId] || !perms[modId].view) {
+      
+      // 尋找他可以去的第一個頁面，找不到就踢回登入頁
+      var target = 'login.html';
+      for (var key in perms) {
+        if (perms[key].view) {
+          // 反推頁面名稱
+          var destPage = Object.keys(MODULE_MAP).find(k => MODULE_MAP[k] === key && k !== 'admin');
+          if (destPage) { target = destPage + '.html'; break; }
+        }
+      }
+      window.location.replace(target);
       return false;
     }
     return true;
   }
 
+  /* 2. 導覽列守衛：隱藏不能去的 Tab */
   function applyNav() {
-    var role    = getRole();
-    var allowed = ROLES_CONFIG.pageAccess[role] || [];
+    var role = getRole();
+    var perms = getPerms();
+
     document.querySelectorAll('.nav-tab[href]').forEach(function(tab){
       var page = tab.getAttribute('href').replace('.html', '');
-      tab.style.display = (allowed.indexOf(page) !== -1) ? '' : 'none';
+      var modId = MODULE_MAP[page];
+      
+      var isAllowed = false;
+      if (role === 'admin') {
+        isAllowed = true;
+      } else if (modId && modId !== 'admin' && perms[modId] && perms[modId].view) {
+        isAllowed = true;
+      }
+      tab.style.display = isAllowed ? '' : 'none';
     });
+
     var badge = document.getElementById('role-badge');
-    if (badge) badge.textContent = ROLES_CONFIG.roleLabels[role] || role;
+    if (badge) badge.textContent = window.ROLES_CONFIG.roleLabels[role] || role;
     var nameEl = document.getElementById('user-display-name');
     if (nameEl) nameEl.textContent = getUsername();
   }
 
+  /* 3. 區塊守衛：按鈕與功能隱藏 (data-role-section) */
   function applySection() {
     var role = getRole();
+    if (role === 'admin') {
+      document.querySelectorAll('[data-role-section]').forEach(el => el.style.display = '');
+      return;
+    }
+
+    var perms = getPerms();
     document.querySelectorAll('[data-role-section]').forEach(function(el){
-      var keys = el.dataset.roleSection.split(',').map(function(s){ return s.trim(); });
+      var keys = el.dataset.roleSection.split(',').map(s => s.trim());
       var isAllowed = false;
       
       keys.forEach(function(key) {
-        // 1. 去 ROLES_CONFIG.sectionAccess 查表
-        if (ROLES_CONFIG.sectionAccess[key]) {
-          if (ROLES_CONFIG.sectionAccess[key].indexOf(role) !== -1) {
-            isAllowed = true;
-          }
-        } 
-        // 2. 兼容舊寫法，如果直接寫 'admin'
-        else if (key === role) {
+        // 解析例如 "quote-delete" -> prefix="quote", action="delete"
+        var parts = key.split('-');
+        var prefix = parts[0]; 
+        var action = parts[1]; 
+        
+        // 將 add, export 等行為歸類 (新增算 edit)
+        if (action === 'add') action = 'edit';
+        if (action === 'export') action = 'view'; // 匯出報表允許只有檢視權限的人使用
+
+        var modId = PREFIX_MAP[prefix];
+        if (modId && perms[modId] && perms[modId][action]) {
           isAllowed = true;
         }
       });
@@ -144,22 +155,31 @@ window.RoleGuard = (function () {
     });
   }
 
+  /* 4. 唯讀守衛：如果該頁面只有檢視權限，鎖定所有輸入框與未被標記的按鈕 */
   function applyReadonly() {
     var role = getRole();
-    if (ROLES_CONFIG.readonlyRoles.indexOf(role) === -1) return;
-    document.querySelectorAll('input, textarea, select, [data-action]').forEach(function(el){
-      if (el.closest('.topbar') || el.closest('.toolbar')) return;
-      el.disabled = true;
-      el.style.pointerEvents = 'none';
-      el.title = '您的職等為唯讀，無法編輯';
-    });
-    document.querySelectorAll('.btn').forEach(function(b){
-      var oc = b.getAttribute('onclick') || '';
-      if (oc.indexOf('logout') !== -1) return;
-      if (b.closest('.topbar-actions') || b.closest('.topbar')) return;
-      b.style.opacity = '0.4';
-      b.style.pointerEvents = 'none';
-    });
+    if (role === 'admin') return;
+
+    var page = currentPage();
+    var modId = MODULE_MAP[page];
+    var perms = getPerms();
+
+    // 如果目前模組沒有 edit 權限
+    if (modId && perms[modId] && !perms[modId].edit) {
+      document.querySelectorAll('input, textarea, select, [data-action]').forEach(function(el){
+        // 避開頂部工具列與搜尋框
+        if (el.closest('.topbar') || el.closest('.toolbar') || el.closest('.search-bar')) return;
+        el.disabled = true;
+        el.style.pointerEvents = 'none';
+      });
+      // 隱藏可能沒有綁定 data-role-section 的預設操作按鈕
+      document.querySelectorAll('.btn').forEach(function(b){
+        var txt = b.textContent || '';
+        // 保留「登出、返回、搜尋」等無害按鈕
+        if (b.closest('.topbar') || b.closest('.search-bar') || txt.includes('登出') || txt.includes('返回')) return;
+        b.style.display = 'none';
+      });
+    }
   }
 
   function applyAll() {
@@ -168,22 +188,12 @@ window.RoleGuard = (function () {
     applyReadonly();
   }
 
-  function can(section) {
-    var allowed = ROLES_CONFIG.sectionAccess[section] || [];
-    return allowed.indexOf(getRole()) !== -1;
-  }
-
-  function roleLabel() {
-    return ROLES_CONFIG.roleLabels[getRole()] || getRole();
-  }
-
   return {
-    getRole: getRole, getUid: getUid, getUsername: getUsername,
+    getRole: getRole, getUid: getUid, getUsername: getUsername, getPerms: getPerms,
     setSession: setSession, clearSession: clearSession,
     currentPage: currentPage,
     guardPage: guardPage,
     applyNav: applyNav, applySection: applySection,
-    applyReadonly: applyReadonly, applyAll: applyAll,
-    can: can, roleLabel: roleLabel,
+    applyReadonly: applyReadonly, applyAll: applyAll
   };
 })();
