@@ -518,8 +518,24 @@ input[type="date"] { cursor: pointer; }
 
 <!-- 加入登入防護腳本 -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  // (新寫法)
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const db = getFirestore(app);
+
+const snap = await getDocs(collection(db, 'users'));
+const myDoc = snap.docs.find(d => d.id === user.uid);
+const myData = myDoc ? myDoc.data() : {};
+const myRole = myData.role || 'viewer';
+const myPerms = myData.permissions || {}; // 抓出權限矩陣
+
+// ▼ 將 myPerms 作為第四個參數傳入，roles.js 才有資料可以判斷！ ▼
+window.RoleGuard.setSession(user.uid, myRole, user.displayName || user.email.split('@')[0], myPerms);
+
+// 若無權限會被踢回首頁或可進入的頁面
+if (!window.RoleGuard.guardPage()) return; 
+window.RoleGuard.applyAll();
+var ov = document.getElementById('auth-overlay');
+if (ov) ov.remove();
 
   const firebaseConfig = {
     apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
