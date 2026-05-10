@@ -136,6 +136,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .loan-row{ display:grid; grid-template-columns:1fr 100px 100px 100px 100px 80px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
 .loan-row:last-child{ border-bottom:none; }
 .loan-row:hover{ background:#faf9f7; }
+
 /* 逾期醒目提示 */
 .loan-row.is-overdue {
   border: 2px solid #dc2626 !important;
@@ -148,7 +149,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   background: rgba(220, 38, 38, 0.08);
 }
 .loan-header{ font-size:10px; color:var(--ink3); font-weight:500; letter-spacing:.4px; text-transform:uppercase; background:#faf9f7; margin-top:0 !important; border:none !important;}
-.overdue-tag{ font-size:9px; background:rgba(220,38,38,.1); color:#dc2626; padding:1px 6px; border-radius:20px; font-weight:500; }
+.overdue-tag{ font-size:10px; background:#dc2626; color:#fff; padding:2px 6px; border-radius:4px; font-weight:600; margin-left:4px;}
 
 /* MODAL */
 .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
@@ -450,7 +451,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
         <div class="field">
           <label>類別</label>
           <div style="display:flex;gap:6px;">
-            <select id="item-cat" style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;"></select>
+            <select id="item-cat" onchange="onItemCatChange()" style="flex:1;background:#f9f7f4;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--ink);outline:none;"></select>
             <button class="btn btn-ghost-dark btn-sm" onclick="openInvCatManager()" title="管理自訂分類">⚙</button>
           </div>
         </div>
@@ -459,8 +460,8 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
           <input type="text" id="item-brand" placeholder="Sony、Canon...">
         </div>
         <div class="field">
-          <label>型號 / 編號</label>
-          <input type="text" id="item-code" placeholder="序號或自訂編號">
+          <label>型號 / 編號（系統自動帶入或可自訂）</label>
+          <input type="text" id="item-code" placeholder="例：CAM-0001">
         </div>
       </div>
       <div class="field-row col2">
@@ -838,6 +839,43 @@ let costItems = [];
 
 let filterStatus = 'all';
 let filterCat    = 'all';
+
+/* =============================================
+   ★ 自動編碼產生器 (前綴由類別決定)
+   ============================================= */
+window.generateItemCode = function(cat) {
+  const pfxMap = {
+    '攝影機': 'CAM',
+    '鏡頭': 'LEN',
+    '燈光': 'LGT',
+    '收音': 'MIC',
+    '配件': 'ACC',
+    '支撐': 'SUP'
+  };
+  const pfx = pfxMap[cat] || 'OTH';
+  
+  let maxNum = 0;
+  items.forEach(it => {
+    if (it.code && it.code.startsWith(pfx + '-')) {
+      const parts = it.code.split('-');
+      if (parts.length === 2) {
+        const num = parseInt(parts[1], 10);
+        if (!isNaN(num) && num > maxNum) maxNum = num;
+      }
+    }
+  });
+  
+  return pfx + '-' + String(maxNum + 1).padStart(4, '0');
+};
+
+window.onItemCatChange = function() {
+  const id = document.getElementById('item-id').value;
+  // 只有在「新增」模式時（沒帶 id），才自動切換代碼
+  if (!id) {
+    const cat = document.getElementById('item-cat').value;
+    document.getElementById('item-code').value = generateItemCode(cat);
+  }
+};
 
 /* =============================================
    ★ 全域 折舊現值計算公式 (每年 10%，精確到月，歸零防護)
@@ -1248,7 +1286,8 @@ function renderTable() {
       }
     }
 
-    // 將購入價與折損後現值合併在同一個 td 中上下顯示
+    // 嚴格對應標題 9 欄位: 
+    // 1(名稱) | 2(類別) | 3(狀態) | 4(數量) | 5(可用) | 6(購入價/現值) | 7(日租金/行情) | 8(購入日期) | 9(操作)
     return `<tr>
       <td>
         <div class="item-name">${it.name}</div>
@@ -1297,10 +1336,18 @@ function renderLoans() {
   wrap.innerHTML = active.map(l => {
     const item = items.find(i=>i.id===l.itemId);
     const proj = projects.find(p=>p.id===l.projId);
-    const overdue = l.returnDate && l.returnDate < today;
     
-    // 依逾期狀態加上 class 即可呈現醒目的外框與底色
-    return `<div class="loan-row ${overdue ? 'is-overdue' : ''}">
+    // 計算逾期天數
+    let overdueTag = '';
+    const isOverdue = l.returnDate && l.returnDate < today;
+    if (isOverdue) {
+      const d1 = new Date(l.returnDate);
+      const d2 = new Date(today);
+      const diffDays = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+      overdueTag = `<span class="overdue-tag">逾期 ${diffDays} 天</span>`;
+    }
+
+    return `<div class="loan-row ${isOverdue ? 'is-overdue' : ''}">
       <div data-label="器材">
         <div>
           <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
@@ -1309,11 +1356,13 @@ function renderLoans() {
       </div>
       <div data-label="借用人" style="font-size:12px;">${l.borrower||'—'}</div>
       <div data-label="借出日" style="font-size:11px;color:var(--ink3);font-family:var(--font-mono);">${l.outDate||'—'}</div>
-      <div data-label="預計歸還" style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'} ${overdue?'<span class="overdue-tag">逾期</span>':''}</div>
+      <div data-label="預計歸還" style="font-size:11px;font-family:var(--font-mono);">
+        ${l.returnDate||'—'} ${overdueTag}
+      </div>
       <div data-label="專案" style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
       <div style="display:flex;gap:4px;justify-content:flex-end;">
         <button class="btn btn-green btn-xs" data-role-section="inventory-edit" onclick="returnLoan('${l.id}')">歸還</button>
-        <button class="btn btn-xs" data-role-section="inventory-delete, admin-panel"
+        <button class="btn btn-xs" data-role-section="admin-panel"
           onclick="openEditLoanModal('${l.id}')"
           style="background:rgba(217,119,6,.15);color:#d97706;border:1px solid rgba(217,119,6,.4);"
           title="編輯此借出紀錄">
@@ -1538,10 +1587,14 @@ function openItemModal(itemId) {
   document.getElementById('item-id').value = it ? it.id : '';
   document.getElementById('item-name').value = it ? it.name : '';
   
-  populateInvCatSelect(it ? (it.cat||'攝影機') : '攝影機');
+  const defaultCat = it ? (it.cat||'攝影機') : '攝影機';
+  populateInvCatSelect(defaultCat);
   
   document.getElementById('item-brand').value = it ? (it.brand||'') : '';
-  document.getElementById('item-code').value  = it ? (it.code||'') : '';
+  
+  // ★ 如果是新增，自動帶入該類別的編碼；如果編輯，保留原編碼
+  document.getElementById('item-code').value  = it ? (it.code||'') : generateItemCode(defaultCat);
+  
   document.getElementById('item-qty').value   = it ? (it.qty||1) : 1;
   document.getElementById('item-status').value= it ? (it.status||'在庫') : '在庫';
   document.getElementById('item-buy-price').value  = it ? (it.buyPrice||'') : '';
