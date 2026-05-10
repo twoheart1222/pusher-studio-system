@@ -356,8 +356,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
             <th>狀態</th>
             <th>數量</th>
             <th>可用</th>
-            <th>購入價 / 現值</th>
-            <th>日租金 / 行情</th>
+            <th>購入價 / 現值 / 日租金行情</th>
             <th>購入日期</th>
             <th style="text-align:right;">操作</th>
           </tr>
@@ -1312,8 +1311,8 @@ function renderTable() {
       }
     }
 
-    // 嚴格對應標題 9 欄位: 
-    // 1(名稱) | 2(類別) | 3(狀態) | 4(數量) | 5(可用) | 6(購入價/現值) | 7(日租金/行情) | 8(購入日期) | 9(操作)
+    // 嚴格對應標題 8 欄位: 
+    // 1(名稱) | 2(類別) | 3(狀態) | 4(數量) | 5(可用) | 6(購入價/現值/日租金) | 7(購入日期) | 8(操作)
     return `<tr>
       <td>
         <div class="item-name">${it.name}</div>
@@ -1324,12 +1323,11 @@ function renderTable() {
       <td><span class="status-badge s-${it.status||'在庫'}">${it.status||'在庫'}</span></td>
       <td class="qty-cell">${it.qty||1}</td>
       <td class="qty-cell ${avail<=0?'qty-low':'qty-avail'}">${avail}</td>
+      
       <td class="price-cell">
         <div style="color:var(--ink2);">${it.buyPrice?'NT$'+(+it.buyPrice).toLocaleString():'—'}</div>
         <div style="color:#b45309; font-weight:600; margin-top:3px; font-size:12px;">${curValHtml}</div>
-      </td>
-      <td class="price-cell">
-        <div style="display:flex; align-items:center;">
+        <div style="display:flex; align-items:center; margin-top:6px;">
           ${it.dayRate?'NT$'+(+it.dayRate).toLocaleString()+'/天':'—'}
           <a href="${quickSearchUrl}" target="_blank" style="text-decoration:none; margin-left:4px; font-size:12px;" title="Google 搜尋市場行情">🔗</a>
         </div>
