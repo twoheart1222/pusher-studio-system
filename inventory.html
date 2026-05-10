@@ -342,7 +342,10 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   <div class="panel">
     <div class="panel-header">
       <span class="panel-title">器材清單</span>
-      <span style="font-size:11px;color:var(--ink3);" id="item-count-label">共 0 項</span>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button class="btn btn-ghost-dark btn-xs" data-role-section="admin-panel" onclick="autoFillMissingCodes()">🔤 為現有器材補齊編號</button>
+        <span style="font-size:11px;color:var(--ink3);" id="item-count-label">共 0 項</span>
+      </div>
     </div>
     <div class="inv-table-wrap">
       <table class="inv-table">
@@ -875,6 +878,29 @@ window.onItemCatChange = function() {
     const cat = document.getElementById('item-cat').value;
     document.getElementById('item-code').value = generateItemCode(cat);
   }
+};
+
+/* ★ 為現有器材自動補齊編號 (管理員專用) */
+window.autoFillMissingCodes = async function() {
+  showConfirm('確定要為所有「尚未填寫編號」的器材自動生成專屬編號嗎？', async () => {
+    let updatedCount = 0;
+    // 排序，讓舊器材優先取得較前面的編號 (依 createdAt)
+    const sortedItems = [...items].sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+
+    for (let it of sortedItems) {
+      if (!it.code || it.code.trim() === '') {
+        it.code = generateItemCode(it.cat || '其他');
+        await fbSet('inv_items', it.id, it);
+        updatedCount++;
+      }
+    }
+    if (updatedCount > 0) {
+      showToast(`✓ 已為 ${updatedCount} 項器材自動補齊編號`);
+      renderAll();
+    } else {
+      showToast('目前所有器材皆已有編號，無需補齊');
+    }
+  });
 };
 
 /* =============================================
@@ -1808,13 +1834,14 @@ function openEditLoanModal(loanId) {
 
   document.getElementById('el-loan-id').value = loanId;
 
-  // 器材下拉：包含所有器材（含借出中），讓管理員可以修正
+  // 器材下拉：包含所有器材（含借出中），讓管理員可以自由切換綁定的器材
   const itemSel = document.getElementById('el-item-id');
   itemSel.innerHTML = items
     .filter(it => it.status !== '報廢')
     .map(it => `<option value="${esc(it.id)}" ${it.id === loan.itemId ? 'selected' : ''}>${esc(it.name)}${it.brand ? ' ('+esc(it.brand)+')' : ''} — ${it.status}</option>`)
     .join('');
-  // 若現有器材被報廢但仍有紀錄，補入選項避免空值
+  
+  // 若原始紀錄器材被報廢但仍存在，補入選項避免空值
   if (!items.filter(it => it.status !== '報廢').find(it => it.id === loan.itemId)) {
     const ghost = items.find(i => i.id === loan.itemId);
     if (ghost) itemSel.innerHTML = `<option value="${esc(ghost.id)}" selected>${esc(ghost.name)} — ${ghost.status}</option>` + itemSel.innerHTML;
@@ -1868,7 +1895,7 @@ async function saveEditLoan() {
   loan.note        = document.getElementById('el-note').value;
   loan.updatedAt   = Date.now();
 
-  // 若器材更換，修正舊器材狀態
+  // 若借用紀錄綁定的器材更換了，需連帶修正舊器材與新器材的「庫存狀態」
   if (oldItemId !== newItemId) {
     const oldItem = items.find(i => i.id === oldItemId);
     const newItem = items.find(i => i.id === newItemId);
@@ -1888,7 +1915,6 @@ async function saveEditLoan() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 編輯借出 modal 的固定金額顯示切換
   const elCostMode = document.getElementById('el-cost-mode');
   if (elCostMode) {
     elCostMode.addEventListener('change', function() {
