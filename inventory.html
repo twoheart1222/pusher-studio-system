@@ -176,6 +176,16 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 /* 折舊歸零標籤 */
 .depreciated-badge { font-size:9px; background:rgba(220,38,38,.1); color:#dc2626; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:600; vertical-align:middle; }
 
+/* LOAN EDIT MODAL - ADMIN BADGE */
+.loan-edit-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(217,119,6,.12); color: #d97706;
+  border: 1px solid rgba(217,119,6,.35); border-radius: 6px;
+  padding: 5px 12px; font-size: 11px; font-weight: 600;
+  margin-bottom: 4px;
+}
+.loan-edit-badge svg { flex-shrink: 0; }
+
 /* ===== RWD MOBILE ===== */
 @media(max-width:1200px){ 
   .kpi-row{grid-template-columns:repeat(3,1fr);} 
@@ -194,9 +204,11 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   .toolbar { position: static; } 
 }
 
-  /* ── auth loading overlay ── */
-  #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
+/* ── auth loading overlay ── */
+#auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
+
+<script src="roles.js"></script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -211,10 +223,20 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   const auth = getAuth(app);
 
   onAuthStateChanged(auth, (user) => {
-    if (!user) { window.location.href = 'login.html'; } else { var ov=document.getElementById('auth-overlay'); if(ov) ov.remove(); }
+    if (!user) { 
+      window.location.href = 'login.html'; 
+    } else { 
+      if (window.RoleGuard && typeof window.RoleGuard.guardPage === 'function') {
+        if (!window.RoleGuard.guardPage()) return;
+        window.RoleGuard.applyAll();
+      }
+      var ov=document.getElementById('auth-overlay'); 
+      if(ov) ov.remove(); 
+    }
   });
 
   window.logout = function() {
+    if (window.RoleGuard) window.RoleGuard.clearSession();
     signOut(auth).then(() => { window.location.href = 'login.html'; });
   };
 </script>
@@ -256,19 +278,22 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     <a href="cost.html" class="nav-tab">成本計算</a>
     <a href="inventory.html" class="nav-tab active">器材庫存</a>
     <a href="contacts.html" class="nav-tab">客戶與廠商管理</a>
+    <a href="admin-roles.html" class="nav-tab" data-role-section="admin-panel">帳號管理</a>
   </div>
   <div class="topbar-actions">
     <span style="font-size:10px;color:#78716c;display:flex;align-items:center;gap:5px;">
       <span class="sync-dot" id="sync-dot"></span>
       <span id="sync-text">連線中...</span>
     </span>
-    <button class="btn btn-green btn-sm" onclick="openScanner()">📷 掃描借還</button>
+    <button class="btn btn-green btn-sm" data-role-section="inventory-add" onclick="openScanner()">📷 掃描借還</button>
     <button class="btn btn-ghost btn-sm" onclick="openQRManager()">🖨️ QR 管理</button>
     <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
-    <button class="btn btn-ghost btn-sm" onclick="openExcelImport()">📥 匯入</button>
-    <button class="btn btn-ghost btn-sm" onclick="openLoanModal()">📤 借出</button>
-    <button class="btn btn-amber btn-sm" onclick="openItemModal()">＋ 新增</button>
+    <button class="btn btn-ghost btn-sm" data-role-section="inventory-add" onclick="openExcelImport()">📥 匯入</button>
+    <button class="btn btn-ghost btn-sm" data-role-section="inventory-add" onclick="openLoanModal()">📤 借出</button>
+    <button class="btn btn-amber btn-sm" data-role-section="inventory-add" onclick="openItemModal()">＋ 新增</button>
     <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
+    <span style="font-size:11px;color:#a8a29e;" id="user-display-name"></span>
+    <span class="role-badge-pill" id="role-badge" style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(180,83,9,.2);color:#d97706;border:1px solid rgba(180,83,9,.4);"></span>
     <button class="btn btn-ghost btn-sm" style="color: #fca5a5; border-color: rgba(220,38,38,0.3);" onclick="logout()">登出</button>
   </div>
 </div>
@@ -333,7 +358,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     <div class="panel">
       <div class="panel-header">
         <span class="panel-title">借出紀錄</span>
-        <button class="btn btn-ghost-dark btn-xs" onclick="openLoanModal()">＋ 新增借出</button>
+        <button class="btn btn-ghost-dark btn-xs" data-role-section="inventory-add" onclick="openLoanModal()">＋ 新增借出</button>
       </div>
       <div class="loan-wrap">
         <div class="loan-inner">
@@ -560,6 +585,78 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     <div class="modal-footer">
       <button class="btn btn-ghost-dark" onclick="closeLoanModal()">取消</button>
       <button class="btn btn-amber" onclick="saveLoan()">確認借出</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="edit-loan-overlay" onclick="closeEditLoanIfBg(event)">
+  <div class="modal">
+    <div class="modal-header" style="background:#292524;border-bottom:2px solid #d97706;">
+      <span class="modal-title" style="display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" fill="none" stroke="#d97706" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        編輯借出紀錄
+      </span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeEditLoanModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="loan-edit-badge">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        管理員權限 · 借出紀錄修改
+      </div>
+      <input type="hidden" id="el-loan-id">
+      <div class="field">
+        <label>器材</label>
+        <select id="el-item-id"></select>
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>借用數量</label>
+          <input type="number" id="el-qty" value="1" min="1">
+        </div>
+        <div class="field">
+          <label>借用人 *</label>
+          <input type="text" id="el-borrower" placeholder="姓名">
+        </div>
+      </div>
+      <div class="field-row col2">
+        <div class="field">
+          <label>借出日期</label>
+          <input type="date" id="el-out-date">
+        </div>
+        <div class="field">
+          <label>預計歸還日</label>
+          <input type="date" id="el-return-date">
+        </div>
+      </div>
+      <div class="field">
+        <label>連結專案（選填）</label>
+        <select id="el-proj-id">
+          <option value="">— 不連結 —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>連動成本計算</label>
+        <select id="el-cost-mode">
+          <option value="none">不計費</option>
+          <option value="auto">依日租金自動計算（天數 × 租金）</option>
+          <option value="fixed">固定金額</option>
+        </select>
+      </div>
+      <div class="field" id="el-fixed-amount-field" style="display:none;">
+        <label>固定金額（NT$）</label>
+        <input type="number" id="el-fixed-amount" placeholder="0" min="0">
+      </div>
+      <div class="field">
+        <label>備註</label>
+        <input type="text" id="el-note" placeholder="選填">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="closeEditLoanModal()">取消</button>
+      <button class="btn btn-amber" onclick="saveEditLoan()" style="background:#d97706;">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        更新借出紀錄
+      </button>
     </div>
   </div>
 </div>
@@ -998,6 +1095,23 @@ function getFiltered() {
 }
 
 /* =============================================
+   ADMIN FAIL-SAFE (確保最高權限絕不被隱藏)
+   ============================================= */
+function applyAdminFailSafe() {
+  if (window.RoleGuard && typeof window.RoleGuard.getRole === 'function') {
+    if (window.RoleGuard.getRole() === 'admin') {
+      document.querySelectorAll('[data-role-section]').forEach(el => {
+        el.style.display = '';
+      });
+      document.querySelectorAll('.btn').forEach(btn => {
+        btn.style.pointerEvents = '';
+        btn.style.opacity = '1';
+      });
+    }
+  }
+}
+
+/* =============================================
    RENDER ALL
    ============================================= */
 function renderAll() {
@@ -1006,6 +1120,13 @@ function renderAll() {
   renderLoans();
   renderRentalStats();
   initRentalYearSelect();
+  
+  // 重新套用區塊權限
+  if (window.RoleGuard && typeof window.RoleGuard.applySection === 'function') {
+    window.RoleGuard.applySection();
+  }
+  // 觸發管理員強制展開保護
+  applyAdminFailSafe();
 }
 
 /* =============================================
@@ -1106,7 +1227,7 @@ function renderTable() {
     
     const quickSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(it.name + ' 租金 攝影')}`;
     
-    // ★ 在畫面上動態計算出現在的折舊殘值，並加入 0 元折足標記
+    // ★ 動態計算出現在的折舊殘值，並加入 0 元折足標記
     const curVal = calculateCurValue(it.buyPrice, it.buyDate);
     let curValHtml = '—';
     if (parseFloat(it.buyPrice) > 0) {
@@ -1117,6 +1238,7 @@ function renderTable() {
       }
     }
 
+    // 嚴格對應標題順序: 名稱(1) > 類別(2) > 狀態(3) > 數量(4) > 可用(5) > 購入價(6) > 折損後現值(7) > 日租金(8) > 購入日期(9) > 操作(10)
     return `<tr>
       <td>
         <div class="item-name">${it.name}</div>
@@ -1140,9 +1262,9 @@ function renderTable() {
       <td>
         <div class="td-actions">
           <button class="btn btn-ghost-dark btn-xs" onclick="openQRCode('${it.id}','${it.name.replace(/'/g, "\\'")}')" title="產生 QR Code">🔲 QR</button>
-          <button class="btn btn-blue btn-xs" onclick="openLoanModal('${it.id}')">借出</button>
-          <button class="btn btn-ghost-dark btn-xs" onclick="openItemModal('${it.id}')">編</button>
-          <button class="btn btn-red btn-xs" onclick="deleteItem('${it.id}')">刪</button>
+          <button class="btn btn-blue btn-xs" data-role-section="inventory-add" onclick="openLoanModal('${it.id}')">借出</button>
+          <button class="btn btn-ghost-dark btn-xs" data-role-section="inventory-edit" onclick="openItemModal('${it.id}')">編</button>
+          <button class="btn btn-red btn-xs" data-role-section="inventory-delete" onclick="deleteItem('${it.id}')">刪</button>
         </div>
       </td>
     </tr>`;
@@ -1176,8 +1298,15 @@ function renderLoans() {
       <div data-label="預計歸還" style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'} ${overdue?'<span class="overdue-tag">逾期</span>':''}</div>
       <div data-label="專案" style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
       <div style="display:flex;gap:4px;justify-content:flex-end;">
-        <button class="btn btn-green btn-xs" onclick="returnLoan('${l.id}')">歸還</button>
-        <button class="btn btn-red btn-xs" onclick="deleteLoan('${l.id}')">刪</button>
+        <button class="btn btn-green btn-xs" data-role-section="inventory-edit" onclick="returnLoan('${l.id}')">歸還</button>
+        <button class="btn btn-xs" data-role-section="inventory-delete, admin-panel"
+          onclick="openEditLoanModal('${l.id}')"
+          style="background:rgba(217,119,6,.15);color:#d97706;border:1px solid rgba(217,119,6,.4);"
+          title="編輯此借出紀錄">
+          <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:inline;vertical-align:-1px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          編輯
+        </button>
+        <button class="btn btn-red btn-xs" data-role-section="inventory-delete" onclick="deleteLoan('${l.id}')">刪</button>
       </div>
     </div>`;
   }).join('');
@@ -1604,6 +1733,104 @@ async function deleteLoan(id) {
 }
 
 /* =============================================
+   EDIT LOAN (新增：編輯借出紀錄專用)
+   ============================================= */
+function openEditLoanModal(loanId) {
+  const loan = loans.find(l => l.id === loanId);
+  if (!loan) { showToast('找不到此借出紀錄', 'err'); return; }
+
+  document.getElementById('el-loan-id').value = loanId;
+
+  // 器材下拉：包含所有器材（含借出中），讓管理員可以自由切換綁定的器材
+  const itemSel = document.getElementById('el-item-id');
+  itemSel.innerHTML = items
+    .filter(it => it.status !== '報廢')
+    .map(it => `<option value="${esc(it.id)}" ${it.id === loan.itemId ? 'selected' : ''}>${esc(it.name)}${it.brand ? ' ('+esc(it.brand)+')' : ''} — ${it.status}</option>`)
+    .join('');
+  
+  // 若原始紀錄器材被報廢但仍存在，補入選項避免空值
+  if (!items.filter(it => it.status !== '報廢').find(it => it.id === loan.itemId)) {
+    const ghost = items.find(i => i.id === loan.itemId);
+    if (ghost) itemSel.innerHTML = `<option value="${esc(ghost.id)}" selected>${esc(ghost.name)} — ${ghost.status}</option>` + itemSel.innerHTML;
+  }
+  itemSel.value = loan.itemId;
+
+  document.getElementById('el-qty').value        = loan.qty || 1;
+  document.getElementById('el-borrower').value   = loan.borrower || '';
+  document.getElementById('el-out-date').value   = loan.outDate || '';
+  document.getElementById('el-return-date').value= loan.returnDate || '';
+
+  const psel = document.getElementById('el-proj-id');
+  psel.innerHTML = `<option value="">— 不連結 —</option>` +
+    projects.map(p => `<option value="${esc(p.id)}" ${p.id === loan.projId ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+  psel.value = loan.projId || '';
+
+  document.getElementById('el-cost-mode').value   = loan.costMode || 'none';
+  document.getElementById('el-fixed-amount').value= loan.fixedAmount || '';
+  document.getElementById('el-fixed-amount-field').style.display = loan.costMode === 'fixed' ? '' : 'none';
+  document.getElementById('el-note').value        = loan.note || '';
+
+  document.getElementById('edit-loan-overlay').classList.add('open');
+}
+
+function closeEditLoanModal() {
+  document.getElementById('edit-loan-overlay').classList.remove('open');
+}
+function closeEditLoanIfBg(e) {
+  if (e.target === document.getElementById('edit-loan-overlay')) closeEditLoanModal();
+}
+
+async function saveEditLoan() {
+  const loanId   = document.getElementById('el-loan-id').value;
+  const borrower = document.getElementById('el-borrower').value.trim();
+  if (!loanId || !borrower) { showToast('請填寫借用人', 'err'); return; }
+
+  const loan = loans.find(l => l.id === loanId);
+  if (!loan) { showToast('找不到借出紀錄', 'err'); return; }
+
+  const oldItemId = loan.itemId;
+  const newItemId = document.getElementById('el-item-id').value;
+
+  loan.itemId      = newItemId;
+  loan.borrower    = borrower;
+  loan.qty         = +document.getElementById('el-qty').value || 1;
+  loan.outDate     = document.getElementById('el-out-date').value;
+  loan.returnDate  = document.getElementById('el-return-date').value;
+  loan.projId      = document.getElementById('el-proj-id').value || '';
+  loan.costMode    = document.getElementById('el-cost-mode').value;
+  loan.fixedAmount = +document.getElementById('el-fixed-amount').value || 0;
+  loan.note        = document.getElementById('el-note').value;
+  loan.updatedAt   = Date.now();
+
+  // 若借用紀錄綁定的器材更換了，需連帶修正舊器材與新器材的「庫存狀態」
+  if (oldItemId !== newItemId) {
+    const oldItem = items.find(i => i.id === oldItemId);
+    const newItem = items.find(i => i.id === newItemId);
+    if (oldItem) {
+      const stillOut = loans.filter(l => l.itemId === oldItemId && !l.returned && l.id !== loanId).length;
+      if (!stillOut) { oldItem.status = '在庫'; await fbSet('inv_items', oldItem.id, oldItem); }
+    }
+    if (newItem && newItem.status === '在庫') {
+      newItem.status = '借出'; await fbSet('inv_items', newItem.id, newItem);
+    }
+  }
+
+  await fbSet('inv_loans', loanId, loan);
+  closeEditLoanModal();
+  showToast('✓ 借出紀錄已更新');
+  renderAll();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const elCostMode = document.getElementById('el-cost-mode');
+  if (elCostMode) {
+    elCostMode.addEventListener('change', function() {
+      document.getElementById('el-fixed-amount-field').style.display = this.value === 'fixed' ? '' : 'none';
+    });
+  }
+});
+
+/* =============================================
    REPAIR CRUD
    ============================================= */
 function openRepairModal(preItemId) {
@@ -1901,7 +2128,6 @@ body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeea
 </div>
 </div>
 
-<!-- 換行編輯彈窗 -->
 <div class="ne-ov" id="ne-ov" onclick="if(event.target===this)closeNE()">
   <div class="ne-box">
     <h3>✏️ 自訂標籤名稱換行</h3>
@@ -2263,18 +2489,15 @@ function downloadItemTemplate() {
   XLSX.writeFile(wb, '器材庫存範本.xlsx');
 }
 
-// ★ 確保 initData 在 DOM 準備好後被呼叫（若 Firebase module 已先完成，此處補觸發）
+// 確保 initData 在 DOM 準備好後被呼叫
 document.addEventListener('DOMContentLoaded', () => {
-  // 給 Firebase module script 最多 3 秒完成初始化，否則以離線模式啟動
   const startMs = Date.now();
   const tryInit = () => {
     if (window._fbReady !== undefined) {
-      // Firebase module 已回報結果，直接啟動
       if (typeof window.initData === 'function') window.initData();
     } else if (Date.now() - startMs < 3000) {
       setTimeout(tryInit, 80);
     } else {
-      // 逾時：離線模式
       if (typeof window.initData === 'function') window.initData();
     }
   };
