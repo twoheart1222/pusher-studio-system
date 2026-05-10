@@ -5,10 +5,10 @@
  * 與所有 HTML 頁面放在同一目錄。
  *
  * 內建職等：
- *   admin    超級管理員
- *   manager  部門主管
- *   staff    一般員工
- *   viewer   唯讀人員
+ * admin    超級管理員
+ * manager  部門主管
+ * staff    一般員工
+ * viewer   唯讀人員
  *
  * 新增職等：在 roleLabels / pageAccess / sectionAccess 各自加一行即可。
  * ==========================================
@@ -28,7 +28,8 @@ window.ROLES_CONFIG = {
    * 不在清單內 → 直接訪問被踢回第一個允許頁面
    */
   pageAccess: {
-    admin:   ['index', 'project', 'cost', 'inventory', 'contacts', 'admin-roles'],
+    // 補上 'admin' 頁面權限
+    admin:   ['index', 'project', 'cost', 'inventory', 'contacts', 'admin', 'admin-roles'],
     manager: ['index', 'project', 'cost', 'inventory', 'contacts'],
     staff:   ['index', 'project', 'inventory'],
     viewer:  ['index', 'project'],
@@ -53,7 +54,7 @@ window.ROLES_CONFIG = {
 
     'inventory-add':     ['admin', 'manager', 'staff'],
     'inventory-edit':    ['admin', 'manager', 'staff'],
-    'inventory-delete':  ['admin'],
+    'inventory-delete':  ['admin'], // 用於限定只有 admin 可以刪除或進行敏感借出修改
 
     'contacts-view':     ['admin', 'manager'],
     'contacts-edit':     ['admin', 'manager'],
@@ -123,8 +124,23 @@ window.RoleGuard = (function () {
   function applySection() {
     var role = getRole();
     document.querySelectorAll('[data-role-section]').forEach(function(el){
-      var allowed = el.dataset.roleSection.split(',').map(function(s){ return s.trim(); });
-      el.style.display = (allowed.indexOf(role) !== -1) ? '' : 'none';
+      var keys = el.dataset.roleSection.split(',').map(function(s){ return s.trim(); });
+      var isAllowed = false;
+      
+      keys.forEach(function(key) {
+        // 1. 去 ROLES_CONFIG.sectionAccess 查表
+        if (ROLES_CONFIG.sectionAccess[key]) {
+          if (ROLES_CONFIG.sectionAccess[key].indexOf(role) !== -1) {
+            isAllowed = true;
+          }
+        } 
+        // 2. 兼容舊寫法，如果直接寫 'admin'
+        else if (key === role) {
+          isAllowed = true;
+        }
+      });
+
+      el.style.display = isAllowed ? '' : 'none';
     });
   }
 
@@ -132,17 +148,14 @@ window.RoleGuard = (function () {
     var role = getRole();
     if (ROLES_CONFIG.readonlyRoles.indexOf(role) === -1) return;
     document.querySelectorAll('input, textarea, select, [data-action]').forEach(function(el){
-      // topbar / toolbar 內的元素（搜尋列等）不鎖定
       if (el.closest('.topbar') || el.closest('.toolbar')) return;
       el.disabled = true;
       el.style.pointerEvents = 'none';
       el.title = '您的職等為唯讀，無法編輯';
     });
     document.querySelectorAll('.btn').forEach(function(b){
-      // 登出按鈕永遠保持可用
       var oc = b.getAttribute('onclick') || '';
       if (oc.indexOf('logout') !== -1) return;
-      // topbar-actions 內的按鈕（含登出）也保持可用
       if (b.closest('.topbar-actions') || b.closest('.topbar')) return;
       b.style.opacity = '0.4';
       b.style.pointerEvents = 'none';
