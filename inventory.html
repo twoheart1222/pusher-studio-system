@@ -198,9 +198,6 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
 
-<!-- 職等權限設定 -->
-<script src="roles.js"></script>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -214,20 +211,10 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   const auth = getAuth(app);
 
   onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      window.location.href = 'login.html';
-    } else {
-      // 職等頁面守衛
-      if (!window.RoleGuard.guardPage()) return;
-      // 套用導覽列、區塊權限、唯讀模式
-      window.RoleGuard.applyAll();
-      var ov = document.getElementById('auth-overlay');
-      if (ov) ov.remove();
-    }
+    if (!user) { window.location.href = 'login.html'; } else { var ov=document.getElementById('auth-overlay'); if(ov) ov.remove(); }
   });
 
   window.logout = function() {
-    window.RoleGuard.clearSession();
     signOut(auth).then(() => { window.location.href = 'login.html'; });
   };
 </script>
@@ -275,15 +262,13 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       <span class="sync-dot" id="sync-dot"></span>
       <span id="sync-text">連線中...</span>
     </span>
-    <button class="btn btn-green btn-sm" data-role-section="inventory-add" onclick="openScanner()">📷 掃描借還</button>
+    <button class="btn btn-green btn-sm" onclick="openScanner()">📷 掃描借還</button>
     <button class="btn btn-ghost btn-sm" onclick="openQRManager()">🖨️ QR 管理</button>
     <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
-    <button class="btn btn-ghost btn-sm" data-role-section="inventory-add" onclick="openExcelImport()">📥 匯入</button>
-    <button class="btn btn-ghost btn-sm" data-role-section="inventory-add" onclick="openLoanModal()">📤 借出</button>
-    <button class="btn btn-amber btn-sm" data-role-section="inventory-add" onclick="openItemModal()">＋ 新增</button>
+    <button class="btn btn-ghost btn-sm" onclick="openExcelImport()">📥 匯入</button>
+    <button class="btn btn-ghost btn-sm" onclick="openLoanModal()">📤 借出</button>
+    <button class="btn btn-amber btn-sm" onclick="openItemModal()">＋ 新增</button>
     <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
-    <span style="font-size:11px;color:#a8a29e;" id="user-display-name"></span>
-    <span class="role-badge-pill" id="role-badge" style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(180,83,9,.2);color:#d97706;border:1px solid rgba(180,83,9,.4);"></span>
     <button class="btn btn-ghost btn-sm" style="color: #fca5a5; border-color: rgba(220,38,38,0.3);" onclick="logout()">登出</button>
   </div>
 </div>
@@ -1021,8 +1006,6 @@ function renderAll() {
   renderLoans();
   renderRentalStats();
   initRentalYearSelect();
-  // 重新套用區塊權限（動態產生的 DOM 需再跑一次）
-  if (window.RoleGuard) window.RoleGuard.applySection();
 }
 
 /* =============================================
@@ -1157,9 +1140,9 @@ function renderTable() {
       <td>
         <div class="td-actions">
           <button class="btn btn-ghost-dark btn-xs" onclick="openQRCode('${it.id}','${it.name.replace(/'/g, "\\'")}')" title="產生 QR Code">🔲 QR</button>
-          <button class="btn btn-blue btn-xs" data-role-section="inventory-add" onclick="openLoanModal('${it.id}')">借出</button>
-          <button class="btn btn-ghost-dark btn-xs" data-role-section="inventory-edit" onclick="openItemModal('${it.id}')">編</button>
-          <button class="btn btn-red btn-xs" data-role-section="inventory-delete" onclick="deleteItem('${it.id}')">刪</button>
+          <button class="btn btn-blue btn-xs" onclick="openLoanModal('${it.id}')">借出</button>
+          <button class="btn btn-ghost-dark btn-xs" onclick="openItemModal('${it.id}')">編</button>
+          <button class="btn btn-red btn-xs" onclick="deleteItem('${it.id}')">刪</button>
         </div>
       </td>
     </tr>`;
@@ -1169,29 +1152,6 @@ function renderTable() {
 /* =============================================
    LOAN LIST
    ============================================= */
-
-// 判斷目前登入者是否為最高管理員（level 1）
-function isTopAdmin() {
-  try {
-    // RoleGuard 將 role level 存在 sessionStorage 的 'userRole' 或 'roleLevel'
-    // 嘗試多種欄位名稱以相容不同版本的 roles.js
-    const level = parseInt(sessionStorage.getItem('roleLevel') || sessionStorage.getItem('userLevel') || '99');
-    if (!isNaN(level) && level === 1) return true;
-    // 備援：直接比對角色名稱
-    const role = (sessionStorage.getItem('userRole') || '').toLowerCase();
-    if (role === 'admin' || role === 'superadmin' || role === '管理員' || role === '最高管理員') return true;
-    // 備援：從 RoleGuard API 取得
-    if (window.RoleGuard && typeof window.RoleGuard.getLevel === 'function') {
-      return window.RoleGuard.getLevel() === 1;
-    }
-    if (window.RoleGuard && typeof window.RoleGuard.getRole === 'function') {
-      const r = (window.RoleGuard.getRole() || '').toLowerCase();
-      return r === 'admin' || r === 'superadmin' || r === '管理員' || r === '最高管理員';
-    }
-  } catch(e) {}
-  return false;
-}
-
 function renderLoans() {
   const active = loans.filter(l=>!l.returned).sort((a,b)=>(a.returnDate||'').localeCompare(b.returnDate||''));
   const wrap = document.getElementById('loan-list');
@@ -1200,15 +1160,10 @@ function renderLoans() {
     return;
   }
   const today = new Date().toISOString().slice(0,10);
-  const topAdmin = isTopAdmin();
   wrap.innerHTML = active.map(l => {
     const item = items.find(i=>i.id===l.itemId);
     const proj = projects.find(p=>p.id===l.projId);
     const overdue = l.returnDate && l.returnDate < today;
-    // 最高管理員才顯示「編」按鈕
-    const editBtn = topAdmin
-      ? `<button class="btn btn-ghost-dark btn-xs" onclick="openEditLoanModal('${l.id}')" title="編輯借出資料（最高管理員）">編</button>`
-      : '';
     return `<div class="loan-row">
       <div data-label="器材">
         <div>
@@ -1221,9 +1176,8 @@ function renderLoans() {
       <div data-label="預計歸還" style="font-size:11px;font-family:var(--font-mono);">${l.returnDate||'—'} ${overdue?'<span class="overdue-tag">逾期</span>':''}</div>
       <div data-label="專案" style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
       <div style="display:flex;gap:4px;justify-content:flex-end;">
-        <button class="btn btn-green btn-xs" data-role-section="inventory-edit" onclick="returnLoan('${l.id}')">歸還</button>
-        ${editBtn}
-        <button class="btn btn-red btn-xs" data-role-section="inventory-delete" onclick="deleteLoan('${l.id}')">刪</button>
+        <button class="btn btn-green btn-xs" onclick="returnLoan('${l.id}')">歸還</button>
+        <button class="btn btn-red btn-xs" onclick="deleteLoan('${l.id}')">刪</button>
       </div>
     </div>`;
   }).join('');
@@ -1543,14 +1497,7 @@ function openLoanModal(preItemId) {
   document.getElementById('loan-note').value = '';
   document.getElementById('loan-overlay').classList.add('open');
 }
-function closeLoanModal() {
-  document.getElementById('loan-overlay').classList.remove('open');
-  // 還原標題與儲存按鈕（編輯模式關閉後復原）
-  document.getElementById('loan-modal-title').textContent = '借出器材';
-  document.getElementById('loan-id').value = '';
-  const saveBtn = document.querySelector('#loan-overlay .modal-footer .btn-amber');
-  if (saveBtn) { saveBtn.textContent = '確認借出'; saveBtn.onclick = saveLoan; }
-}
+function closeLoanModal() { document.getElementById('loan-overlay').classList.remove('open'); }
 function closeLoanIfBg(e) { if(e.target===document.getElementById('loan-overlay')) closeLoanModal(); }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1654,106 +1601,6 @@ async function deleteLoan(id) {
     showToast('已刪除借出紀錄');
     renderAll();
   });
-}
-
-/* =============================================
-   LOAN EDIT (最高管理員專用)
-   ============================================= */
-function openEditLoanModal(loanId) {
-  if (!isTopAdmin()) { showToast('此功能僅限最高管理員使用', 'err'); return; }
-  const loan = loans.find(l => l.id === loanId);
-  if (!loan) { showToast('找不到此借出記錄', 'err'); return; }
-
-  // 重用借出 modal，切換成「編輯模式」
-  document.getElementById('loan-modal-title').textContent = '✏️ 編輯借出記錄（管理員）';
-  document.getElementById('loan-id').value = loanId;
-
-  // 器材 select：列出所有可借出器材，並強制選中當前器材（即使狀態是借出）
-  const sel = document.getElementById('loan-item-id');
-  const allBorrowable = items.filter(it => it.status !== '報廢');
-  sel.innerHTML = allBorrowable.map(it =>
-    `<option value="${esc(it.id)}" ${it.id === loan.itemId ? 'selected' : ''}>${esc(it.name)}${it.brand ? ' (' + esc(it.brand) + ')' : ''} — ${it.status}</option>`
-  ).join('');
-  // 若當前器材不在列表（已報廢），仍補入讓 select 有值
-  if (!allBorrowable.find(it => it.id === loan.itemId)) {
-    const ghost = items.find(i => i.id === loan.itemId);
-    if (ghost) sel.innerHTML = `<option value="${esc(ghost.id)}" selected>${esc(ghost.name)} — ${ghost.status}</option>` + sel.innerHTML;
-  }
-  sel.value = loan.itemId;
-
-  document.getElementById('loan-qty').value = loan.qty || 1;
-  document.getElementById('loan-borrower').value = loan.borrower || '';
-  document.getElementById('loan-out-date').value = loan.outDate || '';
-  document.getElementById('loan-return-date').value = loan.returnDate || '';
-
-  const psel = document.getElementById('loan-proj-id');
-  psel.innerHTML = `<option value="">— 不連結 —</option>` +
-    projects.map(p => `<option value="${esc(p.id)}" ${p.id === loan.projId ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
-  psel.value = loan.projId || '';
-
-  document.getElementById('loan-cost-mode').value = loan.costMode || 'none';
-  document.getElementById('loan-fixed-amount').value = loan.fixedAmount || '';
-  document.getElementById('loan-fixed-amount-field').style.display = loan.costMode === 'fixed' ? '' : 'none';
-  document.getElementById('loan-note').value = loan.note || '';
-
-  // 將儲存按鈕替換成「更新」行為
-  const saveBtn = document.querySelector('#loan-overlay .modal-footer .btn-amber');
-  if (saveBtn) {
-    saveBtn.textContent = '更新借出記錄';
-    saveBtn.onclick = saveEditLoan;
-  }
-
-  document.getElementById('loan-overlay').classList.add('open');
-}
-
-async function saveEditLoan() {
-  const loanId = document.getElementById('loan-id').value;
-  if (!loanId) { saveLoan(); return; } // 若 loan-id 為空，走新增流程
-
-  const loan = loans.find(l => l.id === loanId);
-  if (!loan) { showToast('找不到借出記錄', 'err'); return; }
-
-  const borrower = document.getElementById('loan-borrower').value.trim();
-  if (!borrower) { showToast('請填寫借用人', 'err'); return; }
-
-  const newItemId = document.getElementById('loan-item-id').value;
-  const oldItemId = loan.itemId;
-
-  // 更新 loan 物件
-  loan.itemId     = newItemId;
-  loan.borrower   = borrower;
-  loan.qty        = +document.getElementById('loan-qty').value || 1;
-  loan.outDate    = document.getElementById('loan-out-date').value;
-  loan.returnDate = document.getElementById('loan-return-date').value;
-  loan.projId     = document.getElementById('loan-proj-id').value || '';
-  loan.costMode   = document.getElementById('loan-cost-mode').value;
-  loan.fixedAmount= +document.getElementById('loan-fixed-amount').value || 0;
-  loan.note       = document.getElementById('loan-note').value;
-  loan.updatedAt  = Date.now();
-  loan.updatedBy  = 'admin';
-
-  // 若器材改變，更新舊器材狀態（若已無其他借出則歸還在庫）
-  if (oldItemId !== newItemId) {
-    const oldItem = items.find(i => i.id === oldItemId);
-    const newItem = items.find(i => i.id === newItemId);
-    if (oldItem) {
-      const stillOut = loans.filter(l => l.itemId === oldItemId && !l.returned && l.id !== loanId).length;
-      if (!stillOut) { oldItem.status = '在庫'; await fbSet('inv_items', oldItem.id, oldItem); }
-    }
-    if (newItem && newItem.status === '在庫') {
-      newItem.status = '借出'; await fbSet('inv_items', newItem.id, newItem);
-    }
-  }
-
-  await fbSet('inv_loans', loanId, loan);
-
-  // 還原儲存按鈕
-  const saveBtn = document.querySelector('#loan-overlay .modal-footer .btn-amber');
-  if (saveBtn) { saveBtn.textContent = '確認借出'; saveBtn.onclick = saveLoan; }
-
-  closeLoanModal();
-  showToast('✓ 借出記錄已更新');
-  renderAll();
 }
 
 /* =============================================
