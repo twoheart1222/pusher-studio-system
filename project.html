@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com; worker-src blob:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>專案進度 — 公司系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -187,6 +188,9 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 
 @media(max-width:1100px){ .kpi-row{grid-template-columns:repeat(2,1fr);} }
 @media(max-width:900px){ .proj-row-header,.list-col-header{grid-template-columns:14px 1fr 90px 100px;} .col-assignee,.col-cost,.col-actions{display:none;} }
+
+  /* ── auth loading overlay ── */
+  #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
 
 <script type="module">
@@ -203,8 +207,8 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 
   onAuthStateChanged(auth, (user) => {
     if (!user) {
-      window.location.href = 'login.html'; 
-    }
+      window.location.href = 'login.html';
+    } else { var ov=document.getElementById('auth-overlay'); if(ov) ov.remove(); }
   });
 
   window.logout = function() {
@@ -213,6 +217,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 </script>
 </head>
 <body>
+<div id="auth-overlay">驗證中…</div>
 
 <div class="topbar">
   <div class="topbar-brand"><div class="brand-dot"></div>公司管理系統</div>
@@ -539,6 +544,11 @@ initData();
 </script>
 
 <script>
+
+/* ── Security utils ── */
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function safeNum(v,d){d=d||0;var n=parseFloat(v);return isFinite(n)?n:d;}
+function safeDate(s){var t=String(s||'').trim();return /^\d{4}(-\d{2}(-\d{2})?)?$/.test(t)?t:'';}
 /* =============================================
    STATE
    ============================================= */
@@ -1131,7 +1141,7 @@ function toggleProj(id) {
 function populateProjSelect(currentProjId) {
   const sel = document.getElementById('task-proj-id');
   if(!sel) return;
-  sel.innerHTML = projects.map(p => `<option value="${p.id}" ${p.id===currentProjId?'selected':''}>${p.name}</option>`).join('');
+  sel.innerHTML = projects.map(p => `<option value="${esc(p.id)}" ${p.id===currentProjId?'selected':''}>${esc(p.name)}</option>`).join('');
 }
 
 function openTaskModal(projId, taskId) {

@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com; worker-src blob:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>器材庫存 — 公司系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -192,6 +193,9 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   .panel-header { flex-direction: column; align-items: flex-start; }
   .toolbar { position: static; } 
 }
+
+  /* ── auth loading overlay ── */
+  #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
 
 <script type="module">
@@ -207,7 +211,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   const auth = getAuth(app);
 
   onAuthStateChanged(auth, (user) => {
-    if (!user) window.location.href = 'login.html';
+    if (!user) { window.location.href = 'login.html'; } else { var ov=document.getElementById('auth-overlay'); if(ov) ov.remove(); }
   });
 
   window.logout = function() {
@@ -240,6 +244,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 
 </head>
 <body>
+<div id="auth-overlay">驗證中…</div>
 
 <div class="loading-bar" id="loading-bar"></div>
 
@@ -710,6 +715,11 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 </div>
 
 <script>
+
+/* ── Security utils ── */
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function safeNum(v,d){d=d||0;var n=parseFloat(v);return isFinite(n)?n:d;}
+function safeDate(s){var t=String(s||'').trim();return /^\d{4}(-\d{2}(-\d{2})?)?$/.test(t)?t:'';}
 /* =============================================
    STATE
    ============================================= */
@@ -835,11 +845,11 @@ function saveLocal() {
   localStorage.setItem('cost_items',  JSON.stringify(costItems));
 }
 function loadLocal() {
-  items    = JSON.parse(localStorage.getItem('inv_items')   || '[]');
+  try { items    =JSON.parse(localStorage.getItem('inv_items') || '[]'); } catch(e) { items = []; console.warn('[security] inv_items storage corrupted, reset'); localStorage.removeItem('inv_items'); }
   loans    = JSON.parse(localStorage.getItem('inv_loans')   || '[]');
   repairs  = JSON.parse(localStorage.getItem('inv_repairs') || '[]');
   projects = JSON.parse(localStorage.getItem('cost_projects') || '[]');
-  costItems= JSON.parse(localStorage.getItem('cost_items')  || '[]');
+  try { costItems=JSON.parse(localStorage.getItem('cost_items') || '[]'); } catch(e) { costItems = []; console.warn('[security] cost_items storage corrupted, reset'); localStorage.removeItem('cost_items'); }
 }
 
 function setSyncStatus(state, text) {
@@ -1466,7 +1476,7 @@ function openLoanModal(preItemId) {
     }
   }
 
-  sel.innerHTML = loanableItems.map(it => `<option value="${it.id}" ${it.id===preItemId?'selected':''}>${it.name}${it.brand?' ('+it.brand+')':''} — ${it.status}</option>`).join('');
+  sel.innerHTML = loanableItems.map(it => `<option value="${esc(it.id)}" ${it.id===preItemId?'selected':''}>${esc(it.name)}${it.brand?' ('+ esc(it.brand) +')':''} — ${it.status}</option>`).join('');
   if(!loanableItems.length) {
     showToast('目前沒有可借出的器材（維修中／報廢器材不可借出）', 'err');
     return;
@@ -1474,7 +1484,7 @@ function openLoanModal(preItemId) {
   if(preItemId) sel.value = preItemId;
   
   const psel = document.getElementById('loan-proj-id');
-  psel.innerHTML = `<option value="">— 不連結 —</option>` + projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  psel.innerHTML = `<option value="">— 不連結 —</option>` + projects.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
   
   const today = new Date().toISOString().slice(0,10);
   document.getElementById('loan-out-date').value = today;
@@ -1598,7 +1608,7 @@ async function deleteLoan(id) {
    ============================================= */
 function openRepairModal(preItemId) {
   const sel = document.getElementById('repair-item-id');
-  sel.innerHTML = items.map(it=>`<option value="${it.id}" ${it.id===preItemId?'selected':''}>${it.name}</option>`).join('');
+  sel.innerHTML = items.map(it=>`<option value="${esc(it.id)}" ${it.id===preItemId?'selected':''}>${esc(it.name)}</option>`).join('');
   document.getElementById('repair-date').value = new Date().toISOString().slice(0,10);
   document.getElementById('repair-type').value = '維修';
   document.getElementById('repair-vendor').value = '';

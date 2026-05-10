@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com; worker-src blob:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>報價單產生器</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=DM+Serif+Display&family=Playfair+Display:wght@400;600;700&family=Lora:wght@400;500;600&family=Source+Serif+4:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Spectral:wght@300;400;600&family=Crimson+Pro:wght@300;400;600&display=swap" rel="stylesheet">
@@ -507,6 +508,9 @@ input[type="date"] { cursor: pointer; }
 .ppb-val { font-family:monospace; color:#e7e5e4; }
 .ppb-close { background:none; border:none; color:#57534e; cursor:pointer; font-size:15px; padding:0 2px; line-height:1; margin-left:2px; }
 .ppb-close:hover { color:#fca5a5; }
+
+  /* ── auth loading overlay ── */
+  #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
 
 <!-- 加入登入防護腳本 -->
@@ -523,7 +527,7 @@ input[type="date"] { cursor: pointer; }
   const auth = getAuth(app);
 
   onAuthStateChanged(auth, (user) => {
-    if (!user) window.location.href = 'login.html';
+    if (!user) { window.location.href = 'login.html'; } else { var ov=document.getElementById('auth-overlay'); if(ov) ov.remove(); }
   });
 
   window.logout = function() {
@@ -532,6 +536,7 @@ input[type="date"] { cursor: pointer; }
 </script>
 </head>
 <body>
+<div id="auth-overlay">驗證中…</div>
 
 <!-- TOP BAR -->
 <header class="topbar">

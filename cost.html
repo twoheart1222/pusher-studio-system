@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com; worker-src blob:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>成本計算 — 公司系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=Noto+Serif+TC:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -318,6 +319,9 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--ink); 
 
 @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 900px) { .content-grid { grid-template-columns: 1fr; } .charts-row { grid-template-columns: 1fr; } }
+
+  /* ── auth loading overlay ── */
+  #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
 
 <script type="module">
@@ -333,7 +337,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--ink); 
   const auth = getAuth(app);
 
   onAuthStateChanged(auth, (user) => {
-    if (!user) window.location.href = 'login.html';
+    if (!user) { window.location.href = 'login.html'; } else { var ov=document.getElementById('auth-overlay'); if(ov) ov.remove(); }
   });
 
   window.logout = function() {
@@ -342,6 +346,7 @@ body { font-family: var(--font-body); background: var(--bg); color: var(--ink); 
 </script>
 </head>
 <body>
+<div id="auth-overlay">驗證中…</div>
 
 <div class="loading-bar" id="loading-bar"></div>
 
@@ -661,6 +666,11 @@ initData();
 </script>
 
 <script>
+
+/* ── Security utils ── */
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function safeNum(v,d){d=d||0;var n=parseFloat(v);return isFinite(n)?n:d;}
+function safeDate(s){var t=String(s||'').trim();return /^\d{4}(-\d{2}(-\d{2})?)?$/.test(t)?t:'';}
 /* =============================================
    STATE
    ============================================= */

@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://*.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com; worker-src blob:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>登入 — 公司管理系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -24,9 +25,13 @@
   #msg-box { font-size: 12px; text-align: center; margin-top: 14px; display: none; padding: 8px; border-radius: 6px; }
   .msg-err { color: #fca5a5; background: rgba(220,38,38,.1); border: 1px solid rgba(220,38,38,.2); }
   .msg-ok { color: #34d399; background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.2); }
+
+  /* 登入遮罩（防止未驗證時閃爍） */
+  #auth-overlay { position:fixed;inset:0;background:#eeeae4;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans TC',sans-serif;font-size:13px;color:#78716c; }
 </style>
 </head>
 <body>
+<div id="auth-overlay">驗證中…</div>
   <div class="login-box">
     <h2>管理系統登入</h2>
     <div class="field">
@@ -46,10 +51,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    // ★ 這裡多引入了 sendPasswordResetEmail
-    import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    // 你的專屬 Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
       authDomain: "company-system-6ea1a.firebaseapp.com",
@@ -58,11 +61,43 @@
       messagingSenderId: "865462311535",
       appId: "1:865462311535:web:033e059bc0e86fa902cb9a"
     };
-    
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-
     const msgBox = document.getElementById('msg-box');
+
+    // ── 已登入則直接跳轉，並移除遮罩 ──────────────
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = 'index.html';
+      } else {
+        document.getElementById('auth-overlay').remove();
+      }
+    });
+
+    // ── 速率限制：5 次錯誤後鎖定 30 秒 ──────────
+    const RATE_KEY = '_loginAttempts';
+    const MAX_ATT  = 5;
+    const LOCK_MS  = 30 * 1000;
+
+    function getRateData() {
+      try { return JSON.parse(sessionStorage.getItem(RATE_KEY) || '{"count":0,"lockUntil":0}'); }
+      catch { return { count: 0, lockUntil: 0 }; }
+    }
+    function setRateData(d) { sessionStorage.setItem(RATE_KEY, JSON.stringify(d)); }
+    function isLocked() {
+      const d = getRateData();
+      if (d.lockUntil && Date.now() < d.lockUntil) return d.lockUntil;
+      if (d.lockUntil && Date.now() >= d.lockUntil) { setRateData({ count: 0, lockUntil: 0 }); }
+      return false;
+    }
+    function recordFail() {
+      const d = getRateData();
+      d.count++;
+      if (d.count >= MAX_ATT) { d.lockUntil = Date.now() + LOCK_MS; d.count = 0; }
+      setRateData(d);
+    }
+    function recordSuccess() { setRateData({ count: 0, lockUntil: 0 }); }
 
     function showMsg(text, isSuccess = false) {
       msgBox.textContent = text;
@@ -70,48 +105,54 @@
       msgBox.style.display = 'block';
     }
 
-    // 登入功能
+    // ── 登入 ──────────────────────────────────────
     window.doLogin = function() {
-      const e = document.getElementById('email').value;
-      const p = document.getElementById('pwd').value;
-      
-      if (!e || !p) {
-        showMsg('請輸入帳號與密碼');
+      const lockUntil = isLocked();
+      if (lockUntil) {
+        const sec = Math.ceil((lockUntil - Date.now()) / 1000);
+        showMsg(\`登入失敗次數過多，請等待 \${sec} 秒後再試。\`);
         return;
       }
+
+      const e = document.getElementById('email').value.trim();
+      const p = document.getElementById('pwd').value;
+      if (!e || !p) { showMsg('請輸入帳號與密碼'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { showMsg('請輸入有效的 Email 格式'); return; }
+
+      const btn = document.querySelector('.btn-login');
+      btn.disabled = true;
+      btn.textContent = '登入中…';
 
       signInWithEmailAndPassword(auth, e, p)
-        .then(() => {
-          window.location.href = 'index.html'; 
-        })
-        .catch((error) => {
-          showMsg('帳號或密碼錯誤');
-        });
-    }
-
-    // ★ 忘記密碼功能
-    window.resetPwd = function() {
-      const e = document.getElementById('email').value;
-      
-      // 檢查是否已輸入 Email
-      if (!e) {
-        showMsg('💡 請先在上方輸入您的 Email，再點擊忘記密碼。');
-        return;
-      }
-
-      // 呼叫 Firebase 發送重設信
-      sendPasswordResetEmail(auth, e)
-        .then(() => {
-          showMsg('✉️ 密碼重設信已發送！請去信箱收信（若沒看到請檢查垃圾信件匣）。', true);
-        })
-        .catch((error) => {
-          if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
-            showMsg('找不到此 Email，請確認是否輸入正確。');
+        .then(() => { recordSuccess(); window.location.href = 'index.html'; })
+        .catch(() => {
+          recordFail();
+          const d = getRateData();
+          const remain = MAX_ATT - d.count;
+          const lockUntilNow = isLocked();
+          if (lockUntilNow) {
+            showMsg(\`帳號或密碼錯誤，已達上限，請等待 30 秒。\`);
           } else {
-            showMsg('發送失敗，請稍後再試。');
+            showMsg(\`帳號或密碼錯誤（還剩 \${remain} 次機會）\`);
           }
+          btn.disabled = false;
+          btn.textContent = '登入';
         });
-    }
+    };
+
+    // ── 忘記密碼 ──────────────────────────────────
+    window.resetPwd = function() {
+      const e = document.getElementById('email').value.trim();
+      if (!e) { showMsg('💡 請先在上方輸入您的 Email，再點擊忘記密碼。'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { showMsg('請輸入有效的 Email 格式'); return; }
+
+      sendPasswordResetEmail(auth, e)
+        .then(() => { showMsg('✉️ 密碼重設信已發送！請檢查信箱（含垃圾信件匣）。', true); })
+        .catch((error) => {
+          // 不透露帳號是否存在（防帳號枚舉）
+          showMsg('若此 Email 已註冊，重設信將在幾分鐘內送達。', true);
+        });
+    };
   </script>
 </body>
 </html>
