@@ -208,7 +208,6 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
 
-<!-- 職等權限設定 -->
 <script src="roles.js"></script>
 
 <script type="module">
@@ -812,7 +811,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   </div>
 </div>
 
-
+<script>
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function safeNum(v,d){d=d||0;var n=parseFloat(v);return isFinite(n)?n:d;}
 function safeDate(s){var t=String(s||'').trim();return /^\d{4}(-\d{2}(-\d{2})?)?$/.test(t)?t:'';}
@@ -2104,7 +2103,6 @@ body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#eeea
 </div>
 </div>
 
-<!-- 換行編輯彈窗 -->
 <div class="ne-ov" id="ne-ov" onclick="if(event.target===this)closeNE()">
   <div class="ne-box">
     <h3>✏️ 自訂標籤名稱換行</h3>
