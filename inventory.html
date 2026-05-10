@@ -278,6 +278,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     <a href="cost.html" class="nav-tab">成本計算</a>
     <a href="inventory.html" class="nav-tab active">器材庫存</a>
     <a href="contacts.html" class="nav-tab">客戶與廠商管理</a>
+    <a href="admin.html" class="nav-tab" data-role-section="admin-only">管理頁面</a>
     <a href="admin-roles.html" class="nav-tab" data-role-section="admin-only">帳號管理</a>
   </div>
   <div class="topbar-actions">
@@ -1102,7 +1103,14 @@ function renderAll() {
   renderRentalStats();
   initRentalYearSelect();
   // 重新套用區塊權限（動態產生的 DOM 需再跑一次）
-  if (window.RoleGuard) window.RoleGuard.applySection();
+  // ★ 修復：加入 typeof 防護，避免 roles.js 無法對應報錯
+  if (window.RoleGuard) {
+    if (typeof window.RoleGuard.applySection === 'function') {
+      window.RoleGuard.applySection();
+    } else if (typeof window.RoleGuard.applyAll === 'function') {
+      window.RoleGuard.applyAll();
+    }
+  }
 }
 
 /* =============================================
@@ -1238,8 +1246,8 @@ function renderTable() {
         <div class="td-actions">
           <button class="btn btn-ghost-dark btn-xs" onclick="openQRCode('${it.id}','${it.name.replace(/'/g, "\\'")}')" title="產生 QR Code">🔲 QR</button>
           <button class="btn btn-blue btn-xs" data-role-section="inventory-add" onclick="openLoanModal('${it.id}')">借出</button>
-          <button class="btn btn-ghost-dark btn-xs" data-role-section="inventory-edit" onclick="openItemModal('${it.id}')">編</button>
-          <button class="btn btn-red btn-xs" data-role-section="inventory-delete" onclick="deleteItem('${it.id}')">刪</button>
+          <button class="btn btn-ghost-dark btn-xs" onclick="openItemModal('${it.id}')">編</button>
+          <button class="btn btn-red btn-xs" onclick="deleteItem('${it.id}')">刪</button>
         </div>
       </td>
     </tr>`;
@@ -1274,14 +1282,14 @@ function renderLoans() {
       <div data-label="專案" style="font-size:11px;color:var(--ink3);">${proj?proj.name:'—'}</div>
       <div style="display:flex;gap:4px;justify-content:flex-end;">
         <button class="btn btn-green btn-xs" data-role-section="inventory-edit" onclick="returnLoan('${l.id}')">歸還</button>
-        <button class="btn btn-xs" data-role-section="inventory-edit"
+        <button class="btn btn-xs" data-role-section="admin-only"
           onclick="openEditLoanModal('${l.id}')"
           style="background:rgba(217,119,6,.15);color:#d97706;border:1px solid rgba(217,119,6,.4);"
           title="編輯此借出紀錄">
           <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:inline;vertical-align:-1px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
           編輯
         </button>
-        <button class="btn btn-red btn-xs" data-role-section="inventory-delete" onclick="deleteLoan('${l.id}')">刪</button>
+        <button class="btn btn-red btn-xs" data-role-section="admin-only" onclick="deleteLoan('${l.id}')">刪</button>
       </div>
     </div>`;
   }).join('');
