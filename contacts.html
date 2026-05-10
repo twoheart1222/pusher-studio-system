@@ -451,8 +451,14 @@ window._fbCollection = collection;
 window._fbGetDocs = getDocs;
 window._fbReady = true;
 
-// 觸發載入
-if (window.onFbReady) window.onFbReady();
+// 等待 onFbReady 定義完成後才呼叫（避免 module 執行順序競爭）
+(function waitReady(ms) {
+  if (typeof window.onFbReady === 'function') {
+    window.onFbReady();
+  } else if (ms < 5000) {
+    setTimeout(function(){ waitReady(ms + 50); }, 50);
+  }
+})(0);
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -994,6 +1000,10 @@ function downloadTemplate() {
 
 window.onload = () => {
   initYearSelect();
+  // 如果 Firebase module 比 onload 先完成但 onFbReady 當時還沒定義，在這裡補觸發
+  if (window._fbReady && clientDB.length === 0) {
+    window.onFbReady();
+  }
 };
 </script>
 </body>
