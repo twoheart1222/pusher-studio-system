@@ -92,10 +92,14 @@
     const ROLES_CONFIG = window.ROLES_CONFIG;
     const RoleGuard    = window.RoleGuard;
 
-    // 若已登入 → 讀取職等再跳頁
+    // 若已登入 → 重新從 Firestore 讀取職等再跳頁（確保拿到最新權限）
     onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // 先清除舊 session，避免拿到過期的職等
+        RoleGuard.clearSession();
         const role = await fetchRole(user.uid, user.email);
+        const displayName = user.displayName || user.email.split('@')[0];
+        RoleGuard.setSession(user.uid, role, displayName);
         const allowed = ROLES_CONFIG.pageAccess[role] || [];
         const dest = (allowed.length ? allowed[0] : 'index') + '.html';
         window.location.href = dest;
