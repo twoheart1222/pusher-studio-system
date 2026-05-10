@@ -162,6 +162,9 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
 
+<!-- 職等權限設定 -->
+<script src="roles.js"></script>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -175,10 +178,20 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   const auth = getAuth(app);
 
   onAuthStateChanged(auth, (user) => {
-    if (!user) { window.location.href = 'login.html'; } else { var ov=document.getElementById('auth-overlay'); if(ov) ov.remove(); }
+    if (!user) {
+      window.location.href = 'login.html';
+    } else {
+      // 職等頁面守衛
+      if (!window.RoleGuard.guardPage()) return;
+      // 套用導覽列、區塊權限、唯讀模式
+      window.RoleGuard.applyAll();
+      var ov = document.getElementById('auth-overlay');
+      if (ov) ov.remove();
+    }
   });
 
   window.logout = function() {
+    window.RoleGuard.clearSession();
     signOut(auth).then(() => { window.location.href = 'login.html'; });
   };
 </script>
@@ -199,10 +212,12 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     <a href="contacts.html" class="nav-tab active">客戶與廠商管理</a>
   </div>
   <div class="topbar-actions">
-    <button class="btn btn-ghost" onclick="document.getElementById('import-modal').classList.add('open')">匯入 Excel</button>
-    <button class="btn btn-ghost" onclick="exportDB()">匯出 Excel</button>
-    <button class="btn btn-amber" onclick="openAddModal()">＋ 新增資料</button>
+    <button class="btn btn-ghost" data-role-section="contacts-view" onclick="document.getElementById('import-modal').classList.add('open')">匯入 Excel</button>
+    <button class="btn btn-ghost" data-role-section="contacts-view" onclick="exportDB()">匯出 Excel</button>
+    <button class="btn btn-amber" data-role-section="contacts-edit" onclick="openAddModal()">＋ 新增資料</button>
     <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
+    <span style="font-size:11px;color:#a8a29e;" id="user-display-name"></span>
+    <span class="role-badge-pill" id="role-badge" style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(180,83,9,.2);color:#d97706;border:1px solid rgba(180,83,9,.4);"></span>
     <button class="btn btn-ghost" style="color: #fca5a5; border-color: rgba(220,38,38,0.3); padding: 4px 10px;" onclick="logout()">登出</button>
   </div>
 </header>
@@ -300,9 +315,9 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
             <div id="d-contact-selector-wrap" style="margin-top:6px;"></div>
           </div>
           <div style="display:flex;gap:6px; align-items:flex-start;">
-            <button class="btn btn-ghost-dark btn-sm" onclick="editSelected()">編輯聯絡人</button>
+            <button class="btn btn-ghost-dark btn-sm" data-role-section="contacts-edit" onclick="editSelected()">編輯聯絡人</button>
             <button class="btn btn-ghost-dark btn-sm" id="btn-apply-quote" onclick="applyToQuote()">套用到報價單</button>
-            <button class="btn btn-red btn-sm" onclick="deleteSelected()">刪除</button>
+            <button class="btn btn-red btn-sm" data-role-section="contacts-delete" onclick="deleteSelected()">刪除</button>
           </div>
         </div>
 
@@ -727,12 +742,9 @@ function renderClientList() {
       </div>
     </div>`;
   }).join('');
+  // 重新套用區塊權限
+  if (window.RoleGuard) window.RoleGuard.applySection();
 }
-
-/* =======================================
-   SELECT & SHOW DETAIL
-======================================= */
-function selectCompany(name) {
   selectedCompanyName = name;
   renderClientList(); 
 
