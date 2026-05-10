@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>帳號職等管理 — 公司管理系統</title>
+<title>帳號與細部權限管理 — 公司管理系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg:#eeeae4; --panel:#1c1917; --panel2:#292524; --paper:#fdfcfb;
   --ink:#1c1917; --ink2:#57534e; --ink3:#a8a29e; --line:#e7e3dc;
-  --acc:#b45309; --acc2:#d97706; --danger:#dc2626;
+  --acc:#b45309; --acc2:#d97706; --success:#059669; --danger:#dc2626;
   --r:6px;
   --font-body:'Noto Sans TC','Microsoft JhengHei',sans-serif;
 }
@@ -24,67 +24,66 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--ink);font-siz
 .nav-tab:hover{color:#e7e5e4;background:rgba(255,255,255,.06);}
 .nav-tab.active{color:var(--acc2);border-color:rgba(217,119,6,.3);background:rgba(180,83,9,.12);}
 .topbar-actions{display:flex;gap:7px;align-items:center;}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);border:none;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 13px;border-radius:var(--r);border:none;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap;}
 .btn-ghost{background:rgba(255,255,255,.07);color:#d6d3d1;border:1px solid rgba(255,255,255,.12);}
 .btn-ghost:hover{background:rgba(255,255,255,.14);color:#fafaf9;}
+.btn-ghost-dark{background:rgba(0,0,0,.04);color:var(--ink2);border:1px solid var(--line);}
+.btn-ghost-dark:hover{background:rgba(0,0,0,.08);color:var(--ink);}
 .btn-amber{background:var(--acc);color:white;}
 .btn-amber:hover{background:var(--acc2);}
 .btn-sm{padding:4px 10px;font-size:11px;}
 .badge-role{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;background:rgba(180,83,9,.15);color:var(--acc2);border:1px solid rgba(180,83,9,.3);}
 
-/* AUTH OVERLAY */
 #auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 
 /* MAIN */
-.main{max-width:900px;margin:0 auto;padding:36px 24px 80px;}
+.main{max-width:1000px;margin:0 auto;padding:36px 24px 80px;}
 .page-title{font-size:20px;font-weight:600;margin-bottom:4px;}
 .page-sub{font-size:12px;color:var(--ink3);margin-bottom:28px;}
 
-/* INVITE CARD */
-.card{background:var(--paper);border-radius:10px;border:1.5px solid var(--line);padding:22px 24px;margin-bottom:20px;}
-.card-title{font-size:13px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.card-title svg{opacity:.5;}
-.field-row{display:flex;gap:10px;align-items:flex-end;}
-.field-row .field{flex:1;}
-.field label{display:block;font-size:11px;color:var(--ink3);margin-bottom:5px;letter-spacing:.5px;}
-.field input,.field select{width:100%;border:1.5px solid var(--line);border-radius:var(--r);padding:8px 11px;font-size:13px;font-family:inherit;background:var(--paper);color:var(--ink);outline:none;transition:.15s;}
-.field input:focus,.field select:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(180,83,9,.08);}
-#invite-msg{font-size:12px;margin-top:10px;display:none;padding:7px 11px;border-radius:5px;}
-.msg-ok{color:#059669;background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);}
-.msg-err{color:#dc2626;background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);}
+/* CARD & ALERTS */
+.card{background:var(--paper);border-radius:10px;border:1.5px solid var(--line);padding:22px 24px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.alert{padding:12px 16px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:12px;display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;}
+.alert-icon{font-size:16px;line-height:1;}
 
 /* USER TABLE */
-.table-header{display:grid;grid-template-columns:1fr 140px 140px 100px;gap:12px;padding:8px 16px;font-size:10px;letter-spacing:1px;color:var(--ink3);text-transform:uppercase;border-bottom:1.5px solid var(--line);background:var(--paper);border-radius:8px 8px 0 0;border:1.5px solid var(--line);}
-.user-row{display:grid;grid-template-columns:1fr 140px 140px 100px;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center;background:var(--paper);transition:.12s;}
-.user-row:last-child{border-bottom:none;border-radius:0 0 8px 8px;}
-.user-row:hover{background:#faf9f7;}
-.table-wrap{border:1.5px solid var(--line);border-radius:10px;overflow:hidden;}
-.user-email{font-size:13px;font-weight:500;color:var(--ink);}
-.user-uid{font-size:10px;color:var(--ink3);font-family:'IBM Plex Mono',monospace;margin-top:1px;}
-.role-select{border:1.5px solid var(--line);border-radius:5px;padding:5px 9px;font-size:12px;font-family:inherit;background:white;color:var(--ink);outline:none;cursor:pointer;transition:.15s;}
-.role-select:focus{border-color:var(--acc);}
-.save-btn{padding:5px 13px;border-radius:5px;border:none;font-size:12px;font-family:inherit;cursor:pointer;background:rgba(180,83,9,.12);color:var(--acc);font-weight:500;transition:.15s;}
-.save-btn:hover{background:var(--acc);color:white;}
-.save-btn.saved{background:rgba(5,150,105,.12);color:#059669;}
-.joined-at{font-size:11px;color:var(--ink3);}
-.empty-state{padding:40px;text-align:center;color:var(--ink3);background:var(--paper);border-radius:10px;border:1.5px dashed var(--line);}
 .search-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;}
 .search-bar input{flex:1;border:1.5px solid var(--line);border-radius:var(--r);padding:8px 12px;font-size:13px;font-family:inherit;outline:none;background:var(--paper);transition:.15s;}
 .search-bar input:focus{border-color:var(--acc);}
-.stats-row{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;}
-.stat-chip{padding:8px 16px;border-radius:20px;font-size:11px;font-weight:500;background:var(--paper);border:1.5px solid var(--line);color:var(--ink2);}
-.stat-chip span{font-weight:600;color:var(--ink);margin-left:4px;}
 
-/* ROLE LEGEND */
-.legend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:4px;}
-.legend-item{padding:12px 14px;border-radius:8px;border:1.5px solid var(--line);background:#faf9f7;}
-.legend-role-name{font-size:12px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:7px;}
-.legend-pages{font-size:11px;color:var(--ink3);line-height:1.6;}
-.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.dot-admin{background:#b45309;}
-.dot-manager{background:#0284c7;}
-.dot-staff{background:#059669;}
-.dot-viewer{background:#78716c;}
+.table-wrap{border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:var(--paper);box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.table-header{display:grid;grid-template-columns:250px 1fr 140px 100px;gap:12px;padding:10px 16px;font-size:10px;letter-spacing:1px;color:var(--ink3);text-transform:uppercase;border-bottom:1.5px solid var(--line);background:#faf9f7;}
+.user-row{display:grid;grid-template-columns:250px 1fr 140px 100px;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);align-items:center;transition:.12s;}
+.user-row:last-child{border-bottom:none;}
+.user-row:hover{background:#f5f2ee;}
+.user-email{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px;}
+.user-uid{font-size:10px;color:var(--ink3);font-family:'IBM Plex Mono',monospace;margin-top:2px;}
+.perm-tags{display:flex;flex-wrap:wrap;gap:4px;}
+.ptag{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.04);color:var(--ink2);border:1px solid var(--line);}
+.ptag.active{background:rgba(5,150,105,.1);color:var(--success);border-color:rgba(5,150,105,.3);}
+.joined-at{font-size:11px;color:var(--ink3);}
+.action-btn{padding:5px 13px;border-radius:5px;border:1px solid rgba(180,83,9,.3);font-size:11px;font-family:inherit;cursor:pointer;background:rgba(180,83,9,.08);color:var(--acc);font-weight:500;transition:.15s;}
+.action-btn:hover{background:var(--acc);color:white;}
+.action-btn.admin-btn{background:var(--panel);color:white;border-color:var(--panel);pointer-events:none;}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.overlay.open{display:flex;}
+.modal{background:var(--paper);border-radius:12px;width:600px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;}
+.modal-header{background:#faf9f7;padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+.modal-title{font-size:15px;font-weight:600;}
+.modal-body{padding:20px;max-height:70vh;overflow-y:auto;}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;background:#faf9f7;}
+
+.matrix-table{width:100%;border-collapse:collapse;}
+.matrix-table th{text-align:left;font-size:11px;color:var(--ink3);text-transform:uppercase;padding:10px;border-bottom:1.5px solid var(--line);}
+.matrix-table td{padding:12px 10px;border-bottom:1px solid var(--line);font-size:13px;font-weight:500;}
+.matrix-table tr:last-child td{border-bottom:none;}
+.cb-wrap{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:400;color:var(--ink2);}
+.cb-wrap input[type="checkbox"]{accent-color:var(--acc);width:16px;height:16px;cursor:pointer;}
+
+.admin-toggle-zone{padding:12px 16px;background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
+.admin-toggle-zone.is-admin{background:#f0fdf4;border-color:#bbf7d0;}
 </style>
 </head>
 <body>
@@ -110,60 +109,66 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--ink);font-siz
 </div>
 
 <div class="main">
-  <div class="page-title">帳號職等管理</div>
-  <div class="page-sub">設定每位成員的職等，以控制其可訪問的頁面與功能。</div>
+  <div class="page-title">帳號與細部權限管理</div>
+  <div class="page-sub">設定團隊成員可操作的模組。員工自行註冊後預設無權限，需由管理員在此開通。</div>
 
-  <!-- 統計 -->
-  <div class="stats-row" id="stats-row">
-    <div class="stat-chip">載入中…</div>
+  <div class="alert">
+    <div class="alert-icon">💡</div>
+    <div>
+      <strong>新進人員加入流程：</strong><br>
+      請新進人員前往登入頁面點選「註冊帳號」。註冊成功後，他們的帳號就會出現在下方列表中。您可以在此點擊「設定權限」，勾選他們可以檢視或編輯的板塊。
+    </div>
   </div>
 
-  <!-- 職等說明 -->
-  <div class="card" style="margin-bottom:20px;">
-    <div class="card-title">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      職等說明
-    </div>
-    <div class="legend-grid" id="legend-grid"><!-- JS 生成 --></div>
-  </div>
-
-  <!-- 邀請／手動新增帳號 -->
-  <div class="card">
-    <div class="card-title">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-      預設職等設定（手動指定 UID）
-    </div>
-    <p style="font-size:12px;color:var(--ink3);margin-bottom:14px;">
-      若使用者尚未登入過系統（無 Firestore 記錄），可在此預先建立其職等。<br>
-      UID 可從 Firebase Console → Authentication 取得。
-    </p>
-    <div class="field-row">
-      <div class="field" style="flex:2;">
-        <label>使用者 UID</label>
-        <input type="text" id="inv-uid" placeholder="Firebase Auth UID（從 Console 複製）">
-      </div>
-      <div class="field">
-        <label>Email（備註用）</label>
-        <input type="email" id="inv-email" placeholder="user@example.com">
-      </div>
-      <div class="field" style="flex:0 0 140px;">
-        <label>職等</label>
-        <select id="inv-role"><!-- JS 生成 --></select>
-      </div>
-      <div style="flex:0 0 auto;padding-bottom:1px;">
-        <button class="btn btn-amber" onclick="addUserRecord()">儲存</button>
-      </div>
-    </div>
-    <div id="invite-msg"></div>
-  </div>
-
-  <!-- 使用者列表 -->
   <div class="search-bar">
     <input type="text" id="search-input" placeholder="搜尋 Email 或 UID…" oninput="renderUsers()">
   </div>
 
-  <div id="users-container">
-    <div class="empty-state">載入帳號資料中…</div>
+  <div id="users-container" class="table-wrap">
+    <div style="padding:40px;text-align:center;color:var(--ink3);">載入帳號資料中…</div>
+  </div>
+</div>
+
+<div class="overlay" id="perm-modal" onclick="if(event.target===this) closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">權限設定：<span id="modal-user-email" style="color:var(--acc);"></span></div>
+      <button class="btn btn-ghost-dark btn-sm" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="modal-uid">
+      
+      <div class="admin-toggle-zone" id="admin-zone">
+        <div>
+          <div style="font-weight:600;color:var(--ink);margin-bottom:2px;">設為超級管理員 (Admin)</div>
+          <div style="font-size:11px;color:var(--ink3);">管理員將無視下方設定，擁有全站最高權限。</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="cb-is-admin" style="width:18px;height:18px;accent-color:var(--danger);" onchange="toggleAdminUI()">
+          <span style="font-size:12px;font-weight:600;" id="admin-text">否</span>
+        </label>
+      </div>
+
+      <div id="matrix-container">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>系統模組</th>
+              <th>檢視 (可看見清單)</th>
+              <th>編輯 (可新增/修改)</th>
+              <th>刪除 (可移除資料)</th>
+            </tr>
+          </thead>
+          <tbody id="matrix-body">
+            </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span id="save-msg" style="font-size:11px;color:var(--success);margin-right:auto;display:none;align-items:center;">✓ 儲存成功</span>
+      <button class="btn btn-ghost-dark" onclick="closeModal()">取消</button>
+      <button class="btn btn-amber" onclick="savePermissions()" id="btn-save">儲存設定</button>
+    </div>
   </div>
 </div>
 
@@ -186,10 +191,7 @@ import { getFirestore, collection, getDocs,
 const firebaseConfig = {
   apiKey:            "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
   authDomain:        "company-system-6ea1a.firebaseapp.com",
-  projectId:         "company-system-6ea1a",
-  storageBucket:     "company-system-6ea1a.firebasestorage.app",
-  messagingSenderId: "865462311535",
-  appId:             "1:865462311535:web:033e059bc0e86fa902cb9a"
+  projectId:         "company-system-6ea1a"
 };
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -200,14 +202,23 @@ const RG = window.RoleGuard;
 
 let allUsers = [];
 
+// 定義系統模組清單
+const MODULES = [
+  { id: 'quotes', name: '📄 報價單' },
+  { id: 'projects', name: '🎬 專案進度' },
+  { id: 'costs', name: '💰 成本計算' },
+  { id: 'inventory', name: '📦 器材庫存' },
+  { id: 'contacts', name: '🤝 客戶廠商' }
+];
+
 /* ── auth guard ── */
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = 'login.html'; return; }
 
-  // 讀取自己的職等，確認是 admin
   const snap = await getDocs(collection(db, 'users'));
   const myDoc = snap.docs.find(d => d.id === user.uid);
-  const myRole = myDoc ? (myDoc.data().role || RC.defaultRole) : RC.defaultRole;
+  const myData = myDoc ? myDoc.data() : {};
+  const myRole = myData.role || 'viewer';
 
   if (myRole !== 'admin') {
     alert('您沒有管理員權限。');
@@ -219,11 +230,13 @@ onAuthStateChanged(auth, async (user) => {
   RG.applyNav();
   document.getElementById('auth-overlay').remove();
 
-  // 讀取所有使用者
   allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-  buildLegend();
-  buildRoleSelect();
-  renderStats();
+  
+  // 若資料庫內有使用者還沒初始化 permissions 結構，給予預設值
+  allUsers.forEach(u => {
+    if(!u.permissions) u.permissions = {};
+  });
+
   renderUsers();
 });
 
@@ -231,41 +244,7 @@ window.logout = function () {
   signOut(auth).then(() => { RG.clearSession(); window.location.href = 'login.html'; });
 };
 
-/* ── 職等說明 ── */
-function buildLegend() {
-  const dotClass = { admin:'dot-admin', manager:'dot-manager', staff:'dot-staff', viewer:'dot-viewer' };
-  const grid = document.getElementById('legend-grid');
-  grid.innerHTML = Object.entries(RC.roleLabels).map(([role, label]) => {
-    const pages = (RC.pageAccess[role] || []).join('、');
-    return `<div class="legend-item">
-      <div class="legend-role-name">
-        <span class="dot ${dotClass[role]||'dot-viewer'}"></span>${label}（${role}）
-      </div>
-      <div class="legend-pages">可訪問：${pages || '無'}</div>
-    </div>`;
-  }).join('');
-}
-
-/* ── role select options ── */
-function buildRoleSelect() {
-  const sel = document.getElementById('inv-role');
-  sel.innerHTML = Object.entries(RC.roleLabels).map(([v,l]) =>
-    `<option value="${v}">${l}</option>`).join('');
-}
-
-/* ── 統計 ── */
-function renderStats() {
-  const counts = {};
-  Object.keys(RC.roleLabels).forEach(r => counts[r] = 0);
-  allUsers.forEach(u => { const r = u.role || RC.defaultRole; counts[r] = (counts[r]||0)+1; });
-  document.getElementById('stats-row').innerHTML =
-    `<div class="stat-chip">共 <span>${allUsers.length}</span> 個帳號</div>` +
-    Object.entries(RC.roleLabels).map(([r,l]) =>
-      `<div class="stat-chip">${l} <span>${counts[r]||0}</span></div>`
-    ).join('');
-}
-
-/* ── 使用者列表 ── */
+/* ── 渲染使用者列表 ── */
 window.renderUsers = function() {
   const q = (document.getElementById('search-input').value || '').toLowerCase();
   const filtered = allUsers.filter(u =>
@@ -274,91 +253,167 @@ window.renderUsers = function() {
 
   const container = document.getElementById('users-container');
   if (!filtered.length) {
-    container.innerHTML = '<div class="empty-state">找不到符合條件的帳號。</div>'; return;
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink3);">找不到符合條件的帳號。</div>'; 
+    return;
   }
-
-  const roleOptions = Object.entries(RC.roleLabels).map(([v,l]) =>
-    `<option value="${v}">${l}</option>`).join('');
 
   container.innerHTML = `
     <div class="table-header">
       <div>帳號</div>
-      <div>職等</div>
-      <div>建立時間</div>
+      <div>已開通權限概覽</div>
+      <div>加入時間</div>
       <div>操作</div>
     </div>
-    <div class="table-wrap">
-      ${filtered.map(u => {
-        const created = u.createdAt ? u.createdAt.slice(0,10) : '—';
-        const selOpts = Object.entries(RC.roleLabels).map(([v,l]) =>
-          `<option value="${v}" ${u.role===v?'selected':''}>${l}</option>`).join('');
-        return `<div class="user-row" id="row-${u.uid}">
+    ${filtered.map(u => {
+      const created = u.createdAt ? u.createdAt.slice(0,10) : '—';
+      const isAdmin = u.role === 'admin';
+      
+      let tagsHtml = '';
+      if(isAdmin) {
+        tagsHtml = `<span class="ptag active" style="background:#fef2f2;color:#dc2626;border-color:#fecdd3;">👑 最高管理員</span>`;
+      } else {
+        let activeMods = 0;
+        MODULES.forEach(m => {
+          if(u.permissions[m.id] && u.permissions[m.id].view) {
+            tagsHtml += `<span class="ptag">${m.name.split(' ')[1]}</span>`;
+            activeMods++;
+          }
+        });
+        if(activeMods === 0) tagsHtml = `<span class="ptag" style="color:var(--danger)">尚未開通任何權限</span>`;
+      }
+
+      return `
+        <div class="user-row">
           <div>
             <div class="user-email">${u.email || '（無 Email）'}</div>
             <div class="user-uid">${u.uid}</div>
           </div>
-          <div>
-            <select class="role-select" id="sel-${u.uid}">${selOpts}</select>
-          </div>
+          <div class="perm-tags">${tagsHtml}</div>
           <div class="joined-at">${created}</div>
           <div>
-            <button class="save-btn" id="btn-${u.uid}" onclick="saveRole('${u.uid}')">儲存</button>
+            ${isAdmin 
+              ? `<button class="action-btn admin-btn">設定權限</button>` 
+              : `<button class="action-btn" onclick="openModal('${u.uid}')">設定權限</button>`
+            }
           </div>
         </div>`;
-      }).join('')}
-    </div>`;
+    }).join('')}
+  `;
 };
 
-/* ── 儲存職等 ── */
-window.saveRole = async function(uid) {
-  const sel = document.getElementById('sel-'+uid);
-  const btn = document.getElementById('btn-'+uid);
-  const newRole = sel.value;
+/* ── 打開 Modal ── */
+window.openModal = function(uid) {
+  const user = allUsers.find(u => u.uid === uid);
+  if(!user) return;
+
+  document.getElementById('modal-uid').value = uid;
+  document.getElementById('modal-user-email').textContent = user.email || uid;
+  
+  const isAdmin = user.role === 'admin';
+  document.getElementById('cb-is-admin').checked = isAdmin;
+  
+  // 生成矩陣
+  let tbodyHtml = '';
+  MODULES.forEach(m => {
+    let p = user.permissions[m.id] || { view: false, edit: false, delete: false };
+    tbodyHtml += `
+      <tr>
+        <td>${m.name}</td>
+        <td><label class="cb-wrap"><input type="checkbox" id="cb-${m.id}-view" ${p.view ? 'checked' : ''} onchange="syncCheck('${m.id}')"> 允許</label></td>
+        <td><label class="cb-wrap"><input type="checkbox" id="cb-${m.id}-edit" ${p.edit ? 'checked' : ''} onchange="syncCheck('${m.id}')"> 允許</label></td>
+        <td><label class="cb-wrap"><input type="checkbox" id="cb-${m.id}-delete" ${p.delete ? 'checked' : ''} onchange="syncCheck('${m.id}')"> 允許</label></td>
+      </tr>
+    `;
+  });
+  
+  document.getElementById('matrix-body').innerHTML = tbodyHtml;
+  document.getElementById('save-msg').style.display = 'none';
+  document.getElementById('perm-modal').classList.add('open');
+  toggleAdminUI();
+};
+
+window.closeModal = function() {
+  document.getElementById('perm-modal').classList.remove('open');
+};
+
+/* ── 權限邏輯防呆 ── */
+// 若勾了編輯，一定要連帶勾檢視；取消檢視，連帶取消編輯與刪除
+window.syncCheck = function(modId) {
+  const v = document.getElementById(`cb-${modId}-view`);
+  const e = document.getElementById(`cb-${modId}-edit`);
+  const d = document.getElementById(`cb-${modId}-delete`);
+  
+  if(e.checked || d.checked) v.checked = true;
+  if(!v.checked) { e.checked = false; d.checked = false; }
+};
+
+window.toggleAdminUI = function() {
+  const isAdmin = document.getElementById('cb-is-admin').checked;
+  const zone = document.getElementById('admin-zone');
+  const txt = document.getElementById('admin-text');
+  const matrix = document.getElementById('matrix-container');
+  
+  if(isAdmin) {
+    zone.classList.add('is-admin');
+    txt.textContent = '是 (全權限)';
+    txt.style.color = '#dc2626';
+    matrix.style.opacity = '0.3';
+    matrix.style.pointerEvents = 'none';
+  } else {
+    zone.classList.remove('is-admin');
+    txt.textContent = '否';
+    txt.style.color = 'var(--ink)';
+    matrix.style.opacity = '1';
+    matrix.style.pointerEvents = 'auto';
+  }
+};
+
+/* ── 儲存權限 ── */
+window.savePermissions = async function() {
+  const uid = document.getElementById('modal-uid').value;
+  const btn = document.getElementById('btn-save');
+  const msg = document.getElementById('save-msg');
+  
+  const isAdmin = document.getElementById('cb-is-admin').checked;
+  const newRole = isAdmin ? 'admin' : 'custom'; // 不再用 manager/staff，改為自定義 custom
+  
+  let newPerms = {};
+  MODULES.forEach(m => {
+    newPerms[m.id] = {
+      view: document.getElementById(`cb-${m.id}-view`).checked,
+      edit: document.getElementById(`cb-${m.id}-edit`).checked,
+      delete: document.getElementById(`cb-${m.id}-delete`).checked
+    };
+  });
+
   try {
-    btn.textContent = '儲存中…'; btn.disabled = true;
-    await updateDoc(doc(db, 'users', uid), { role: newRole });
+    btn.textContent = '儲存中...'; btn.disabled = true;
+    
+    await updateDoc(doc(db, 'users', uid), { 
+      role: newRole,
+      permissions: newPerms
+    });
+
+    // 更新本地資料
     const u = allUsers.find(x => x.uid === uid);
-    if (u) u.role = newRole;
-    btn.textContent = '✓ 已儲存'; btn.classList.add('saved');
-    renderStats();
-    setTimeout(() => { btn.textContent='儲存'; btn.classList.remove('saved'); btn.disabled=false; }, 2000);
-  } catch(e) {
-    btn.textContent = '儲存'; btn.disabled = false;
-    alert('儲存失敗：' + e.message);
+    if(u) {
+      u.role = newRole;
+      u.permissions = newPerms;
+    }
+
+    msg.style.display = 'flex';
+    renderUsers();
+    
+    setTimeout(() => {
+      btn.textContent = '儲存設定'; btn.disabled = false;
+      closeModal();
+    }, 1000);
+
+  } catch(error) {
+    alert("儲存失敗：" + error.message);
+    btn.textContent = '儲存設定'; btn.disabled = false;
   }
 };
-
-/* ── 手動新增使用者記錄 ── */
-window.addUserRecord = async function() {
-  const uid   = document.getElementById('inv-uid').value.trim();
-  const email = document.getElementById('inv-email').value.trim();
-  const role  = document.getElementById('inv-role').value;
-  const msg   = document.getElementById('invite-msg');
-
-  if (!uid) { showInvMsg('請輸入 UID', false); return; }
-
-  try {
-    await setDoc(doc(db, 'users', uid), { email, role, createdAt: new Date().toISOString() }, { merge: true });
-    // 更新本地
-    const idx = allUsers.findIndex(u => u.uid === uid);
-    if (idx !== -1) allUsers[idx] = { uid, email, role };
-    else allUsers.push({ uid, email, role, createdAt: new Date().toISOString() });
-    document.getElementById('inv-uid').value = '';
-    document.getElementById('inv-email').value = '';
-    renderStats(); renderUsers();
-    showInvMsg(`✓ 已設定 ${email||uid} 為「${RC.roleLabels[role]||role}」`, true);
-  } catch(e) {
-    showInvMsg('儲存失敗：' + e.message, false);
-  }
-};
-
-function showInvMsg(text, ok) {
-  const msg = document.getElementById('invite-msg');
-  msg.textContent = text;
-  msg.className = ok ? 'msg-ok' : 'msg-err';
-  msg.style.display = 'block';
-  setTimeout(() => { msg.style.display='none'; }, 4000);
-}
 </script>
 </body>
 </html>
