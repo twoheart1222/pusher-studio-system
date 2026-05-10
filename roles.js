@@ -132,11 +132,18 @@ window.RoleGuard = (function () {
     var role = getRole();
     if (ROLES_CONFIG.readonlyRoles.indexOf(role) === -1) return;
     document.querySelectorAll('input, textarea, select, [data-action]').forEach(function(el){
+      // topbar / toolbar 內的元素（搜尋列等）不鎖定
+      if (el.closest('.topbar') || el.closest('.toolbar')) return;
       el.disabled = true;
       el.style.pointerEvents = 'none';
       el.title = '您的職等為唯讀，無法編輯';
     });
     document.querySelectorAll('.btn').forEach(function(b){
+      // 登出按鈕永遠保持可用
+      var oc = b.getAttribute('onclick') || '';
+      if (oc.indexOf('logout') !== -1) return;
+      // topbar-actions 內的按鈕（含登出）也保持可用
+      if (b.closest('.topbar-actions') || b.closest('.topbar')) return;
       b.style.opacity = '0.4';
       b.style.pointerEvents = 'none';
     });
