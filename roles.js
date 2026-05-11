@@ -11,31 +11,39 @@ window.ROLES_CONFIG = {
     custom:  '專案成員',
     viewer:  '未開通人員' // 剛註冊時的預設狀態
   },
-  defaultRole: 'viewer'
+  defaultRole: 'viewer',
+
+  // ★ 修正：補上 pageAccess，讓登入後能正確跳頁
+  // admin 直接進 index；custom/viewer 沒有預設頁面（由 permissions 動態決定）
+  pageAccess: {
+    admin:  ['index'],
+    custom: [],
+    viewer: []
+  }
 };
 
 /* ── 核心對照表：將頁面網址與按鈕前綴，對應到 Firebase 裡的模組 ID ── */
 const MODULE_MAP = {
   // 網頁檔名對應
-  'index': 'quotes',       // 報價單
-  'project': 'projects',   // 專案進度
-  'cost': 'costs',         // 成本計算
-  'inventory': 'inventory',// 器材庫存
-  'contacts': 'contacts',  // 客戶廠商
-  
+  'index':     'quotes',    // 報價單
+  'project':   'projects',  // 專案進度
+  'cost':      'costs',     // 成本計算
+  'inventory': 'inventory', // 器材庫存
+  'contacts':  'contacts',  // 客戶廠商
+
   // 管理員專屬頁面
-  'admin': 'admin',
+  'admin':       'admin',
   'admin-roles': 'admin'
 };
 
 const PREFIX_MAP = {
   // data-role-section 前綴對應
-  'quote': 'quotes',
-  'project': 'projects',
-  'cost': 'costs',
+  'quote':     'quotes',
+  'project':   'projects',
+  'cost':      'costs',
   'inventory': 'inventory',
-  'contacts': 'contacts',
-  'admin': 'admin'
+  'contacts':  'contacts',
+  'admin':     'admin'
 };
 
 /* ============================================================
@@ -45,21 +53,20 @@ window.RoleGuard = (function () {
   var KEY_ROLE  = 'rg_role';
   var KEY_UID   = 'rg_uid';
   var KEY_NAME  = 'rg_name';
-  var KEY_PERMS = 'rg_perms'; // 新增：用來存取矩陣權限
+  var KEY_PERMS = 'rg_perms';
 
   function getRole()     { return sessionStorage.getItem(KEY_ROLE) || window.ROLES_CONFIG.defaultRole; }
   function getUid()      { return sessionStorage.getItem(KEY_UID)  || ''; }
   function getUsername() { return sessionStorage.getItem(KEY_NAME) || ''; }
-  function getPerms()    { 
-    try { return JSON.parse(sessionStorage.getItem(KEY_PERMS) || '{}'); } 
-    catch(e) { return {}; } 
+  function getPerms()    {
+    try { return JSON.parse(sessionStorage.getItem(KEY_PERMS) || '{}'); }
+    catch(e) { return {}; }
   }
 
-  // ★ 更新：寫入 Session 時需帶入權限矩陣
   function setSession(uid, role, displayName, permissions) {
-    sessionStorage.setItem(KEY_ROLE, role);
-    sessionStorage.setItem(KEY_UID,  uid);
-    sessionStorage.setItem(KEY_NAME, displayName || '');
+    sessionStorage.setItem(KEY_ROLE,  role);
+    sessionStorage.setItem(KEY_UID,   uid);
+    sessionStorage.setItem(KEY_NAME,  displayName || '');
     sessionStorage.setItem(KEY_PERMS, JSON.stringify(permissions || {}));
   }
 
@@ -71,23 +78,20 @@ window.RoleGuard = (function () {
     return (window.location.pathname.split('/').pop() || 'index').replace('.html', '');
   }
 
-  /* 1. 頁面守衛：判斷能不能進入該 HTML */
+  /* 1. 頁面守衛 */
   function guardPage() {
     var role = getRole();
+    // ★ admin 永遠放行
     if (role === 'admin') return true;
 
-    var page = currentPage();
+    var page  = currentPage();
     var modId = MODULE_MAP[page];
     var perms = getPerms();
 
-    // 尚未開通、或是試圖進入 admin 頁面、或是該模組沒有 view 權限
     if (!modId || modId === 'admin' || !perms[modId] || !perms[modId].view) {
-      
-      // 尋找他可以去的第一個頁面，找不到就踢回登入頁
       var target = 'login.html';
       for (var key in perms) {
         if (perms[key].view) {
-          // 反推頁面名稱
           var destPage = Object.keys(MODULE_MAP).find(k => MODULE_MAP[k] === key && k !== 'admin');
           if (destPage) { target = destPage + '.html'; break; }
         }
@@ -98,15 +102,15 @@ window.RoleGuard = (function () {
     return true;
   }
 
-  /* 2. 導覽列守衛：隱藏不能去的 Tab */
+  /* 2. 導覽列守衛 */
   function applyNav() {
-    var role = getRole();
+    var role  = getRole();
     var perms = getPerms();
 
     document.querySelectorAll('.nav-tab[href]').forEach(function(tab){
-      var page = tab.getAttribute('href').replace('.html', '');
+      var page  = tab.getAttribute('href').replace('.html', '');
       var modId = MODULE_MAP[page];
-      
+
       var isAllowed = false;
       if (role === 'admin') {
         isAllowed = true;
@@ -122,7 +126,7 @@ window.RoleGuard = (function () {
     if (nameEl) nameEl.textContent = getUsername();
   }
 
-  /* 3. 區塊守衛：按鈕與功能隱藏 (data-role-section) */
+  /* 3. 區塊守衛 */
   function applySection() {
     var role = getRole();
     if (role === 'admin') {
@@ -134,16 +138,14 @@ window.RoleGuard = (function () {
     document.querySelectorAll('[data-role-section]').forEach(function(el){
       var keys = el.dataset.roleSection.split(',').map(s => s.trim());
       var isAllowed = false;
-      
+
       keys.forEach(function(key) {
-        // 解析例如 "quote-delete" -> prefix="quote", action="delete"
-        var parts = key.split('-');
-        var prefix = parts[0]; 
-        var action = parts[1]; 
-        
-        // 將 add, export 等行為歸類 (新增算 edit)
-        if (action === 'add') action = 'edit';
-        if (action === 'export') action = 'view'; // 匯出報表允許只有檢視權限的人使用
+        var parts  = key.split('-');
+        var prefix = parts[0];
+        var action = parts[1];
+
+        if (action === 'add')    action = 'edit';
+        if (action === 'export') action = 'view';
 
         var modId = PREFIX_MAP[prefix];
         if (modId && perms[modId] && perms[modId][action]) {
@@ -155,27 +157,23 @@ window.RoleGuard = (function () {
     });
   }
 
-  /* 4. 唯讀守衛：如果該頁面只有檢視權限，鎖定所有輸入框與未被標記的按鈕 */
+  /* 4. 唯讀守衛 */
   function applyReadonly() {
     var role = getRole();
     if (role === 'admin') return;
 
-    var page = currentPage();
+    var page  = currentPage();
     var modId = MODULE_MAP[page];
     var perms = getPerms();
 
-    // 如果目前模組沒有 edit 權限
     if (modId && perms[modId] && !perms[modId].edit) {
       document.querySelectorAll('input, textarea, select, [data-action]').forEach(function(el){
-        // 避開頂部工具列與搜尋框
         if (el.closest('.topbar') || el.closest('.toolbar') || el.closest('.search-bar')) return;
         el.disabled = true;
         el.style.pointerEvents = 'none';
       });
-      // 隱藏可能沒有綁定 data-role-section 的預設操作按鈕
       document.querySelectorAll('.btn').forEach(function(b){
         var txt = b.textContent || '';
-        // 保留「登出、返回、搜尋」等無害按鈕
         if (b.closest('.topbar') || b.closest('.search-bar') || txt.includes('登出') || txt.includes('返回')) return;
         b.style.display = 'none';
       });

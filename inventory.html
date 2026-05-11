@@ -1715,6 +1715,13 @@ async function deleteItem(id) {
 /* =============================================
    LOAN CRUD
    ============================================= */
+function getItemAvailQty(itemId) {
+  const it = items.find(i=>i.id===itemId);
+  if(!it) return 0;
+  const activeLoanQty = loans.filter(l=>l.itemId===itemId&&!l.returned).reduce((a,l)=>a+(+l.qty||1),0);
+  return (+it.qty||1) - activeLoanQty;
+}
+
 function openLoanModal(preItemId) {
   document.getElementById('loan-id').value = '';
   const sel = document.getElementById('loan-item-id');
@@ -1727,14 +1734,40 @@ function openLoanModal(preItemId) {
       showToast(`「${preIt.name}」目前狀態為【${preIt.status}】，無法借出`, 'err');
       return;
     }
+    if(preIt && getItemAvailQty(preItemId) <= 0) {
+      showToast(`「${preIt.name}」目前可用數量為 0，無法借出`, 'err');
+      return;
+    }
   }
 
-  sel.innerHTML = loanableItems.map(it => `<option value="${esc(it.id)}" ${it.id===preItemId?'selected':''}>${esc(it.name)}${it.brand?' ('+ esc(it.brand) +')':''} — ${it.status}</option>`).join('');
-  if(!loanableItems.length) {
-    showToast('目前沒有可借出的器材（維修中／報廢器材不可借出）', 'err');
+  // 過濾掉可用數量為 0 的器材
+  const availableItems = loanableItems.filter(it => getItemAvailQty(it.id) > 0);
+
+  sel.innerHTML = availableItems.map(it => {
+    const avail = getItemAvailQty(it.id);
+    return `<option value="${esc(it.id)}" ${it.id===preItemId?'selected':''}>${esc(it.name)}${it.brand?' ('+ esc(it.brand) +')':''} — 可用 ${avail}/${it.qty||1}</option>`;
+  }).join('');
+  if(!availableItems.length) {
+    showToast('目前沒有可借出的器材（可用數量為 0、維修中或報廢）', 'err');
     return;
   }
   if(preItemId) sel.value = preItemId;
+
+  // 更新借用數量的最大值
+  const selectedId = sel.value;
+  if(selectedId) {
+    const maxAvail = getItemAvailQty(selectedId);
+    document.getElementById('loan-qty').max = maxAvail;
+    document.getElementById('loan-qty').value = Math.min(1, maxAvail);
+  }
+
+  // 切換器材時更新最大借用數量
+  sel.onchange = function() {
+    const avail = getItemAvailQty(this.value);
+    document.getElementById('loan-qty').max = avail;
+    const curQty = +document.getElementById('loan-qty').value || 1;
+    if(curQty > avail) document.getElementById('loan-qty').value = avail;
+  };
   
   const psel = document.getElementById('loan-proj-id');
   psel.innerHTML = `<option value="">— 不連結 —</option>` + projects.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
@@ -1773,12 +1806,22 @@ async function saveLoan() {
     return;
   }
 
+  const qty = +document.getElementById('loan-qty').value||1;
+  const availQty = getItemAvailQty(itemId);
+  if(availQty <= 0) {
+    showToast(`「${it ? it.name : '此器材'}」可用數量為 0，無法借出`, 'err');
+    return;
+  }
+  if(qty > availQty) {
+    showToast(`借用數量（${qty}）超過可用數量（${availQty}），請重新輸入`, 'err');
+    return;
+  }
+
   const id = 'loan_'+Date.now();
   const outDate    = document.getElementById('loan-out-date').value;
   const returnDate = document.getElementById('loan-return-date').value;
   const costMode   = document.getElementById('loan-cost-mode').value;
   const projId     = document.getElementById('loan-proj-id').value;
-  const qty        = +document.getElementById('loan-qty').value||1;
 
   const loan = {
     id, itemId, borrower, qty,

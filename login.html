@@ -23,17 +23,8 @@
   .msg-ok  { color: #34d399;  background: rgba(52,211,153,.1);  border: 1px solid rgba(52,211,153,.2); }
   .loading-bar { height: 2px; background: #b45309; width: 0; transition: width .4s; border-radius: 1px; margin-bottom: 20px; }
   .loading-bar.active { width: 100%; }
-
-  /* 職等徽章預覽（登入成功後短暫顯示） */
-  .role-preview {
-    display: none; text-align: center; margin-top: 12px;
-    font-size: 11px; color: #78716c;
-  }
-  .role-badge-pill {
-    display: inline-block; padding: 2px 10px; border-radius: 20px;
-    font-size: 11px; font-weight: 500; margin-left: 6px;
-    background: rgba(180,83,9,.2); color: #d97706; border: 1px solid rgba(180,83,9,.4);
-  }
+  .role-preview { display: none; text-align: center; margin-top: 12px; font-size: 11px; color: #78716c; }
+  .role-badge-pill { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; margin-left: 6px; background: rgba(180,83,9,.2); color: #d97706; border: 1px solid rgba(180,83,9,.4); }
 </style>
 </head>
 <body>
@@ -60,21 +51,20 @@
   <script type="importmap">
   {
     "imports": {
-      "firebase/app":      "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
-      "firebase/auth":     "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
-      "firebase/firestore":"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+      "firebase/app":       "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+      "firebase/auth":      "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
     }
   }
   </script>
 
-  <!-- roles.js 必須在 firebase 之前載入（提供 ROLES_CONFIG） -->
   <script src="roles.js"></script>
 
   <script type="module">
-    import { initializeApp }                                     from "firebase/app";
+    import { initializeApp }                                from "firebase/app";
     import { getAuth, signInWithEmailAndPassword,
-             sendPasswordResetEmail, onAuthStateChanged }        from "firebase/auth";
-    import { getFirestore, doc, getDoc, setDoc }                 from "firebase/firestore";
+             sendPasswordResetEmail, onAuthStateChanged }   from "firebase/auth";
+    import { getFirestore, doc, getDoc, setDoc }            from "firebase/firestore";
 
     const firebaseConfig = {
       apiKey:            "AIzaSyC-hhAqJM26bYaO_lcA17ERGSU7V1RmlYM",
@@ -92,43 +82,79 @@
     const ROLES_CONFIG = window.ROLES_CONFIG;
     const RoleGuard    = window.RoleGuard;
 
-    // 若已登入 → 重新從 Firestore 讀取職等再跳頁（確保拿到最新權限）
+    // ★ 修正：onAuthStateChanged 同步讀取 role + permissions 再跳頁
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // 先清除舊 session，避免拿到過期的職等
         RoleGuard.clearSession();
-        const role = await fetchRole(user.uid, user.email);
+        const { role, permissions } = await fetchRoleAndPerms(user.uid, user.email);
         const displayName = user.displayName || user.email.split('@')[0];
-        RoleGuard.setSession(user.uid, role, displayName);
-        const allowed = ROLES_CONFIG.pageAccess[role] || [];
-        const dest = (allowed.length ? allowed[0] : 'index') + '.html';
-        window.location.href = dest;
+        RoleGuard.setSession(user.uid, role, displayName, permissions);
+        redirectByRole(role, permissions);
       }
     });
 
     /**
-     * 從 Firestore users/{uid} 讀取職等
+     * 從 Firestore users/{uid} 讀取 role 與 permissions
      * 若文件不存在 → 自動建立並給 defaultRole
      */
-    async function fetchRole(uid, email) {
+    async function fetchRoleAndPerms(uid, email) {
       try {
         const ref  = doc(db, 'users', uid);
         const snap = await getDoc(ref);
         if (snap.exists()) {
-          return snap.data().role || ROLES_CONFIG.defaultRole;
+          const data = snap.data();
+          return {
+            role:        data.role        || ROLES_CONFIG.defaultRole,
+            permissions: data.permissions || {}
+          };
         } else {
           // 第一次登入：建立文件
           await setDoc(ref, {
-            email:     email,
-            role:      ROLES_CONFIG.defaultRole,
-            createdAt: new Date().toISOString(),
+            email:       email,
+            role:        ROLES_CONFIG.defaultRole,
+            permissions: {},
+            createdAt:   new Date().toISOString(),
           });
-          return ROLES_CONFIG.defaultRole;
+          return { role: ROLES_CONFIG.defaultRole, permissions: {} };
         }
       } catch (e) {
-        console.warn('fetchRole error', e);
-        return ROLES_CONFIG.defaultRole;
+        console.warn('fetchRoleAndPerms error', e);
+        return { role: ROLES_CONFIG.defaultRole, permissions: {} };
       }
+    }
+
+    /**
+     * ★ 核心修正：依職等決定跳轉目標
+     *   - admin  → 直接進 index.html，不需要 pageAccess / permissions
+     *   - custom → 找 permissions 裡第一個有 view 的模組對應頁面
+     *   - viewer → 停在 login.html 並提示尚未開通
+     */
+    function redirectByRole(role, permissions) {
+      if (role === 'admin') {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // custom：從 permissions 找可以 view 的第一頁
+      if (role === 'custom' && permissions) {
+        const MODULE_MAP = {
+          'quotes':    'index',
+          'projects':  'project',
+          'costs':     'cost',
+          'inventory': 'inventory',
+          'contacts':  'contacts'
+        };
+        for (const modId in permissions) {
+          if (permissions[modId].view && MODULE_MAP[modId]) {
+            window.location.href = MODULE_MAP[modId] + '.html';
+            return;
+          }
+        }
+      }
+
+      // viewer 或找不到任何頁面 → 停在登入頁提示
+      showMsg('您的帳號尚未開通任何權限，請聯繫管理員。');
+      setLoading(false);
     }
 
     const msgBox   = document.getElementById('msg-box');
@@ -159,9 +185,8 @@
         const cred = await signInWithEmailAndPassword(auth, e, p);
         const uid  = cred.user.uid;
 
-        // 讀取職等
-        const role     = await fetchRole(uid, e);
-        const roleName = (ROLES_CONFIG.roleLabels && ROLES_CONFIG.roleLabels[role]) || role;
+        const { role, permissions } = await fetchRoleAndPerms(uid, e);
+        const roleName = ROLES_CONFIG.roleLabels[role] || role;
 
         // 顯示職等預覽
         const preview = document.getElementById('role-preview');
@@ -169,14 +194,12 @@
         preview.style.display = 'block';
         badge.textContent = roleName;
 
-        // 存入 session
+        // 存入 session（★ 帶入 permissions）
         const displayName = cred.user.displayName || e.split('@')[0];
-        RoleGuard.setSession(uid, role, displayName);
+        RoleGuard.setSession(uid, role, displayName, permissions);
 
-        // 依職等跳轉
-        const allowed = ROLES_CONFIG.pageAccess[role] || [];
-        const dest    = (allowed.length ? allowed[0] : 'index') + '.html';
-        setTimeout(() => { window.location.href = dest; }, 600);
+        // ★ 統一用 redirectByRole 跳頁
+        setTimeout(() => { redirectByRole(role, permissions); }, 600);
 
       } catch (err) {
         setLoading(false);
