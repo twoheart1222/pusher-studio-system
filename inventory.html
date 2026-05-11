@@ -282,14 +282,12 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 </script>
 
 <script type="module">
-  // ★ 將 Firebase Firestore 升級為 onSnapshot (即時監聽)，達成手機與電腦零時差同步
   import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
   import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
   try {
     const app = getApp();
     const fbDb = getFirestore(app);
-    // 注入 onSnapshot 給全域使用
     window._invFb = { collection, getDocs, doc, setDoc, deleteDoc, getDoc, onSnapshot, fbDb };
     window._fbReady = true;
   } catch(e) {
@@ -449,6 +447,23 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 </div>
 
 <div class="toast-container" id="toast-container"></div>
+
+<div class="overlay" id="alert-overlay" style="z-index:900;">
+  <div class="modal" style="width:340px; border-top: 4px solid #dc2626;">
+    <div class="modal-header" style="background:#faf9f7; color:var(--ink); border-bottom:none; justify-content:center;">
+      <span class="modal-title" style="font-size:18px; color:#dc2626; display:flex; align-items:center; gap:8px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        無法借出
+      </span>
+    </div>
+    <div class="modal-body" style="padding:10px 20px 20px; text-align:center;">
+      <p id="alert-msg" style="font-size:14px;color:var(--ink);line-height:1.6;font-weight:500;"></p>
+    </div>
+    <div class="modal-footer" style="justify-content:center; background:#faf9f7;">
+      <button class="btn btn-red" onclick="document.getElementById('alert-overlay').classList.remove('open')" style="padding:8px 24px;">我知道了</button>
+    </div>
+  </div>
+</div>
 
 <div class="overlay" id="confirm-overlay">
   <div class="modal" style="width:340px;">
@@ -721,7 +736,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <button class="btn btn-ghost-dark btn-sm" onclick="downloadItemTemplate()">⬇ 下載範本</button>
-        <button class="btn btn-ghost-dark btn-sm" onclick="exportItemsExcel()">⬇ 匯出現有器材</button>
+        <button class="btn btn-ghost-dark btn-sm" onclick="exportItemsExcel()">⬇ 匯出現現有器材</button>
       </div>
       <div class="section-divider" style="margin-top:4px;">選擇檔案</div>
       <div style="display:flex;align-items:center;gap:10px;">
@@ -852,29 +867,6 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   </div>
 </div>
 
-<!-- 掃描後無法借出的提示 Modal -->
-<div class="overlay" id="scan-block-overlay">
-  <div class="modal" style="width:340px;text-align:center;">
-    <div class="modal-header" style="background:#7f1d1d;border-bottom:2px solid #dc2626;">
-      <span class="modal-title" style="display:flex;align-items:center;gap:8px;color:#fca5a5;">
-        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-        無法借出
-      </span>
-      <button class="btn btn-ghost btn-xs btn-icon" onclick="document.getElementById('scan-block-overlay').classList.remove('open')" style="color:#fca5a5;">✕</button>
-    </div>
-    <div class="modal-body" style="align-items:center;padding:24px 20px 16px;">
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(220,38,38,.12);border:2px solid rgba(220,38,38,.4);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
-        <svg width="28" height="28" fill="none" stroke="#dc2626" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-      </div>
-      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:8px;" id="scan-block-name"></div>
-      <div style="font-size:13px;color:#dc2626;font-weight:600;background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.25);border-radius:6px;padding:10px 14px;line-height:1.6;" id="scan-block-reason"></div>
-    </div>
-    <div class="modal-footer" style="justify-content:center;">
-      <button class="btn btn-red" onclick="document.getElementById('scan-block-overlay').classList.remove('open')">關閉</button>
-    </div>
-  </div>
-</div>
-
 <script>
 
 /* ── Security utils ── */
@@ -892,6 +884,27 @@ let costItems = [];
 
 let filterStatus = 'all';
 let filterCat    = 'all';
+
+/* =============================================
+   ★ TOAST & ALERTS (自訂警告系統)
+   ============================================= */
+function showToast(msg, type='ok') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast '+type; t.textContent = msg;
+  c.appendChild(t); setTimeout(()=>t.remove(),3000);
+}
+function showConfirm(msg, onOk) {
+  const overlay = document.getElementById('confirm-overlay');
+  document.getElementById('confirm-msg').innerText = msg;
+  overlay.classList.add('open');
+  document.getElementById('confirm-ok').onclick   = () => { overlay.classList.remove('open'); onOk(); };
+  document.getElementById('confirm-cancel').onclick= () => overlay.classList.remove('open');
+}
+function showAlert(msg) {
+  document.getElementById('alert-msg').innerText = msg;
+  document.getElementById('alert-overlay').classList.add('open');
+}
 
 /* =============================================
    ★ 自動編碼產生器 (前綴由類別決定)
@@ -923,18 +936,15 @@ window.generateItemCode = function(cat) {
 
 window.onItemCatChange = function() {
   const id = document.getElementById('item-id').value;
-  // 只有在「新增」模式時（沒帶 id），才自動切換代碼
   if (!id) {
     const cat = document.getElementById('item-cat').value;
     document.getElementById('item-code').value = generateItemCode(cat);
   }
 };
 
-/* ★ 為現有器材自動補齊編號 (管理員專用) */
 window.autoFillMissingCodes = async function() {
   showConfirm('確定要為所有「尚未填寫編號」的器材自動生成專屬編號嗎？', async () => {
     let updatedCount = 0;
-    // 排序，讓舊器材優先取得較前面的編號 (依 createdAt)
     const sortedItems = [...items].sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
 
     for (let it of sortedItems) {
@@ -972,14 +982,10 @@ window.calculateCurValue = function(price, dateStr) {
   let months = (now.getFullYear() - buyDate.getFullYear()) * 12 + (now.getMonth() - buyDate.getMonth());
   if (months < 0) months = 0;
 
-  // 每月折損率：10% / 12個月
   let dep = p * 0.10 * (months / 12);
-  
-  // 計算結果不低於0
   return Math.max(0, Math.round(p - dep));
 };
 
-// 在 Modal 中即時更新欄位，並加上紅字歸零提示
 window.updateCurValueField = function() {
   const price = document.getElementById('item-buy-price').value;
   const date = document.getElementById('item-buy-date').value;
@@ -1006,20 +1012,17 @@ window.initData = async function() {
   if (window._initCalled) return;
   window._initCalled = true;
 
-  // 1. 光速渲染：使用 localStorage 內的暫存資料直接繪製畫面 (Optimistic UI)
   loadLocal();
   initYearSelect();
   renderInvCatFilters();
   renderAll();
 
-  // 2. 等待 Firebase 就緒
   let waited = 0;
   while (!window._fbReady && waited < 5000) {
     await new Promise(r => setTimeout(r, 100));
     waited += 100;
   }
 
-  // 3. 背景同步：改用 onSnapshot 即時監聽，實現電腦與手機零時差同步
   if(window._fbReady) {
      setSyncStatus('syncing','連線中...');
      setupRealtimeSync();
@@ -1273,11 +1276,9 @@ function renderAll() {
   renderRentalStats();
   initRentalYearSelect();
   
-  // 重新套用區塊權限
   if (window.RoleGuard && typeof window.RoleGuard.applySection === 'function') {
     window.RoleGuard.applySection();
   }
-  // 觸發管理員強制展開保護
   applyAdminFailSafe();
 }
 
@@ -1398,15 +1399,7 @@ function renderTable() {
       <td><span class="cat-badge cat-${it.cat||'其他'}">${it.cat||'其他'}</span></td>
       <td><span class="status-badge s-${it.status||'在庫'}">${it.status||'在庫'}</span></td>
       <td class="qty-cell">${it.qty||1}</td>
-      <td class="qty-cell">
-        ${avail <= 0
-          ? `<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(220,38,38,.12);border:1.5px solid rgba(220,38,38,.45);border-radius:6px;padding:4px 9px;color:#dc2626;font-weight:700;font-size:11px;white-space:nowrap;">
-               <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-               庫存可用為 0，無法借出
-             </div>`
-          : `<span class="qty-avail">${avail}</span>`
-        }
-      </td>
+      <td class="qty-cell ${avail<=0?'qty-low':'qty-avail'}">${avail}</td>
       
       <td class="price-cell">
         <div style="color:var(--ink2);">${it.buyPrice?'NT$'+(+it.buyPrice).toLocaleString():'—'}</div>
@@ -1445,7 +1438,6 @@ function renderLoans() {
     const item = items.find(i=>i.id===l.itemId);
     const proj = projects.find(p=>p.id===l.projId);
     
-    // 計算逾期天數
     let overdueTag = '';
     const isOverdue = l.returnDate && l.returnDate < today;
     if (isOverdue) {
@@ -1765,13 +1757,13 @@ function openLoanModal(preItemId) {
       showToast(`「${preIt.name}」目前狀態為【${preIt.status}】，無法借出`, 'err');
       return;
     }
+    // 【修改點 1】借出時若數量為 0，跳出客製化警告彈窗
     if(preIt && getItemAvailQty(preItemId) <= 0) {
-      showToast(`「${preIt.name}」目前可用數量為 0，無法借出`, 'err');
+      showAlert(`庫存可用為 0，無法借出\n\n「${preIt.name}」目前已無可用庫存數量。`);
       return;
     }
   }
 
-  // 過濾掉可用數量為 0 的器材
   const availableItems = loanableItems.filter(it => getItemAvailQty(it.id) > 0);
 
   sel.innerHTML = availableItems.map(it => {
@@ -1784,7 +1776,6 @@ function openLoanModal(preItemId) {
   }
   if(preItemId) sel.value = preItemId;
 
-  // 更新借用數量的最大值
   const selectedId = sel.value;
   if(selectedId) {
     const maxAvail = getItemAvailQty(selectedId);
@@ -1792,7 +1783,6 @@ function openLoanModal(preItemId) {
     document.getElementById('loan-qty').value = Math.min(1, maxAvail);
   }
 
-  // 切換器材時更新最大借用數量
   sel.onchange = function() {
     const avail = getItemAvailQty(this.value);
     document.getElementById('loan-qty').max = avail;
@@ -1840,7 +1830,7 @@ async function saveLoan() {
   const qty = +document.getElementById('loan-qty').value||1;
   const availQty = getItemAvailQty(itemId);
   if(availQty <= 0) {
-    showToast(`「${it ? it.name : '此器材'}」可用數量為 0，無法借出`, 'err');
+    showAlert(`庫存可用為 0，無法借出\n\n「${it ? it.name : '此器材'}」目前已無可用庫存數量。`);
     return;
   }
   if(qty > availQty) {
@@ -1864,7 +1854,7 @@ async function saveLoan() {
     returned: false,
     createdAt: Date.now()
   };
-  loans.push(loan); // 先存入本地陣列達到光速顯示
+  loans.push(loan);
 
   if(it && it.status==='在庫') {
     it.status = '借出';
@@ -2121,6 +2111,7 @@ function downloadSingleQR() {
   }, 300);
 }
 
+// 【修改點 3】還原並強化 QR Code 管理列印介面
 function openQRManager() {
   if (!items.length) { showToast('目前無器材', 'err'); return; }
   sessionStorage.setItem('qr_items', JSON.stringify(items.map(it => ({
@@ -2134,220 +2125,95 @@ function openQRManager() {
   setTimeout(() => URL.revokeObjectURL(url), 15000);
 }
 
-// 產生 QR Code 獨立列印頁面
-function buildQRManagerHTML() {
-  const its = items.map(it => ({
-    id: it.id, name: it.name, cat: it.cat || '', brand: it.brand || '', code: it.code || '',
-    status: it.status || '在庫'
-  }));
-  const itemsJson = JSON.stringify(its).replace(/</g,'\\u003c').replace(/>/g,'\\u003e');
-
+function buildQRManagerHTML() { 
   return `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QR Code 管理 · 器材庫存</title>
+<title>🖨️ QR Code 列印管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:#f5f3ef;color:#1c1917;font-size:13px;}
-.header{background:#1c1917;color:#fafaf9;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
-.header-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;}
-.dot{width:7px;height:7px;border-radius:50%;background:#d97706;}
-.toolbar{background:#292524;padding:8px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.05);}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:6px;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;}
-.btn-amber{background:#b45309;color:white;}.btn-amber:hover{background:#d97706;}
-.btn-ghost{background:rgba(255,255,255,.07);color:#d6d3d1;border:1px solid rgba(255,255,255,.15);}.btn-ghost:hover{background:rgba(255,255,255,.14);color:#fafaf9;}
-.btn-blue{background:rgba(3,105,161,.15);color:#38bdf8;border:1px solid rgba(3,105,161,.35);}.btn-blue:hover{background:#0369a1;color:white;}
-.btn-green{background:rgba(5,150,105,.15);color:#34d399;border:1px solid rgba(5,150,105,.35);}.btn-green:hover{background:#059669;color:white;}
-.btn-red{background:rgba(220,38,38,.12);color:#f87171;border:1px solid rgba(220,38,38,.3);}.btn-red:hover{background:#dc2626;color:white;}
-.main{padding:16px 20px;max-width:1400px;margin:0 auto;}
-.count-bar{font-size:11px;color:#78716c;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.count-bar strong{color:#1c1917;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;}
-.card{background:white;border:2px solid #e7e3dc;border-radius:10px;overflow:hidden;transition:.15s;position:relative;display:flex;flex-direction:column;}
-.card.selected{border-color:#b45309;box-shadow:0 0 0 2px rgba(180,83,9,.2);}
-.card.selected .card-top{background:rgba(180,83,9,.07);}
-.card-top{padding:10px 12px 6px;display:flex;align-items:flex-start;gap:8px;cursor:pointer;flex:1;}
-.card-chk{width:17px;height:17px;border-radius:4px;border:2px solid #c4bdb6;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:.15s;}
-.card.selected .card-chk{background:#b45309;border-color:#b45309;}
-.card-info{flex:1;min-width:0;}
-.card-name{font-size:12px;font-weight:600;color:#1c1917;line-height:1.4;word-break:break-all;}
-.card-meta{font-size:10px;color:#78716c;margin-top:3px;}
-.card-status{display:inline-block;padding:1px 7px;border-radius:20px;font-size:9px;font-weight:600;margin-top:4px;}
-.s-在庫{background:rgba(5,150,105,.1);color:#059669;}
-.s-借出{background:rgba(3,105,161,.1);color:#0369a1;}
-.s-維修中{background:rgba(220,38,38,.1);color:#dc2626;}
-.s-報廢{background:rgba(120,113,108,.1);color:#78716c;}
-.card-qr{padding:8px 12px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;background:#fafaf9;border-top:1px solid #e7e3dc;}
-.card-actions{display:flex;gap:4px;width:100%;justify-content:center;}
-.btn-xs{padding:3px 9px;font-size:10px;border-radius:4px;}
-.edit-row{display:flex;align-items:center;gap:4px;width:100%;padding:6px 12px 8px;background:#fafaf9;border-top:1px solid #e7e3dc;}
-.edit-row input{flex:1;border:1px solid #d6d0ca;border-radius:4px;padding:4px 7px;font-size:11px;font-family:inherit;outline:none;background:white;min-width:0;}
-.edit-row input:focus{border-color:#b45309;box-shadow:0 0 0 2px rgba(180,83,9,.1);}
-.search-box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 10px;font-size:12px;color:#d6d3d1;outline:none;font-family:inherit;width:160px;}
-.search-box::placeholder{color:#78716c;}
-
-@media print{
-  .header,.toolbar,.count-bar,.card-actions,.edit-row,.no-print{display:none!important;}
-  body{background:white;}
-  .main{padding:0;}
-  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6mm;padding:4mm;}
-  .card{border:1px solid #ccc;border-radius:4px;page-break-inside:avoid;break-inside:avoid;}
-  .card:not(.selected){display:none!important;}
-  .card-top{cursor:default;}
-  .card-chk{display:none;}
-  .card-qr{background:white;border-top:1px solid #eee;padding:8px 12px;}
-}
+  body { font-family: 'Noto Sans TC', sans-serif; background: #eeeae4; padding: 20px; color: #1c1917; }
+  .no-print { margin-bottom: 20px; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); max-width: 800px; margin-left: auto; margin-right: auto;}
+  .controls { display: flex; gap: 20px; margin: 15px 0; background: #f9f7f4; padding: 15px; border-radius: 8px;}
+  .controls label { font-size: 14px; font-weight: 500; cursor: pointer; display:flex; align-items:center; gap:6px;}
+  .print-btn { background: #b45309; color: #fff; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 600; display:inline-flex; align-items:center; gap:8px;}
+  .print-btn:hover { background: #d97706; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; max-width: 1200px; margin: 0 auto;}
+  .qr-card { background: #fff; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #e7e3dc; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .qr-card input.edit-name { width: 100%; text-align: center; font-weight: 600; border: 1px dashed #d6d3d1; padding: 6px; margin-bottom: 8px; font-size: 14px; border-radius: 4px; font-family:inherit;}
+  .qr-card input.edit-name:focus { outline:none; border-color: #b45309; background: #fffbeb;}
+  .qr-card .meta { font-size: 11px; color: #78716c; margin-bottom: 12px; height: 16px; font-family: 'IBM Plex Mono', monospace;}
+  .qr-code-img { margin: 0 auto; display: flex; justify-content: center; }
+  .qr-code-img img { border-radius: 4px; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .no-print { display: none !important; }
+    .grid { display: flex; flex-wrap: wrap; gap: 5mm; max-width: none;}
+    .qr-card { width: 4.5cm; height: 5.5cm; page-break-inside: avoid; border: 1px dashed #ccc; padding: 5mm; box-sizing: border-box; box-shadow: none; border-radius:0;}
+    .qr-card input.edit-name { border: none; background: transparent; font-size: 12pt; padding: 0; text-overflow: ellipsis;}
+  }
 </style>
 </head>
 <body>
-<div class="header">
-  <div class="header-title"><div class="dot"></div>QR Code 管理 · 器材庫存</div>
-  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-    <button class="btn btn-green" id="btn-sel-all">全選</button>
-    <button class="btn btn-ghost" id="btn-desel-all">取消全選</button>
-    <button class="btn btn-amber" onclick="window.print()">🖨️ 列印已選項目</button>
-    <button class="btn btn-ghost" onclick="window.close()">✕ 關閉</button>
-  </div>
-</div>
-<div class="toolbar">
-  <input class="search-box" id="qr-search" placeholder="搜尋器材名稱..." oninput="filterCards()">
-  <span style="font-size:11px;color:#78716c;" id="selected-count">已選：0 項</span>
-</div>
-
-<div class="main">
-  <div class="count-bar">
-    共 <strong id="total-count">0</strong> 項器材 · 點擊卡片勾選要列印的項目 · 點「✏ 編輯」可修改名稱（不影響資料庫，僅改列印用名稱）
+  <div class="no-print">
+    <h2 style="margin-top:0;">🖨️ 器材 QR Code 標籤列印</h2>
+    <p style="color:#57534e; font-size:14px;">請勾選您要在標籤上顯示的附加資訊。若品名太長，您可以直接點擊卡片上的「器材名稱」進行縮減修改（修改僅限本次列印使用，不影響系統資料）。</p>
+    <div class="controls">
+      <label><input type="checkbox" id="chk-brand" checked onchange="renderQRs()"> 顯示品牌</label>
+      <label><input type="checkbox" id="chk-model" checked onchange="renderQRs()"> 顯示型號/編號</label>
+      <label><input type="checkbox" id="chk-cat" checked onchange="renderQRs()"> 顯示類別</label>
+    </div>
+    <button class="print-btn" onclick="window.print()">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+      列印全部標籤
+    </button>
   </div>
   <div class="grid" id="qr-grid"></div>
-</div>
 
-<script>
-const ALL_ITEMS = ${itemsJson};
-let editedNames = {};  // id -> 本頁修改的名稱
-
-function getDisplayName(it) {
-  return editedNames[it.id] !== undefined ? editedNames[it.id] : it.name;
-}
-
-function renderGrid(filter) {
-  const grid = document.getElementById('qr-grid');
-  const src = filter ? ALL_ITEMS.filter(it =>
-    it.name.toLowerCase().includes(filter) ||
-    (it.brand||'').toLowerCase().includes(filter) ||
-    (it.code||'').toLowerCase().includes(filter)
-  ) : ALL_ITEMS;
-
-  document.getElementById('total-count').textContent = src.length;
-  grid.innerHTML = '';
-
-  src.forEach(it => {
-    const card = document.createElement('div');
-    card.className = 'card' + (selectedIds.has(it.id) ? ' selected' : '');
-    card.id = 'card-' + it.id;
+  <script>
+    const items = JSON.parse(sessionStorage.getItem('qr_items') || '[]');
     
-    const displayName = getDisplayName(it);
-    const meta = [it.cat, it.brand, it.code].filter(Boolean).join(' · ') || '—';
-    const statusCls = 's-' + (it.status || '在庫');
+    function renderQRs() {
+      const showBrand = document.getElementById('chk-brand').checked;
+      const showModel = document.getElementById('chk-model').checked;
+      const showCat = document.getElementById('chk-cat').checked;
+      
+      const grid = document.getElementById('qr-grid');
+      grid.innerHTML = '';
+      
+      items.forEach(it => {
+        const card = document.createElement('div');
+        card.className = 'qr-card';
+        
+        let metaArr = [];
+        if(showCat && it.cat) metaArr.push(it.cat);
+        if(showBrand && it.brand) metaArr.push(it.brand);
+        if(showModel && it.code) metaArr.push(it.code);
+        const metaStr = metaArr.join(' · ');
 
-    card.innerHTML = \`
-      <div class="card-top" onclick="toggleCard('\${it.id}')">
-        <div class="card-chk" id="chk-\${it.id}">
-          \${selectedIds.has(it.id) ? '<svg width="11" height="11" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' : ''}
-        </div>
-        <div class="card-info">
-          <div class="card-name" id="name-\${it.id}">\${displayName}</div>
-          <div class="card-meta">\${meta}</div>
-          <span class="card-status \${statusCls}">\${it.status||'在庫'}</span>
-        </div>
-      </div>
-      <div class="card-qr">
-        <div id="qr-\${it.id}" style="line-height:0;"></div>
-        <div class="card-actions">
-          <button class="btn btn-blue btn-xs no-print" onclick="startEdit('\${it.id}')">✏ 編輯名稱</button>
-        </div>
-      </div>
-      <div class="edit-row no-print" id="edit-row-\${it.id}" style="display:none;">
-        <input type="text" id="edit-input-\${it.id}" value="\${displayName.replace(/"/g,'&quot;')}" maxlength="40" onkeydown="if(event.key==='Enter')saveEdit('\${it.id}');if(event.key==='Escape')cancelEdit('\${it.id}')">
-        <button class="btn btn-amber btn-xs" onclick="saveEdit('\${it.id}')">確認</button>
-        <button class="btn btn-ghost btn-xs" onclick="cancelEdit('\${it.id}')">取消</button>
-      </div>
-    \`;
-    grid.appendChild(card);
-
-    // Generate QR code after appending
-    setTimeout(() => {
-      const qrBox = document.getElementById('qr-' + it.id);
-      if (qrBox && !qrBox.hasChildNodes()) {
-        new QRCode(qrBox, { text: it.id, width: 120, height: 120, correctLevel: QRCode.CorrectLevel.M });
-      }
-    }, 10);
-  });
-
-  updateSelectedCount();
-}
-
-const selectedIds = new Set();
-
-function toggleCard(id) {
-  if (selectedIds.has(id)) {
-    selectedIds.delete(id);
-  } else {
-    selectedIds.add(id);
-  }
-  const card = document.getElementById('card-' + id);
-  const chk  = document.getElementById('chk-' + id);
-  if (card) card.className = 'card' + (selectedIds.has(id) ? ' selected' : '');
-  if (chk) chk.innerHTML = selectedIds.has(id)
-    ? '<svg width="11" height="11" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>'
-    : '';
-  updateSelectedCount();
-}
-
-function updateSelectedCount() {
-  document.getElementById('selected-count').textContent = \`已選：\${selectedIds.size} 項\`;
-}
-
-function filterCards() {
-  const q = document.getElementById('qr-search').value.toLowerCase().trim();
-  renderGrid(q || null);
-}
-
-function startEdit(id) {
-  document.getElementById('edit-row-' + id).style.display = 'flex';
-  const inp = document.getElementById('edit-input-' + id);
-  inp.focus(); inp.select();
-}
-
-function saveEdit(id) {
-  const inp = document.getElementById('edit-input-' + id);
-  const newName = inp.value.trim();
-  if (!newName) { inp.focus(); return; }
-  editedNames[id] = newName;
-  const nameEl = document.getElementById('name-' + id);
-  if (nameEl) nameEl.textContent = newName;
-  cancelEdit(id);
-}
-
-function cancelEdit(id) {
-  document.getElementById('edit-row-' + id).style.display = 'none';
-}
-
-document.getElementById('btn-sel-all').onclick = () => {
-  ALL_ITEMS.forEach(it => selectedIds.add(it.id));
-  renderGrid(document.getElementById('qr-search').value.toLowerCase().trim() || null);
-};
-document.getElementById('btn-desel-all').onclick = () => {
-  selectedIds.clear();
-  renderGrid(document.getElementById('qr-search').value.toLowerCase().trim() || null);
-};
-
-renderGrid(null);
-<\/script>
+        card.innerHTML = \`
+          <input type="text" class="edit-name" value="\${it.name.replace(/"/g, '&quot;')}" title="點擊修改列印名稱">
+          <div class="meta">\${metaStr}</div>
+          <div class="qr-code-img" id="qr-\${it.id}"></div>
+        \`;
+        grid.appendChild(card);
+        
+        new QRCode(document.getElementById('qr-'+it.id), {
+          text: it.id,
+          width: 130,
+          height: 130,
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      });
+    }
+    
+    // 確保字體載入後再繪製，避免排版偏移
+    setTimeout(renderQRs, 100);
+  <\/script>
 </body>
-</html>`;
+</html>`; 
 }
 
 let html5QrCode = null;
@@ -2371,68 +2237,19 @@ function closeScanner() {
 }
 function closeScannerIfBg(e) { if(e.target === document.getElementById('scanner-overlay')) closeScanner(); }
 
+// 【修改點 2】掃描辨識時，若商品為借出狀態，給予明確警告並詢問是否歸還
 function onScanSuccess(decodedText) {
   closeScanner();
   const it = items.find(i => i.id === decodedText);
-  if (!it) { showToast('⚠ 找不到該器材！請確認掃描的條碼是否正確', 'err'); return; }
-
-  // 狀態為維修中或報廢：無法借出
-  if (it.status === '維修中') {
-    showScanBlockAlert(it.name, '目前狀態為【維修中】，無法借出。');
-    return;
-  }
-  if (it.status === '報廢') {
-    showScanBlockAlert(it.name, '此器材已【報廢】，無法借出。');
-    return;
-  }
-
-  // 有借出中的紀錄 → 詢問是否歸還
+  if (!it) { showToast('找不到該器材！請確認掃描的條碼是否正確', 'err'); return; }
   const activeLoan = loans.find(l => l.itemId === decodedText && !l.returned);
   if (activeLoan) {
-    showConfirm(
-      `「${it.name}」目前由【${activeLoan.borrower||'未知'}】借出中。\n確定要執行【歸還】嗎？`,
-      () => { returnLoan(activeLoan.id); }
-    );
-    return;
+    showConfirm(`⚠️ 此商品目前為「借出」狀態，無法再次借出！\n\n「${it.name}」目前由 ${activeLoan.borrower||'未知'} 借用中。\n請問是否要執行【歸還】？`, () => { returnLoan(activeLoan.id); });
+  } else {
+    openLoanModal(it.id); showToast(`✓ 已辨識器材「${it.name}」，請填寫借用人`);
   }
-
-  // 可用數量為 0（全部借出）
-  const avail = getItemAvailQty(it.id);
-  if (avail <= 0) {
-    showScanBlockAlert(it.name, `庫存可用為 0，目前無法借出。`);
-    return;
-  }
-
-  // 正常開啟借出表單
-  openLoanModal(it.id);
-  showToast(`✓ 已辨識器材「${it.name}」，請填寫借用人`);
-}
-
-// 掃描後顯示「無法借出」提示 Modal
-function showScanBlockAlert(itemName, reason) {
-  const overlay = document.getElementById('scan-block-overlay');
-  document.getElementById('scan-block-name').textContent = itemName;
-  document.getElementById('scan-block-reason').textContent = reason;
-  overlay.classList.add('open');
 }
 function onScanFailure(error) {}
-
-/* =============================================
-   TOAST & CONFIRM
-   ============================================= */
-function showToast(msg, type='ok') {
-  const c = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  t.className = 'toast '+type; t.textContent = msg;
-  c.appendChild(t); setTimeout(()=>t.remove(),3000);
-}
-function showConfirm(msg, onOk) {
-  const overlay = document.getElementById('confirm-overlay');
-  document.getElementById('confirm-msg').textContent = msg;
-  overlay.classList.add('open');
-  document.getElementById('confirm-ok').onclick   = () => { overlay.classList.remove('open'); onOk(); };
-  document.getElementById('confirm-cancel').onclick= () => overlay.classList.remove('open');
-}
 
 /* =============================================
    EXCEL IMPORT / EXPORT 
