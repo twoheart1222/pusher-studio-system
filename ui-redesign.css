@@ -1,0 +1,508 @@
+/* Pusher Studio internal system UI refresh */
+:root {
+  --bg: #f5f6f8 !important;
+  --panel: #17202a !important;
+  --panel2: #ffffff !important;
+  --paper: #ffffff !important;
+  --ink: #17202a !important;
+  --ink2: #52606d !important;
+  --ink3: #8b98a5 !important;
+  --line: #dfe5eb !important;
+  --acc: #c56a2d !important;
+  --acc2: #e28a3a !important;
+  --success: #16835f !important;
+  --danger: #c93d3d !important;
+  --info: #246b9f !important;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .05), 0 10px 28px rgba(15, 23, 42, .07) !important;
+  --shadow-lg: 0 18px 50px rgba(15, 23, 42, .18) !important;
+  --r: 8px !important;
+}
+
+* { letter-spacing: 0 !important; }
+
+body {
+  background:
+    linear-gradient(180deg, #fbfcfd 0, #f5f6f8 260px) !important;
+  color: var(--ink) !important;
+  font-size: 13px !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(23, 32, 42, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 32, 42, .035) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,.35), transparent 420px);
+  z-index: -1;
+}
+
+.topbar {
+  height: 58px !important;
+  padding: 0 28px !important;
+  background: rgba(255, 255, 255, .92) !important;
+  color: var(--ink) !important;
+  border-bottom: 1px solid var(--line) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.8), 0 10px 24px rgba(15,23,42,.05) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.topbar-brand {
+  color: var(--ink) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+.brand-dot,
+.topbar-brand .brand-dot {
+  width: 9px !important;
+  height: 9px !important;
+  background: #c56a2d !important;
+  box-shadow: 0 0 0 4px rgba(197, 106, 45, .13) !important;
+}
+
+.topbar-nav {
+  gap: 4px !important;
+  align-items: center !important;
+}
+
+.nav-tab {
+  min-height: 34px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 7px 12px !important;
+  border-radius: 7px !important;
+  color: #52606d !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+}
+
+.nav-tab:hover {
+  color: var(--ink) !important;
+  background: #f1f4f7 !important;
+  border-color: #e3e9ef !important;
+}
+
+.nav-tab.active {
+  color: #9f4f21 !important;
+  background: #fff4eb !important;
+  border-color: #f1c6a7 !important;
+}
+
+.topbar-actions {
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+  min-width: 0 !important;
+}
+
+.topbar-actions > * {
+  flex-shrink: 0 !important;
+}
+
+#sync-status {
+  min-width: max-content !important;
+  white-space: nowrap !important;
+  writing-mode: horizontal-tb !important;
+}
+
+.toolbar {
+  top: 58px !important;
+  min-height: 48px !important;
+  height: auto !important;
+  padding: 6px 28px !important;
+  background: rgba(255,255,255,.86) !important;
+  border-bottom: 1px solid var(--line) !important;
+  box-shadow: 0 6px 18px rgba(15,23,42,.04) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.tg {
+  height: 34px !important;
+  padding: 0 12px !important;
+  border-right: 1px solid #e3e9ef !important;
+}
+
+.tg-label {
+  color: #7a8794 !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+}
+
+.t-select,
+.field input,
+.field select,
+.field textarea,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+  background: #ffffff !important;
+  color: var(--ink) !important;
+  border: 1px solid #d9e1e8 !important;
+  border-radius: 7px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+
+.t-select:focus,
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #c56a2d !important;
+  box-shadow: 0 0 0 3px rgba(197,106,45,.12) !important;
+  outline: none !important;
+}
+
+.main {
+  max-width: 1480px !important;
+  padding: 26px 28px 44px !important;
+}
+
+.panel,
+.kpi-card,
+.no-proj,
+.login-box {
+  background: #ffffff !important;
+  border: 1px solid #dfe5eb !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.panel {
+  overflow: hidden !important;
+}
+
+.panel-header {
+  min-height: 50px !important;
+  padding: 13px 16px !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #dfe5eb !important;
+}
+
+.panel-title {
+  color: var(--ink) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+.panel-sub,
+.kpi-sub,
+.empty-sub,
+.proj-meta,
+.summary-label {
+  color: #7a8794 !important;
+}
+
+.kpi-row {
+  gap: 14px !important;
+  margin-bottom: 20px !important;
+}
+
+.kpi-card {
+  min-height: 112px !important;
+  padding: 17px 18px !important;
+}
+
+.kpi-card::before {
+  height: 4px !important;
+  background: #c56a2d !important;
+}
+
+.kpi-label {
+  color: #7a8794 !important;
+  font-weight: 800 !important;
+  font-size: 10px !important;
+}
+
+.kpi-value {
+  color: var(--ink) !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+}
+
+.kpi-value.income,
+.amount-pos,
+.proj-profit.pos {
+  color: #16835f !important;
+}
+
+.kpi-value.cost,
+.amount-neg {
+  color: #b65f28 !important;
+}
+
+.kpi-value.profit,
+.kpi-value.margin {
+  color: #246b9f !important;
+}
+
+.btn,
+.view-pill,
+.proj-filter-pill {
+  border-radius: 7px !important;
+  font-weight: 700 !important;
+  min-height: 30px !important;
+  box-shadow: none !important;
+}
+
+.btn-amber {
+  background: #c56a2d !important;
+  color: #fff !important;
+}
+
+.btn-amber:hover {
+  background: #a95522 !important;
+}
+
+.btn-green {
+  background: #e9f6f1 !important;
+  color: #11694d !important;
+  border: 1px solid #bfe1d4 !important;
+}
+
+.btn-green:hover {
+  background: #16835f !important;
+  color: #fff !important;
+}
+
+.btn-red {
+  background: #fff0f0 !important;
+  color: #b53232 !important;
+  border: 1px solid #f2c6c6 !important;
+}
+
+.btn-red:hover {
+  background: #c93d3d !important;
+  color: #fff !important;
+}
+
+.btn-ghost,
+.btn-ghost-dark {
+  background: #f6f8fa !important;
+  color: #52606d !important;
+  border: 1px solid #dfe5eb !important;
+}
+
+.btn-ghost:hover,
+.btn-ghost-dark:hover {
+  background: #edf2f6 !important;
+  color: var(--ink) !important;
+}
+
+.view-pill,
+.proj-filter-pill {
+  background: #ffffff !important;
+  color: #52606d !important;
+  border: 1px solid #dfe5eb !important;
+}
+
+.view-pill.on,
+.proj-filter-pill.on {
+  color: #9f4f21 !important;
+  background: #fff4eb !important;
+  border-color: #f1c6a7 !important;
+}
+
+table,
+.cost-table,
+.inv-table,
+.contact-table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+th,
+.cost-table th {
+  background: #f2f5f8 !important;
+  color: #52606d !important;
+  border-bottom: 1px solid #dfe5eb !important;
+  font-weight: 800 !important;
+}
+
+td,
+.cost-table td {
+  border-bottom: 1px solid #e8edf2 !important;
+}
+
+tr:hover td,
+.cost-table tr:hover td {
+  background: #f8fafc !important;
+}
+
+.project-item,
+.contact-item,
+.item-row,
+.proj-row-header,
+.task-item {
+  transition: background .16s ease, border-color .16s ease, transform .16s ease !important;
+}
+
+.project-item:hover,
+.contact-item:hover,
+.item-row:hover,
+.proj-row-header:hover {
+  background: #f8fafc !important;
+}
+
+.project-item.active,
+.contact-item.active {
+  background: #fff7f0 !important;
+  border-left-color: #c56a2d !important;
+}
+
+.cat-badge,
+.status-badge,
+.proj-client-tag,
+.payee-tag,
+#role-badge,
+.role-badge-pill {
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+}
+
+.modal {
+  background: #ffffff !important;
+  border-radius: 10px !important;
+  border: 1px solid #dfe5eb !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.modal-header {
+  background: #17202a !important;
+  color: #fff !important;
+}
+
+.overlay {
+  background: rgba(23, 32, 42, .52) !important;
+  backdrop-filter: blur(5px) !important;
+}
+
+.tab-bar {
+  background: #ffffff !important;
+  border-bottom: 1px solid #dfe5eb !important;
+}
+
+.tab-item {
+  color: #7a8794 !important;
+  font-weight: 700 !important;
+}
+
+.tab-item.active {
+  color: #9f4f21 !important;
+  border-bottom-color: #c56a2d !important;
+}
+
+.empty-state {
+  color: #7a8794 !important;
+}
+
+.empty-icon {
+  opacity: .55 !important;
+}
+
+.summary-row {
+  background: #f8fafc !important;
+  border-top: 1px solid #dfe5eb !important;
+}
+
+.toast {
+  background: #17202a !important;
+  border-radius: 8px !important;
+}
+
+#auth-overlay {
+  background: #f5f6f8 !important;
+}
+
+/* Login */
+body:has(.login-box) {
+  background:
+    linear-gradient(135deg, #17202a 0%, #273342 52%, #f5f6f8 52%, #ffffff 100%) !important;
+}
+
+.login-box {
+  width: min(380px, calc(100vw - 32px)) !important;
+  padding: 34px !important;
+  color: var(--ink) !important;
+}
+
+.login-box h2 {
+  color: var(--ink) !important;
+  font-size: 22px !important;
+  text-align: left !important;
+}
+
+.login-box h2::after {
+  content: "Pusher Studio internal system";
+  display: block;
+  margin-top: 7px;
+  color: #7a8794;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.login-box .field label {
+  color: #52606d !important;
+  font-weight: 800 !important;
+}
+
+.btn-login {
+  background: #c56a2d !important;
+  border-radius: 7px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 10px 22px rgba(197,106,45,.24) !important;
+}
+
+.btn-login:hover {
+  background: #a95522 !important;
+}
+
+.forgot-pwd {
+  color: #52606d !important;
+}
+
+.forgot-pwd:hover {
+  color: #9f4f21 !important;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    height: auto !important;
+    min-height: 58px !important;
+    padding: 10px 16px !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+
+  .topbar-nav {
+    order: 3 !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    padding-bottom: 2px !important;
+  }
+
+  .toolbar {
+    top: 0 !important;
+    padding: 8px 16px !important;
+  }
+
+  .main {
+    padding: 18px 16px 34px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-row {
+    grid-template-columns: 1fr !important;
+  }
+}
