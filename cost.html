@@ -1057,6 +1057,188 @@ function fmt(n) {
   return (n < 0 ? '-' : '') + 'NT$' + Math.abs(Math.round(n)).toLocaleString();
 }
 
+function pct(n) {
+  if(n === undefined || n === null || isNaN(n)) return '—';
+  return (Math.round(n * 10) / 10).toFixed(1) + '%';
+}
+
+function readMoney(v) {
+  const n = parseFloat(String(v || '').replace(/,/g, ''));
+  return isFinite(n) ? n : 0;
+}
+
+function calcProjectBudget(items, grossPrice, taxMode, profitPct, hrPct) {
+  let tax = 0;
+  let net = grossPrice;
+
+  if(taxMode === 'included') {
+    net = grossPrice / 1.05;
+    tax = grossPrice - net;
+  } else if(taxMode === 'excluded') {
+    tax = grossPrice * 0.05;
+  }
+
+  const targetProfit = net * (profitPct / 100);
+  const availableCost = Math.max(net - targetProfit, 0);
+  const actualHr = items.filter(c => c.type !== '收入' && c.cat === '人力').reduce((a,c) => a + (+c.amount || 0), 0);
+  const otherCost = items.filter(c => c.type !== '收入' && c.cat !== '人力').reduce((a,c) => a + (+c.amount || 0), 0);
+  const hrByRatio = net * (hrPct / 100);
+  const hrCeiling = Math.max(availableCost - otherCost, 0);
+  const suggestedHr = Math.min(hrByRatio, hrCeiling);
+  const projectedCost = otherCost + suggestedHr;
+  const projectedProfit = net - projectedCost;
+
+  return {
+    grossPrice, tax, net, targetProfit, availableCost,
+    actualHr, otherCost, hrByRatio, hrCeiling, suggestedHr,
+    projectedCost, projectedProfit,
+    suggestedHrPctGross: grossPrice > 0 ? suggestedHr / grossPrice * 100 : 0,
+    suggestedHrPctNet: net > 0 ? suggestedHr / net * 100 : 0,
+    actualHrPctGross: grossPrice > 0 ? actualHr / grossPrice * 100 : 0,
+    actualHrPctNet: net > 0 ? actualHr / net * 100 : 0
+  };
+}
+
+function getQuickCalcSettings(projId) {
+  try {
+    const all = JSON.parse(localStorage.getItem('cost_quick_calc') || '{}');
+    return all[projId] || {};
+  } catch(e) {
+    return {};
+  }
+}
+
+function saveQuickCalcSettings(projId) {
+  const priceEl = document.getElementById('calc-price');
+  if(!priceEl) return;
+  let all = {};
+  try { all = JSON.parse(localStorage.getItem('cost_quick_calc') || '{}'); } catch(e) {}
+  all[projId] = {
+    price: readMoney(priceEl.value),
+    taxMode: document.getElementById('calc-tax-mode').value,
+    profitPct: +document.getElementById('calc-profit-pct').value,
+    hrPct: +document.getElementById('calc-hr-pct').value
+  };
+  localStorage.setItem('cost_quick_calc', JSON.stringify(all));
+}
+
+function renderProjectCalculator(projId, items) {
+  const saved = getQuickCalcSettings(projId);
+  const totals = calcTotals(items);
+  const defaultPrice = saved.price || totals.income || '';
+  const taxMode = saved.taxMode || 'included';
+  const profitPct = saved.profitPct || 25;
+  const hrPct = saved.hrPct || 35;
+
+  return `<div class="quick-calc" id="quick-calc">
+    <div class="quick-calc-form">
+      <div class="calc-title">
+        <span>快速預算估算</span>
+        <span class="calc-hint">扣稅、保留利潤、抓人事上限</span>
+      </div>
+      <div class="calc-field">
+        <label>專案報價 / 合約總價</label>
+        <input type="number" id="calc-price" min="0" step="1000" value="${defaultPrice}" placeholder="例如 300000" oninput="updateProjectCalculator('${projId}')" onchange="saveQuickCalcSettings('${projId}')">
+      </div>
+      <div class="calc-input-row">
+        <div class="calc-field">
+          <label>發票稅金</label>
+          <select id="calc-tax-mode" onchange="updateProjectCalculator('${projId}');saveQuickCalcSettings('${projId}')">
+            <option value="included" ${taxMode==='included'?'selected':''}>總價含稅，扣 5%</option>
+            <option value="excluded" ${taxMode==='excluded'?'selected':''}>未稅價，另估 5%</option>
+            <option value="none" ${taxMode==='none'?'selected':''}>不扣稅</option>
+          </select>
+        </div>
+        <div class="calc-field">
+          <label>目標利潤率</label>
+          <select id="calc-profit-pct" onchange="updateProjectCalculator('${projId}');saveQuickCalcSettings('${projId}')">
+            ${[10,15,20,25,30,35,40].map(v => `<option value="${v}" ${profitPct===v?'selected':''}>${v}%</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="calc-field">
+        <label>人事費用抓取比例</label>
+        <select id="calc-hr-pct" onchange="updateProjectCalculator('${projId}');saveQuickCalcSettings('${projId}')">
+          ${[25,30,35,40,45,50].map(v => `<option value="${v}" ${hrPct===v?'selected':''}>整體預算 ${v}%</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="quick-calc-results">
+      <div class="calc-card">
+        <div class="calc-label">發票稅額</div>
+        <div class="calc-value warn" id="calc-tax">—</div>
+      </div>
+      <div class="calc-card">
+        <div class="calc-label">稅後可分配</div>
+        <div class="calc-value good" id="calc-net">—</div>
+      </div>
+      <div class="calc-card">
+        <div class="calc-label">保留利潤</div>
+        <div class="calc-value info" id="calc-profit">—</div>
+      </div>
+      <div class="calc-card">
+        <div class="calc-label">可用成本上限</div>
+        <div class="calc-value" id="calc-cost-cap">—</div>
+      </div>
+      <div class="calc-card">
+        <div class="calc-label">已登非人事支出</div>
+        <div class="calc-value warn" id="calc-other-cost">—</div>
+      </div>
+      <div class="calc-card">
+        <div class="calc-label">人事可用上限</div>
+        <div class="calc-value info" id="calc-hr-ceiling">—</div>
+      </div>
+      <div class="calc-card wide">
+        <div class="calc-label">建議人事預算</div>
+        <div class="calc-value good" id="calc-hr-suggest">—</div>
+        <div class="calc-meter"><div class="calc-meter-fill" id="calc-hr-meter"></div></div>
+        <div class="calc-note" id="calc-hr-note">—</div>
+      </div>
+      <div class="calc-card">
+        <div class="calc-label">目前已登人力</div>
+        <div class="calc-value" id="calc-hr-actual">—</div>
+        <div class="calc-note" id="calc-hr-actual-note">—</div>
+      </div>
+      <div class="calc-card full">
+        <div class="calc-label">估算提示</div>
+        <div class="calc-note" id="calc-warning">輸入專案價格後開始估算。</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function updateProjectCalculator(projId) {
+  const projItems = getFilteredItems(projId);
+  const grossPrice = readMoney(document.getElementById('calc-price')?.value);
+  const taxMode = document.getElementById('calc-tax-mode')?.value || 'included';
+  const profitPct = +(document.getElementById('calc-profit-pct')?.value || 25);
+  const hrPct = +(document.getElementById('calc-hr-pct')?.value || 35);
+  const result = calcProjectBudget(projItems, grossPrice, taxMode, profitPct, hrPct);
+
+  const setText = (id, text) => { const el = document.getElementById(id); if(el) el.textContent = text; };
+  setText('calc-tax', fmt(result.tax));
+  setText('calc-net', fmt(result.net));
+  setText('calc-profit', fmt(result.targetProfit));
+  setText('calc-cost-cap', fmt(result.availableCost));
+  setText('calc-other-cost', fmt(result.otherCost));
+  setText('calc-hr-ceiling', fmt(result.hrCeiling));
+  setText('calc-hr-suggest', fmt(result.suggestedHr));
+  setText('calc-hr-actual', fmt(result.actualHr));
+  setText('calc-hr-note', `約占總價 ${pct(result.suggestedHrPctGross)}，占稅後預算 ${pct(result.suggestedHrPctNet)}。`);
+  setText('calc-hr-actual-note', `目前已登人力占總價 ${pct(result.actualHrPctGross)}。`);
+
+  const meter = document.getElementById('calc-hr-meter');
+  if(meter) meter.style.width = Math.min(Math.max(result.suggestedHrPctGross, 0), 100) + '%';
+
+  let warning = `以 ${profitPct}% 利潤、${hrPct}% 人事比例估算，建議先抓 ${fmt(result.suggestedHr)} 做人事預算。`;
+  if(!grossPrice) warning = '輸入專案價格後開始估算。';
+  else if(result.hrCeiling < result.hrByRatio) warning = `非人事支出已吃掉部分預算，人事比例 ${hrPct}% 會超過利潤目標，建議人事先壓在 ${fmt(result.hrCeiling)} 以內。`;
+  else if(result.actualHr > result.suggestedHr) warning = `目前已登人力已高於建議值 ${fmt(result.actualHr - result.suggestedHr)}，需要調整利潤率或其他支出。`;
+  setText('calc-warning', warning);
+  const warningEl = document.getElementById('calc-warning');
+  if(warningEl) warningEl.className = 'calc-note ' + ((result.hrCeiling < result.hrByRatio || result.actualHr > result.suggestedHr) ? 'calc-warning' : '');
+}
+
 /* =============================================
    RENDER ALL
    ============================================= */
@@ -1195,6 +1377,7 @@ function renderProjectDetail(id) {
           <div style="font-size:16px;font-weight:600;font-family:var(--font-mono);color:${c};">${v}</div>
         </div>`).join('')}
       </div>
+      ${renderProjectCalculator(id, items)}
       <div class="tab-bar" id="proj-tabs">
         <div class="tab-item active" onclick="switchTab('detail','${id}',this)">明細列表</div>
         <div class="tab-item" onclick="switchTab('chart','${id}',this)">圖表分析</div>
@@ -1203,7 +1386,7 @@ function renderProjectDetail(id) {
       <div id="tab-chart" class="tab-content">${renderChartsHTML()}</div>
     </div>`;
 
-  setTimeout(() => { renderCharts(id); if(window.RoleGuard) RoleGuard.applySection(); }, 50);
+  setTimeout(() => { updateProjectCalculator(id); renderCharts(id); if(window.RoleGuard) RoleGuard.applySection(); }, 50);
 }
 
 const _costTabState = {};
