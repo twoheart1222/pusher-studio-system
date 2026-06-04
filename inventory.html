@@ -2143,17 +2143,34 @@ function buildQRManagerHTML() {
   .print-btn:hover { background: #d97706; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; max-width: 1200px; margin: 0 auto;}
   .qr-card { background: #fff; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #e7e3dc; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-  .qr-card input.edit-name { width: 100%; text-align: center; font-weight: 600; border: 1px dashed #d6d3d1; padding: 6px; margin-bottom: 8px; font-size: 14px; border-radius: 4px; font-family:inherit;}
-  .qr-card input.edit-name:focus { outline:none; border-color: #b45309; background: #fffbeb;}
+  .qr-card .edit-name { width: 100%; text-align: center; font-weight: 600; border: 1px dashed #d6d3d1; padding: 6px; margin-bottom: 8px; font-size: 14px; border-radius: 4px; font-family:inherit; box-sizing:border-box;}
+  .qr-card .edit-name:focus { outline:none; border-color: #b45309; background: #fffbeb;}
   .qr-card .meta { font-size: 11px; color: #78716c; margin-bottom: 12px; height: 16px; font-family: 'IBM Plex Mono', monospace;}
   .qr-code-img { margin: 0 auto; display: flex; justify-content: center; }
   .qr-code-img img { border-radius: 4px; }
+  .layout-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 12px 0 4px; }
+  .layout-row select { border:1px solid #d6d3d1; border-radius:6px; padding:8px 10px; font-family:inherit; font-size:14px; background:#fff; }
+  body.layout-label-14x30 { background:#f5f6f8; }
+  body.layout-label-14x30 .grid { display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start; justify-content:center; max-width:900px; }
+  body.layout-label-14x30 .qr-card { width:14mm; height:30mm; padding:1.2mm .9mm; border-radius:2px; border:1px solid #d7d7d7; box-shadow:none; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow:hidden; }
+  body.layout-label-14x30 .qr-card .edit-name { order:2; border:none; background:transparent; margin:1mm 0 0; padding:0; width:100%; height:8mm; font-size:6pt; line-height:1.15; white-space:normal; overflow:hidden; text-align:center; font-weight:700; color:#111; }
+  body.layout-label-14x30 .qr-card .meta { display:none; }
+  body.layout-label-14x30 .qr-code-img { order:1; width:11.4mm; height:11.4mm; align-items:center; }
+  body.layout-label-14x30 .qr-code-img img,
+  body.layout-label-14x30 .qr-code-img canvas { width:11.4mm !important; height:11.4mm !important; image-rendering:pixelated; }
+  body.layout-label-14x30 .hint-label { display:inline; }
+  .hint-label { display:none; color:#b45309; font-weight:600; }
+  @page label14x30 { size: 14mm 30mm; margin: 0; }
   @media print {
     body { background: #fff; padding: 0; }
     .no-print { display: none !important; }
     .grid { display: flex; flex-wrap: wrap; gap: 5mm; max-width: none;}
     .qr-card { width: 4.5cm; height: 5.5cm; page-break-inside: avoid; border: 1px dashed #ccc; padding: 5mm; box-sizing: border-box; box-shadow: none; border-radius:0;}
-    .qr-card input.edit-name { border: none; background: transparent; font-size: 12pt; padding: 0; text-overflow: ellipsis;}
+    .qr-card .edit-name { border: none; background: transparent; font-size: 12pt; padding: 0; text-overflow: ellipsis;}
+    body.layout-label-14x30 { padding:0; margin:0; }
+    body.layout-label-14x30 .grid { display:block; margin:0; padding:0; }
+    body.layout-label-14x30 .qr-card { page: label14x30; width:14mm; height:30mm; margin:0; padding:1.2mm .9mm; border:none; page-break-after:always; break-after:page; }
+    body.layout-label-14x30 .qr-card .edit-name { font-size:6pt; height:8mm; line-height:1.15; }
   }
 </style>
 </head>
@@ -2166,7 +2183,15 @@ function buildQRManagerHTML() {
       <label><input type="checkbox" id="chk-model" checked onchange="renderQRs()"> 顯示型號/編號</label>
       <label><input type="checkbox" id="chk-cat" checked onchange="renderQRs()"> 顯示類別</label>
     </div>
-    <button class="print-btn" onclick="window.print()">
+    <div class="layout-row">
+      <label style="font-size:14px;font-weight:600;">標籤版型</label>
+      <select id="label-layout" onchange="setLabelLayout(this.value)">
+        <option value="standard">一般 QR 標籤</option>
+        <option value="14x30">14×30mm 直式標籤機</option>
+      </select>
+      <span class="hint-label">列印設定請選 14mm × 30mm、方向直式、邊界無或最小。</span>
+    </div>
+    <button class="print-btn" onclick="printLabels()">
       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
       列印全部標籤
     </button>
@@ -2175,11 +2200,24 @@ function buildQRManagerHTML() {
 
   <script>
     const items = JSON.parse(sessionStorage.getItem('qr_items') || '[]');
+    let currentLayout = 'standard';
+    
+    function setLabelLayout(layout) {
+      currentLayout = layout;
+      document.body.classList.toggle('layout-label-14x30', layout === '14x30');
+      renderQRs();
+    }
+    
+    function printLabels() {
+      setLabelLayout(document.getElementById('label-layout').value);
+      setTimeout(() => window.print(), 120);
+    }
     
     function renderQRs() {
       const showBrand = document.getElementById('chk-brand').checked;
       const showModel = document.getElementById('chk-model').checked;
       const showCat = document.getElementById('chk-cat').checked;
+      const isSmallLabel = currentLayout === '14x30';
       
       const grid = document.getElementById('qr-grid');
       grid.innerHTML = '';
@@ -2195,7 +2233,7 @@ function buildQRManagerHTML() {
         const metaStr = metaArr.join(' · ');
 
         card.innerHTML = \`
-          <input type="text" class="edit-name" value="\${it.name.replace(/"/g, '&quot;')}" title="點擊修改列印名稱">
+          <div class="edit-name" contenteditable="true" title="點擊修改列印名稱">\${it.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
           <div class="meta">\${metaStr}</div>
           <div class="qr-code-img" id="qr-\${it.id}"></div>
         \`;
@@ -2203,8 +2241,8 @@ function buildQRManagerHTML() {
         
         new QRCode(document.getElementById('qr-'+it.id), {
           text: it.id,
-          width: 130,
-          height: 130,
+          width: isSmallLabel ? 86 : 130,
+          height: isSmallLabel ? 86 : 130,
           correctLevel: QRCode.CorrectLevel.M
         });
       });
