@@ -2498,10 +2498,6 @@ function buildQRManagerHTML() {
 
 let html5QrCode = null;
 let scannerTorchOn = false;
-let nativeScannerStream = null;
-let nativeScannerDetector = null;
-let nativeScannerRaf = null;
-let nativeScannerActive = false;
 let photoQrCode = null;
 
 function getScannerVideoTrack() {
@@ -2598,85 +2594,11 @@ function showScannerMessage(title, detail) {
   `;
 }
 
-function stopNativeScanner() {
-  nativeScannerActive = false;
-  if(nativeScannerRaf) {
-    cancelAnimationFrame(nativeScannerRaf);
-    nativeScannerRaf = null;
-  }
-  if(nativeScannerStream) {
-    nativeScannerStream.getTracks().forEach(track => track.stop());
-    nativeScannerStream = null;
-  }
-}
-
-async function startNativeBarcodeScanner() {
-  try {
-    if(location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-      showScannerMessage('相機被瀏覽器封鎖', getCameraErrorText());
-      return true;
-    }
-    if(!('BarcodeDetector' in window) || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      return false;
-    }
-    const supported = await BarcodeDetector.getSupportedFormats().catch(() => []);
-    if(supported.length && !supported.includes('qr_code')) return false;
-
-    const reader = document.getElementById('reader');
-    resetScannerView();
-    const video = document.createElement('video');
-    video.setAttribute('playsinline', 'true');
-    video.muted = true;
-    video.autoplay = true;
-    reader.appendChild(video);
-
-    nativeScannerStream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: { ideal: 'environment' },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        frameRate: { ideal: 30 }
-      }
-    });
-    video.srcObject = nativeScannerStream;
-    await video.play();
-    nativeScannerDetector = new BarcodeDetector({ formats: ['qr_code'] });
-    nativeScannerActive = true;
-    setTimeout(enhanceScannerCamera, 350);
-
-    const scan = async () => {
-      if(!nativeScannerActive) return;
-      if(video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-        try {
-          const codes = await nativeScannerDetector.detect(video);
-          const rawValue = codes && codes[0] && codes[0].rawValue;
-          if(rawValue) {
-            onScanSuccess(rawValue);
-            return;
-          }
-        } catch(err) {
-          console.debug('Native QR scan failed', err);
-        }
-      }
-      nativeScannerRaf = requestAnimationFrame(scan);
-    };
-    nativeScannerRaf = requestAnimationFrame(scan);
-    showToast('已啟用手機原生 QR 掃描模式');
-    return true;
-  } catch(err) {
-    console.debug('Native BarcodeDetector unavailable, falling back', err);
-    stopNativeScanner();
-    resetScannerView();
-    if(err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
-      showScannerMessage('相機權限未開啟', getCameraErrorText(err));
-      return true;
-    }
-    return false;
-  }
-}
-
 async function startHtml5Scanner() {
+  if(location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    showScannerMessage('相機被瀏覽器封鎖', getCameraErrorText());
+    return;
+  }
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     showScannerMessage('此瀏覽器無法開啟相機', getCameraErrorText());
     return;
@@ -2719,9 +2641,19 @@ async function startHtml5Scanner() {
         onScanFailure
       );
     } catch(retryErr) {
-      console.error("相機啟動失敗", retryErr);
-      showScannerMessage('相機無法啟動', getCameraErrorText(retryErr));
-      throw retryErr;
+      console.debug('Environment camera failed, retrying any camera', retryErr);
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          onScanSuccess,
+          onScanFailure
+        );
+      } catch(simpleErr) {
+        console.error("相機啟動失敗", simpleErr);
+        showScannerMessage('相機無法啟動', getCameraErrorText(simpleErr));
+        throw simpleErr;
+      }
     }
   }
   setTimeout(enhanceScannerCamera, 350);
@@ -2735,17 +2667,13 @@ function openScanner() {
   scannerTorchOn = false;
   closeScanner(false);
   overlay.classList.add('open');
-  startNativeBarcodeScanner().then(started => {
-    if(started) return;
-    return startHtml5Scanner();
-  }).catch(err => {
+  startHtml5Scanner().catch(err => {
     console.error("相機啟動失敗", err);
     showScannerMessage('相機無法啟動', getCameraErrorText(err));
     showToast('無法啟動相機，請確認瀏覽器已允許相機權限', 'err');
   });
 }
 function closeScanner(hideOverlay = true) {
-  stopNativeScanner();
   if (html5QrCode) {
     applyScannerConstraints({ torch: false });
     const scanner = html5QrCode;
