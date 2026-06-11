@@ -896,8 +896,6 @@ let costItems = [];
 
 let filterStatus = 'all';
 let filterCat    = 'all';
-let pendingNativeScanId = null;
-let pendingNativeScanHandled = false;
 
 /* =============================================
    ★ TOAST & ALERTS (自訂警告系統)
@@ -1025,13 +1023,11 @@ window.updateCurValueField = function() {
 window.initData = async function() {
   if (window._initCalled) return;
   window._initCalled = true;
-  initNativeCameraScanLink();
 
   loadLocal();
   initYearSelect();
   renderInvCatFilters();
   renderAll();
-  handleNativeCameraScanLink();
 
   let waited = 0;
   while (!window._fbReady && waited < 5000) {
@@ -1064,7 +1060,6 @@ function setupRealtimeSync() {
      saveLocal();
      renderInvCatFilters();
      renderAll();
-     handleNativeCameraScanLink();
   };
 
   onSnapshot(collection(fbDb, 'inv_items'), (snap) => {
@@ -2085,69 +2080,6 @@ async function deleteRepair(id) {
 let qrcodeInstance = null;
 let _currentQRItemId = null;
 
-function getItemScanUrl(id) {
-  const url = new URL(location.href);
-  url.search = '';
-  url.hash = '';
-  url.searchParams.set('i', id);
-  return url.toString();
-}
-
-function getScanParamFromUrl() {
-  const params = new URLSearchParams(location.search);
-  return params.get('i') || params.get('s') || params.get('scan') || params.get('item') || params.get('qr') || '';
-}
-
-function initNativeCameraScanLink() {
-  const scanId = getScanParamFromUrl();
-  if(scanId) {
-    pendingNativeScanId = scanId;
-    showToast('已收到原廠相機掃描連結，正在載入器材資料...');
-  }
-}
-
-function clearNativeCameraScanUrl() {
-  if(!getScanParamFromUrl()) return;
-  const url = new URL(location.href);
-  url.searchParams.delete('i');
-  url.searchParams.delete('s');
-  url.searchParams.delete('scan');
-  url.searchParams.delete('item');
-  url.searchParams.delete('qr');
-  history.replaceState(null, '', url.pathname + (url.search ? url.search : '') + url.hash);
-}
-
-function handleNativeCameraScanLink() {
-  if(pendingNativeScanHandled) return;
-  if(!pendingNativeScanId) pendingNativeScanId = getScanParamFromUrl();
-  if(!pendingNativeScanId) return;
-  if(!items.length) return;
-
-  const scanId = pendingNativeScanId;
-  const it = items.find(i => i.id === scanId);
-  if(!it) {
-    pendingNativeScanHandled = true;
-    clearNativeCameraScanUrl();
-    showToast('找不到原廠相機掃描到的器材，請確認 QR 是否為新版連結', 'err');
-    return;
-  }
-
-  pendingNativeScanHandled = true;
-  clearNativeCameraScanUrl();
-  setTimeout(() => onScanSuccess(scanId), 120);
-}
-
-function normalizeScanValue(value) {
-  const raw = String(value || '').trim();
-  if(!raw) return '';
-  try {
-    const url = new URL(raw);
-    return url.searchParams.get('i') || url.searchParams.get('s') || url.searchParams.get('scan') || url.searchParams.get('item') || url.searchParams.get('qr') || raw;
-  } catch(e) {
-    return raw;
-  }
-}
-
 function openQRCode(id, name) {
   _currentQRItemId = id;
   const it = items.find(i => i.id === id);
@@ -2156,10 +2088,10 @@ function openQRCode(id, name) {
   document.getElementById('qr-item-meta').innerText = metaParts.join(' · ') || '';
   document.getElementById('qrcode-box').innerHTML = '';
   qrcodeInstance = new QRCode(document.getElementById("qrcode-box"), {
-    text: getItemScanUrl(id),
+    text: id,
     width: 160,
     height: 160,
-    correctLevel: QRCode.CorrectLevel.L
+    correctLevel: QRCode.CorrectLevel.M
   });
   document.getElementById('qrcode-overlay').classList.add('open');
 }
@@ -2196,8 +2128,7 @@ function openQRManager() {
   if (!items.length) { showToast('目前無器材', 'err'); return; }
   sessionStorage.setItem('qr_items', JSON.stringify(items.map(it => ({
     id: it.id, name: it.name, cat: it.cat || '', brand: it.brand || '', code: it.code || '',
-    status: it.status || '在庫', buyDate: it.buyDate || '', dayRate: it.dayRate || 0, note: it.note || '',
-    scanUrl: getItemScanUrl(it.id)
+    status: it.status || '在庫', buyDate: it.buyDate || '', dayRate: it.dayRate || 0, note: it.note || ''
   }))));
   const html = buildQRManagerHTML();
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -2397,10 +2328,10 @@ function buildQRManagerHTML() {
 
         if(opts.showQR) {
           new QRCode(document.getElementById('qr-'+it.id), {
-            text: it.scanUrl || it.id,
+            text: it.id,
             width: isSmallLabel ? 96 : 130,
             height: isSmallLabel ? 96 : 130,
-            correctLevel: QRCode.CorrectLevel.L
+            correctLevel: QRCode.CorrectLevel.M
           });
         }
       });
@@ -2429,7 +2360,7 @@ function buildQRManagerHTML() {
             text: text,
             width: 120,
             height: 120,
-            correctLevel: QRCode.CorrectLevel.L
+            correctLevel: QRCode.CorrectLevel.M
           });
           setTimeout(() => {
             const canvas = holder.querySelector('canvas');
@@ -2484,7 +2415,7 @@ function buildQRManagerHTML() {
 
       let y = 10;
       if(opts.showQR) {
-        const qrSrc = await makeQrDataUrl(String(it.scanUrl || it.id || ''));
+        const qrSrc = await makeQrDataUrl(String(it.id || ''));
         const qrImg = await loadImage(qrSrc);
         const qrSize = 104;
         ctx.imageSmoothingEnabled = false;
@@ -2783,10 +2714,9 @@ async function scanQrPhoto(event) {
 // 【修改點 2】掃描辨識時，若商品為借出狀態，給予明確警告並詢問是否歸還
 function onScanSuccess(decodedText) {
   closeScanner();
-  const itemId = normalizeScanValue(decodedText);
-  const it = items.find(i => i.id === itemId);
+  const it = items.find(i => i.id === decodedText);
   if (!it) { showToast('找不到該器材！請確認掃描的條碼是否正確', 'err'); return; }
-  const activeLoan = loans.find(l => l.itemId === itemId && !l.returned);
+  const activeLoan = loans.find(l => l.itemId === decodedText && !l.returned);
   if (activeLoan) {
     showConfirm(`⚠️ 此商品目前為「借出」狀態，無法再次借出！\n\n「${it.name}」目前由 ${activeLoan.borrower||'未知'} 借用中。\n請問是否要執行【歸還】？`, () => { returnLoan(activeLoan.id); });
   } else {
