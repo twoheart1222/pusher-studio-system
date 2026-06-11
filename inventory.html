@@ -2134,6 +2134,7 @@ function buildQRManagerHTML() {
 <title>🖨️ QR Code 列印管理</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>
 <style>
   body { font-family: 'Noto Sans TC', sans-serif; background: #eeeae4; padding: 20px; color: #1c1917; }
   .no-print { margin-bottom: 20px; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); max-width: 800px; margin-left: auto; margin-right: auto;}
@@ -2141,6 +2142,9 @@ function buildQRManagerHTML() {
   .controls label { font-size: 14px; font-weight: 500; cursor: pointer; display:flex; align-items:center; gap:6px;}
   .print-btn { background: #b45309; color: #fff; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 600; display:inline-flex; align-items:center; gap:8px;}
   .print-btn:hover { background: #d97706; }
+  .print-btn.secondary { background:#1f2937; }
+  .print-btn.secondary:hover { background:#111827; }
+  .print-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; max-width: 1200px; margin: 0 auto;}
   .qr-card { background: #fff; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #e7e3dc; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
   .qr-card .edit-name { width: 100%; text-align: center; font-weight: 600; border: 1px dashed #d6d3d1; padding: 6px; margin-bottom: 8px; font-size: 14px; border-radius: 4px; font-family:inherit; box-sizing:border-box;}
@@ -2156,8 +2160,8 @@ function buildQRManagerHTML() {
   body.layout-label-14x30 { background:#f5f6f8; }
   body.layout-label-14x30 .grid { display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start; justify-content:center; max-width:900px; }
   body.layout-label-14x30 .qr-card { width:14mm; height:30mm; padding:1.2mm .9mm; border-radius:2px; border:1px solid #d7d7d7; box-shadow:none; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow:hidden; }
-  body.layout-label-14x30 .qr-card .edit-name { order:2; border:none; background:transparent; margin:1mm 0 0; padding:0; width:100%; height:8mm; font-size:6pt; line-height:1.15; white-space:normal; overflow:hidden; text-align:center; font-weight:700; color:#111; }
-  body.layout-label-14x30 .qr-card .meta { order:3; display:block; width:100%; height:auto; max-height:5.2mm; margin:.5mm 0 0; font-size:4pt; line-height:1.1; color:#222; overflow:hidden; font-family:'Noto Sans TC', sans-serif; }
+  body.layout-label-14x30 .qr-card .edit-name { order:2; border:none; background:transparent; margin:.8mm 0 0; padding:0; width:100%; height:7.2mm; font-size:5.4pt; line-height:1.1; white-space:normal; overflow:hidden; text-align:center; font-weight:700; color:#111; word-break:break-all; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
+  body.layout-label-14x30 .qr-card .meta { order:3; display:-webkit-box; width:100%; height:4.8mm; margin:.35mm 0 0; font-size:3.6pt; line-height:1.1; color:#222; overflow:hidden; font-family:'Noto Sans TC', sans-serif; word-break:break-all; overflow-wrap:anywhere; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
   body.layout-label-14x30 .qr-code-img { order:1; width:11.4mm; height:11.4mm; align-items:center; }
   body.layout-label-14x30 .qr-card.no-name .meta { margin-top:1mm; max-height:9mm; }
   body.layout-label-14x30 .qr-card.no-qr { justify-content:flex-start; }
@@ -2175,10 +2179,13 @@ function buildQRManagerHTML() {
     .qr-card { width: 4.5cm; height: 5.5cm; page-break-inside: avoid; border: 1px dashed #ccc; padding: 5mm; box-sizing: border-box; box-shadow: none; border-radius:0;}
     .qr-card .edit-name { border: none; background: transparent; font-size: 12pt; padding: 0; text-overflow: ellipsis;}
     body.layout-label-14x30 { padding:0; margin:0; }
-    body.layout-label-14x30 .grid { display:block; margin:0; padding:0; }
-    body.layout-label-14x30 .qr-card { width:14mm; height:30mm; margin:0; padding:1.2mm .9mm; border:none; page-break-after:always; break-after:page; }
-    body.layout-label-14x30 .qr-card .edit-name { font-size:6pt; height:8mm; line-height:1.15; }
-    body.layout-label-14x30 .qr-card .meta { font-size:4pt; }
+    body.layout-label-14x30 .grid { display:block; width:14mm; margin:0; padding:0; }
+    body.layout-label-14x30 .qr-card { width:14mm !important; min-width:14mm; max-width:14mm; height:30mm !important; min-height:30mm; max-height:30mm; margin:0; padding:1.2mm .9mm; border:none; page-break-after:always; break-after:page; overflow:hidden; }
+    body.layout-label-14x30 .qr-card .edit-name { font-size:5.4pt; height:7.2mm; line-height:1.1; }
+    body.layout-label-14x30 .qr-card .meta { font-size:3.6pt; height:4.8mm; }
+    body.layout-label-14x30 .qr-code-img,
+    body.layout-label-14x30 .qr-code-img img,
+    body.layout-label-14x30 .qr-code-img canvas { width:11.4mm !important; height:11.4mm !important; max-width:11.4mm !important; max-height:11.4mm !important; }
   }
 </style>
 </head>
@@ -2206,10 +2213,15 @@ function buildQRManagerHTML() {
       </select>
       <span class="hint-label">列印設定請選 14mm × 30mm、方向直式、邊界無或最小。</span>
     </div>
-    <button class="print-btn" onclick="printLabels()">
-      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-      列印全部標籤
-    </button>
+    <div class="print-actions">
+      <button class="print-btn" onclick="printLabels()">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+        列印全部標籤
+      </button>
+      <button class="print-btn secondary" id="download-niimbot-btn" onclick="downloadNiimbotPngZip()">
+        下載 NIIMBOT 14×30 PNG
+      </button>
+    </div>
   </div>
   <div class="grid" id="qr-grid"></div>
 
@@ -2237,20 +2249,52 @@ function buildQRManagerHTML() {
     }
 
     function printLabels() {
-      setLabelLayout(document.getElementById('label-layout').value);
+      const layoutSelect = document.getElementById('label-layout');
+      if(layoutSelect.value !== '14x30') {
+        layoutSelect.value = '14x30';
+      }
+      setLabelLayout(layoutSelect.value);
       setTimeout(() => window.print(), 120);
     }
 
+    function getDisplayOptions() {
+      return {
+        showName: document.getElementById('chk-name').checked,
+        showQR: document.getElementById('chk-qr').checked,
+        showBrand: document.getElementById('chk-brand').checked,
+        showModel: document.getElementById('chk-model').checked,
+        showCat: document.getElementById('chk-cat').checked,
+        showStatus: document.getElementById('chk-status').checked,
+        showBuyDate: document.getElementById('chk-buy-date').checked,
+        showRate: document.getElementById('chk-rate').checked,
+        showNote: document.getElementById('chk-note').checked
+      };
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      }[ch]));
+    }
+
+    function buildMetaParts(it, opts) {
+      const metaArr = [];
+      if(opts.showCat && it.cat) metaArr.push(it.cat);
+      if(opts.showBrand && it.brand) metaArr.push(it.brand);
+      if(opts.showModel && it.code) metaArr.push(it.code);
+      if(opts.showStatus && it.status) metaArr.push('狀態：' + it.status);
+      if(opts.showBuyDate && it.buyDate) metaArr.push('購入：' + it.buyDate);
+      if(opts.showRate && it.dayRate) metaArr.push('日租：NT$' + Number(it.dayRate).toLocaleString());
+      if(opts.showNote && it.note) metaArr.push(it.note);
+      return metaArr;
+    }
+
     function renderQRs() {
-      const showName = document.getElementById('chk-name').checked;
-      const showQR = document.getElementById('chk-qr').checked;
-      const showBrand = document.getElementById('chk-brand').checked;
-      const showModel = document.getElementById('chk-model').checked;
-      const showCat = document.getElementById('chk-cat').checked;
-      const showStatus = document.getElementById('chk-status').checked;
-      const showBuyDate = document.getElementById('chk-buy-date').checked;
-      const showRate = document.getElementById('chk-rate').checked;
-      const showNote = document.getElementById('chk-note').checked;
+      const opts = getDisplayOptions();
       const isSmallLabel = currentLayout === '14x30';
 
       const grid = document.getElementById('qr-grid');
@@ -2258,28 +2302,20 @@ function buildQRManagerHTML() {
 
       items.forEach(it => {
         const card = document.createElement('div');
-        card.className = 'qr-card' + (showName ? '' : ' no-name') + (showQR ? '' : ' no-qr');
+        card.className = 'qr-card' + (opts.showName ? '' : ' no-name') + (opts.showQR ? '' : ' no-qr');
 
-        let metaArr = [];
-        if(showCat && it.cat) metaArr.push(it.cat);
-        if(showBrand && it.brand) metaArr.push(it.brand);
-        if(showModel && it.code) metaArr.push(it.code);
-        if(showStatus && it.status) metaArr.push('狀態：' + it.status);
-        if(showBuyDate && it.buyDate) metaArr.push('購入：' + it.buyDate);
-        if(showRate && it.dayRate) metaArr.push('日租：NT$' + Number(it.dayRate).toLocaleString());
-        if(showNote && it.note) metaArr.push(it.note);
-        const metaStr = metaArr.join(' · ');
-        const safeName = String(it.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const safeMeta = metaStr.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const metaStr = buildMetaParts(it, opts).join(' · ');
+        const safeName = escapeHtml(it.name);
+        const safeMeta = escapeHtml(metaStr);
 
         card.innerHTML = \`
-          \${showName ? '<div class="edit-name" contenteditable="true" title="點擊修改列印名稱">' + safeName + '</div>' : ''}
+          \${opts.showName ? '<div class="edit-name" contenteditable="true" title="點擊修改列印名稱">' + safeName + '</div>' : ''}
           \${safeMeta ? '<div class="meta">' + safeMeta + '</div>' : ''}
-          \${showQR ? '<div class="qr-code-img" id="qr-' + it.id + '"></div>' : ''}
+          \${opts.showQR ? '<div class="qr-code-img" id="qr-' + it.id + '"></div>' : ''}
         \`;
         grid.appendChild(card);
 
-        if(showQR) {
+        if(opts.showQR) {
           new QRCode(document.getElementById('qr-'+it.id), {
             text: it.id,
             width: isSmallLabel ? 86 : 130,
@@ -2288,6 +2324,158 @@ function buildQRManagerHTML() {
           });
         }
       });
+    }
+
+    function safeFileName(value, fallback) {
+      return String(value || fallback || 'label').replace(/[\\\\/:*?"<>|\\s]+/g, '_').slice(0, 60);
+    }
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    function makeQrDataUrl(text) {
+      return new Promise((resolve, reject) => {
+        const holder = document.createElement('div');
+        holder.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:120px;height:120px;';
+        document.body.appendChild(holder);
+        try {
+          new QRCode(holder, {
+            text: text,
+            width: 120,
+            height: 120,
+            correctLevel: QRCode.CorrectLevel.M
+          });
+          setTimeout(() => {
+            const canvas = holder.querySelector('canvas');
+            const img = holder.querySelector('img');
+            const src = canvas ? canvas.toDataURL('image/png') : (img && img.src);
+            holder.remove();
+            src ? resolve(src) : reject(new Error('QR 產生失敗'));
+          }, 80);
+        } catch (err) {
+          holder.remove();
+          reject(err);
+        }
+      });
+    }
+
+    function wrapText(ctx, text, maxWidth, maxLines) {
+      const source = String(text || '').trim();
+      if(!source) return [];
+      const chars = Array.from(source);
+      const lines = [];
+      let line = '';
+      chars.forEach(ch => {
+        const test = line + ch;
+        if(ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line);
+          line = ch;
+        } else {
+          line = test;
+        }
+      });
+      if(line) lines.push(line);
+      if(lines.length > maxLines) {
+        lines.length = maxLines;
+        while(lines[maxLines - 1] && ctx.measureText(lines[maxLines - 1] + '…').width > maxWidth) {
+          lines[maxLines - 1] = lines[maxLines - 1].slice(0, -1);
+        }
+        lines[maxLines - 1] += '…';
+      }
+      return lines;
+    }
+
+    async function renderNiimbotCanvas(it, opts) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 112;
+      canvas.height = 240;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#111';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+
+      let y = 10;
+      if(opts.showQR) {
+        const qrSrc = await makeQrDataUrl(String(it.id || ''));
+        const qrImg = await loadImage(qrSrc);
+        const qrSize = 92;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(qrImg, Math.round((canvas.width - qrSize) / 2), y, qrSize, qrSize);
+        y += qrSize + 8;
+      }
+
+      if(opts.showName) {
+        ctx.font = '700 12px "Noto Sans TC", sans-serif';
+        wrapText(ctx, it.name || '', 98, opts.showQR ? 3 : 5).forEach(line => {
+          if(y <= 196) {
+            ctx.fillText(line, canvas.width / 2, y);
+            y += 14;
+          }
+        });
+        y += 2;
+      }
+
+      const meta = buildMetaParts(it, opts).join(' / ');
+      if(meta) {
+        ctx.font = '500 8px "Noto Sans TC", sans-serif';
+        wrapText(ctx, meta, 100, Math.max(1, Math.floor((232 - y) / 10))).forEach(line => {
+          if(y <= 230) {
+            ctx.fillText(line, canvas.width / 2, y);
+            y += 10;
+          }
+        });
+      }
+
+      return canvas;
+    }
+
+    async function downloadNiimbotPngZip() {
+      if(!items.length) return;
+      if(typeof JSZip === 'undefined') {
+        alert('下載套件尚未載入，請確認網路後再試一次。');
+        return;
+      }
+      const layoutSelect = document.getElementById('label-layout');
+      layoutSelect.value = '14x30';
+      setLabelLayout('14x30');
+
+      const btn = document.getElementById('download-niimbot-btn');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      const zip = new JSZip();
+      const opts = getDisplayOptions();
+
+      try {
+        for(let i = 0; i < items.length; i += 1) {
+          btn.textContent = '產生中 ' + (i + 1) + '/' + items.length;
+          const canvas = await renderNiimbotCanvas(items[i], opts);
+          const data = canvas.toDataURL('image/png').split(',')[1];
+          zip.file(String(i + 1).padStart(2, '0') + '_' + safeFileName(items[i].name, items[i].id) + '.png', data, {base64:true});
+        }
+        btn.textContent = '打包下載中...';
+        const blob = await zip.generateAsync({type:'blob'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'NIIMBOT_14x30_QR_labels.zip';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(link.href);
+      } catch (err) {
+        console.error(err);
+        alert('產生 NIIMBOT 圖檔失敗，請重新整理後再試一次。');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
     }
 
     // 確保字體載入後再繪製，避免排版偏移
