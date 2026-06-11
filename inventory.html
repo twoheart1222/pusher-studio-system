@@ -14,6 +14,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 
@@ -2500,6 +2501,8 @@ function buildQRManagerHTML() {
 let html5QrCode = null;
 let scannerTorchOn = false;
 let photoQrCode = null;
+let backupQrRaf = null;
+let backupQrCanvas = null;
 
 function getScannerVideoTrack() {
   const video = document.querySelector('#reader video');
@@ -2607,6 +2610,45 @@ function showScannerStartPanel() {
   }, 80);
 }
 
+function stopBackupQrScanner() {
+  if(backupQrRaf) {
+    cancelAnimationFrame(backupQrRaf);
+    backupQrRaf = null;
+  }
+}
+
+function startBackupQrScanner() {
+  stopBackupQrScanner();
+  if(typeof jsQR !== 'function') return;
+  const video = document.querySelector('#reader video');
+  if(!video) return;
+  backupQrCanvas = backupQrCanvas || document.createElement('canvas');
+  const ctx = backupQrCanvas.getContext('2d', { willReadFrequently: true });
+
+  const scan = () => {
+    const activeVideo = document.querySelector('#reader video');
+    if(!activeVideo || activeVideo.readyState < 2) {
+      backupQrRaf = requestAnimationFrame(scan);
+      return;
+    }
+    const width = activeVideo.videoWidth || activeVideo.clientWidth;
+    const height = activeVideo.videoHeight || activeVideo.clientHeight;
+    if(width && height) {
+      backupQrCanvas.width = width;
+      backupQrCanvas.height = height;
+      ctx.drawImage(activeVideo, 0, 0, width, height);
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const code = jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' });
+      if(code && code.data) {
+        onScanSuccess(code.data);
+        return;
+      }
+    }
+    backupQrRaf = requestAnimationFrame(scan);
+  };
+  backupQrRaf = requestAnimationFrame(scan);
+}
+
 function isIOSSafariLike() {
   const ua = navigator.userAgent || '';
   const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2619,10 +2661,11 @@ async function startSimpleSafariScanner() {
   html5QrCode = new Html5Qrcode("reader");
   await html5QrCode.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 250, height: 250 } },
+    { fps: 10, disableFlip: true },
     onScanSuccess,
     onScanFailure
   );
+  setTimeout(startBackupQrScanner, 350);
 }
 
 async function startHtml5Scanner() {
@@ -2653,12 +2696,7 @@ async function startHtml5Scanner() {
   });
   const scanConfig = {
     fps: 25,
-    disableFlip: true,
-    qrbox: (viewfinderWidth, viewfinderHeight) => {
-      const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-      const size = Math.max(220, Math.min(420, Math.floor(minEdge * 0.82)));
-      return { width: size, height: size };
-    }
+    disableFlip: true
   };
   try {
     await html5QrCode.start(
@@ -2686,7 +2724,7 @@ async function startHtml5Scanner() {
       try {
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
+          { fps: 10, disableFlip: true },
           onScanSuccess,
           onScanFailure
         );
@@ -2698,12 +2736,13 @@ async function startHtml5Scanner() {
     }
   }
   setTimeout(enhanceScannerCamera, 350);
+  setTimeout(startBackupQrScanner, 450);
 }
 
 function startLiveScanner() {
   closeScanner(false);
   document.getElementById('scanner-overlay').classList.add('open');
-  showScannerMessage('正在啟動相機', 'Safari 已允許相機時，這裡會改用較穩定的 iPhone 相機啟動模式。');
+  showScannerMessage('正在啟動全畫面掃描', '請讓 QR Code 佔畫面 1/3 以上並保持清楚；系統會同時使用兩種解碼器辨識。');
   startHtml5Scanner().catch(err => {
     console.error("相機啟動失敗", err);
     showScannerMessage('相機無法啟動', getCameraErrorText(err));
@@ -2722,6 +2761,7 @@ function openScanner() {
   showScannerStartPanel();
 }
 function closeScanner(hideOverlay = true) {
+  stopBackupQrScanner();
   if (html5QrCode) {
     applyScannerConstraints({ torch: false });
     const scanner = html5QrCode;
