@@ -2565,19 +2565,20 @@ function resetScannerView() {
 
 function getCameraErrorText(err) {
   const name = err && err.name;
+  const suffix = name ? `\n\n錯誤代碼：${name}` : '';
   if(location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-    return '目前網址不是 HTTPS，手機瀏覽器會封鎖相機。請用 GitHub Pages 的 https 網址開啟系統。';
+    return '目前網址不是 HTTPS，手機瀏覽器會封鎖相機。請用 GitHub Pages 的 https 網址開啟系統。' + suffix;
   }
   if(name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-    return '相機權限被封鎖。請到瀏覽器網址列旁的權限設定，將「相機」改成允許，然後重新整理頁面。';
+    return '相機權限被封鎖。請到瀏覽器網址列旁的權限設定，將「相機」改成允許，然後重新整理頁面。' + suffix;
   }
   if(name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-    return '找不到可用相機。請確認手機沒有被其他 App 佔用相機。';
+    return '找不到可用相機。請確認手機沒有被其他 App 佔用相機。' + suffix;
   }
   if(name === 'NotReadableError' || name === 'TrackStartError') {
-    return '相機目前無法啟動，可能被其他 App 使用中。請關閉相機/通訊 App 後再試。';
+    return '相機目前無法啟動，可能被其他 App 使用中。請關閉相機/通訊 App 後再試。' + suffix;
   }
-  return '相機啟動失敗。請確認已允許相機權限，或改用拍照辨識。';
+  return '相機啟動失敗。請確認已允許相機權限，或改用拍照辨識。' + suffix;
 }
 
 function showScannerMessage(title, detail) {
@@ -2606,6 +2607,24 @@ function showScannerStartPanel() {
   }, 80);
 }
 
+function isIOSSafariLike() {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isWebKit = /WebKit/.test(ua);
+  return isIOS && isWebKit;
+}
+
+async function startSimpleSafariScanner() {
+  resetScannerView();
+  html5QrCode = new Html5Qrcode("reader");
+  await html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    onScanSuccess,
+    onScanFailure
+  );
+}
+
 async function startHtml5Scanner() {
   if(location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
     showScannerMessage('相機被瀏覽器封鎖', getCameraErrorText());
@@ -2616,6 +2635,16 @@ async function startHtml5Scanner() {
     return;
   }
   resetScannerView();
+  if(isIOSSafariLike()) {
+    try {
+      await startSimpleSafariScanner();
+      return;
+    } catch(safariErr) {
+      console.error("Safari camera failed", safariErr);
+      showScannerMessage('Safari 相機無法啟動', getCameraErrorText(safariErr));
+      throw safariErr;
+    }
+  }
   const formats = window.Html5QrcodeSupportedFormats ? [Html5QrcodeSupportedFormats.QR_CODE] : undefined;
   html5QrCode = new Html5Qrcode("reader", {
     formatsToSupport: formats,
@@ -2672,6 +2701,9 @@ async function startHtml5Scanner() {
 }
 
 function startLiveScanner() {
+  closeScanner(false);
+  document.getElementById('scanner-overlay').classList.add('open');
+  showScannerMessage('正在啟動相機', 'Safari 已允許相機時，這裡會改用較穩定的 iPhone 相機啟動模式。');
   startHtml5Scanner().catch(err => {
     console.error("相機啟動失敗", err);
     showScannerMessage('相機無法啟動', getCameraErrorText(err));
