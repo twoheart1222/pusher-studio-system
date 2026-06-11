@@ -190,8 +190,9 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .log-date{ font-size:10px; color:var(--ink3); font-family:var(--font-mono); }
 
 /* QR SCANNER */
-#reader { width: 100%; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #000; display:flex; align-items:center; justify-content:center; }
-#reader video { width:100% !important; height:auto !important; object-fit: cover; }
+#reader { width: 100%; min-height: 320px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #000; display:flex; align-items:center; justify-content:center; position:relative; }
+#reader video { width:100% !important; height:100% !important; min-height:320px; object-fit: cover; }
+#reader canvas { display:none; }
 
 /* 折舊歸零標籤 */
 .depreciated-badge { font-size:9px; background:rgba(220,38,38,.1); color:#dc2626; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:600; vertical-align:middle; }
@@ -869,11 +870,14 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     <div class="modal-footer">
       <div style="font-size:11px; color:var(--ink3); flex:1;">請靠近 QR 並點小 QR；掃不到時可輸入名稱、型號或末 6 碼。</div>
       <input id="manual-scan-input" type="text" placeholder="手動輸入" style="width:115px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12px;" onkeydown="if(event.key==='Enter')manualScanLookup()">
+      <input id="qr-photo-input" type="file" accept="image/*" capture="environment" style="display:none;" onchange="scanQrPhoto(event)">
+      <button class="btn btn-ghost-dark btn-sm" onclick="document.getElementById('qr-photo-input').click()">拍照辨識</button>
       <button class="btn btn-amber btn-sm" onclick="manualScanLookup()">查找</button>
       <button class="btn btn-ghost-dark" onclick="closeScanner()">取消</button>
     </div>
   </div>
 </div>
+<div id="photo-reader" style="display:none;"></div>
 
 <script>
 
@@ -2494,6 +2498,11 @@ function buildQRManagerHTML() {
 
 let html5QrCode = null;
 let scannerTorchOn = false;
+let nativeScannerStream = null;
+let nativeScannerDetector = null;
+let nativeScannerRaf = null;
+let nativeScannerActive = false;
+let photoQrCode = null;
 
 function getScannerVideoTrack() {
   const video = document.querySelector('#reader video');
@@ -2552,37 +2561,145 @@ async function toggleScannerTorch() {
   await applyScannerConstraints({ torch: scannerTorchOn });
 }
 
+function resetScannerView() {
+  const reader = document.getElementById('reader');
+  if(reader) reader.innerHTML = '';
+}
+
+function stopNativeScanner() {
+  nativeScannerActive = false;
+  if(nativeScannerRaf) {
+    cancelAnimationFrame(nativeScannerRaf);
+    nativeScannerRaf = null;
+  }
+  if(nativeScannerStream) {
+    nativeScannerStream.getTracks().forEach(track => track.stop());
+    nativeScannerStream = null;
+  }
+}
+
+async function startNativeBarcodeScanner() {
+  try {
+    if(!('BarcodeDetector' in window) || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return false;
+    }
+    const supported = await BarcodeDetector.getSupportedFormats().catch(() => []);
+    if(supported.length && !supported.includes('qr_code')) return false;
+
+    const reader = document.getElementById('reader');
+    resetScannerView();
+    const video = document.createElement('video');
+    video.setAttribute('playsinline', 'true');
+    video.muted = true;
+    video.autoplay = true;
+    reader.appendChild(video);
+
+    nativeScannerStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30 }
+      }
+    });
+    video.srcObject = nativeScannerStream;
+    await video.play();
+    nativeScannerDetector = new BarcodeDetector({ formats: ['qr_code'] });
+    nativeScannerActive = true;
+    setTimeout(enhanceScannerCamera, 350);
+
+    const scan = async () => {
+      if(!nativeScannerActive) return;
+      if(video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        try {
+          const codes = await nativeScannerDetector.detect(video);
+          const rawValue = codes && codes[0] && codes[0].rawValue;
+          if(rawValue) {
+            onScanSuccess(rawValue);
+            return;
+          }
+        } catch(err) {
+          console.debug('Native QR scan failed', err);
+        }
+      }
+      nativeScannerRaf = requestAnimationFrame(scan);
+    };
+    nativeScannerRaf = requestAnimationFrame(scan);
+    showToast('已啟用手機原生 QR 掃描模式');
+    return true;
+  } catch(err) {
+    console.debug('Native BarcodeDetector unavailable, falling back', err);
+    stopNativeScanner();
+    resetScannerView();
+    return false;
+  }
+}
+
+async function startHtml5Scanner() {
+  resetScannerView();
+  const formats = window.Html5QrcodeSupportedFormats ? [Html5QrcodeSupportedFormats.QR_CODE] : undefined;
+  html5QrCode = new Html5Qrcode("reader", {
+    formatsToSupport: formats,
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+    verbose: false
+  });
+  const scanConfig = {
+    fps: 25,
+    disableFlip: true,
+    qrbox: (viewfinderWidth, viewfinderHeight) => {
+      const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+      const size = Math.max(220, Math.min(420, Math.floor(minEdge * 0.82)));
+      return { width: size, height: size };
+    }
+  };
+  try {
+    await html5QrCode.start(
+      {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30 }
+      },
+      scanConfig,
+      onScanSuccess,
+      onScanFailure
+    );
+  } catch(err) {
+    console.debug('High resolution scanner failed, retrying default camera', err);
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      scanConfig,
+      onScanSuccess,
+      onScanFailure
+    );
+  }
+  setTimeout(enhanceScannerCamera, 350);
+}
+
 function openScanner() {
-  document.getElementById('scanner-overlay').classList.add('open');
+  const overlay = document.getElementById('scanner-overlay');
+  overlay.classList.add('open');
   const manualInput = document.getElementById('manual-scan-input');
   if(manualInput) manualInput.value = '';
   scannerTorchOn = false;
-  html5QrCode = new Html5Qrcode("reader");
-  html5QrCode.start(
-    { facingMode: "environment" },
-    {
-      fps: 15,
-      qrbox: (viewfinderWidth, viewfinderHeight) => {
-        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-        const size = Math.max(180, Math.min(320, Math.floor(minEdge * 0.72)));
-        return { width: size, height: size };
-      },
-      aspectRatio: 1
-    },
-    onScanSuccess, onScanFailure
-  ).then(() => {
-    setTimeout(enhanceScannerCamera, 350);
+  closeScanner(false);
+  overlay.classList.add('open');
+  startNativeBarcodeScanner().then(started => {
+    if(started) return;
+    return startHtml5Scanner();
   }).catch(err => {
     console.error("相機啟動失敗", err);
     showToast('無法啟動相機，請確認瀏覽器已允許相機權限', 'err');
   });
 }
-function closeScanner() {
+function closeScanner(hideOverlay = true) {
+  stopNativeScanner();
   if (html5QrCode) {
     applyScannerConstraints({ torch: false });
     html5QrCode.stop().then(() => { html5QrCode.clear(); html5QrCode = null; }).catch(err => console.error(err));
   }
-  document.getElementById('scanner-overlay').classList.remove('open');
+  if(hideOverlay) document.getElementById('scanner-overlay').classList.remove('open');
 }
 function closeScannerIfBg(e) { if(e.target === document.getElementById('scanner-overlay')) closeScanner(); }
 
@@ -2597,6 +2714,20 @@ function manualScanLookup() {
   });
   if(!matched) { showToast('找不到符合的器材，請換一個關鍵字', 'err'); return; }
   onScanSuccess(matched.id);
+}
+
+async function scanQrPhoto(event) {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  if(!file) return;
+  try {
+    if(!photoQrCode) photoQrCode = new Html5Qrcode('photo-reader');
+    const decodedText = await photoQrCode.scanFile(file, false);
+    onScanSuccess(decodedText);
+  } catch(err) {
+    console.error('Photo QR scan failed', err);
+    showToast('照片中沒有辨識到 QR，請靠近一點再拍一次', 'err');
+  }
 }
 
 // 【修改點 2】掃描辨識時，若商品為借出狀態，給予明確警告並詢問是否歸還
