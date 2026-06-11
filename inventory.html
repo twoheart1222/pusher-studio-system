@@ -860,9 +860,16 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     </div>
     <div class="modal-body" style="padding:0; background:#000; position:relative; min-height:250px;">
       <div id="reader"></div>
+      <div style="position:absolute;left:10px;right:10px;bottom:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;pointer-events:none;">
+        <button class="btn btn-ghost btn-xs" style="pointer-events:auto;background:rgba(255,255,255,.92);" onclick="setScannerZoom(1)">1x</button>
+        <button class="btn btn-amber btn-xs" style="pointer-events:auto;" onclick="setScannerZoom(2)">小 QR</button>
+        <button class="btn btn-ghost btn-xs" style="pointer-events:auto;background:rgba(255,255,255,.92);" onclick="toggleScannerTorch()">補光</button>
+      </div>
     </div>
     <div class="modal-footer">
-      <div style="font-size:11px; color:var(--ink3); flex:1;">請將後置鏡頭對準器材上的 QR 條碼。</div>
+      <div style="font-size:11px; color:var(--ink3); flex:1;">請靠近 QR 並點小 QR；掃不到時可輸入名稱、型號或末 6 碼。</div>
+      <input id="manual-scan-input" type="text" placeholder="手動輸入" style="width:115px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12px;" onkeydown="if(event.key==='Enter')manualScanLookup()">
+      <button class="btn btn-amber btn-sm" onclick="manualScanLookup()">查找</button>
       <button class="btn btn-ghost-dark" onclick="closeScanner()">取消</button>
     </div>
   </div>
@@ -2159,16 +2166,16 @@ function buildQRManagerHTML() {
   .layout-row select { border:1px solid #d6d3d1; border-radius:6px; padding:8px 10px; font-family:inherit; font-size:14px; background:#fff; }
   body.layout-label-14x30 { background:#f5f6f8; }
   body.layout-label-14x30 .grid { display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start; justify-content:center; max-width:900px; }
-  body.layout-label-14x30 .qr-card { width:14mm; height:30mm; padding:1.2mm .9mm; border-radius:2px; border:1px solid #d7d7d7; box-shadow:none; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow:hidden; }
-  body.layout-label-14x30 .qr-card .edit-name { order:2; border:none; background:transparent; margin:.8mm 0 0; padding:0; width:100%; height:7.2mm; font-size:5.4pt; line-height:1.1; white-space:normal; overflow:hidden; text-align:center; font-weight:700; color:#111; word-break:break-all; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
-  body.layout-label-14x30 .qr-card .meta { order:3; display:-webkit-box; width:100%; height:4.8mm; margin:.35mm 0 0; font-size:3.6pt; line-height:1.1; color:#222; overflow:hidden; font-family:'Noto Sans TC', sans-serif; word-break:break-all; overflow-wrap:anywhere; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
-  body.layout-label-14x30 .qr-code-img { order:1; width:11.4mm; height:11.4mm; align-items:center; }
+  body.layout-label-14x30 .qr-card { width:14mm; height:30mm; padding:.7mm .55mm; border-radius:2px; border:1px solid #d7d7d7; box-shadow:none; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow:hidden; }
+  body.layout-label-14x30 .qr-card .edit-name { order:2; border:none; background:transparent; margin:.55mm 0 0; padding:0; width:100%; height:6.4mm; font-size:5pt; line-height:1.08; white-space:normal; overflow:hidden; text-align:center; font-weight:700; color:#111; word-break:break-all; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
+  body.layout-label-14x30 .qr-card .meta { order:3; display:-webkit-box; width:100%; height:3.9mm; margin:.25mm 0 0; font-size:3.4pt; line-height:1.05; color:#222; overflow:hidden; font-family:'Noto Sans TC', sans-serif; word-break:break-all; overflow-wrap:anywhere; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
+  body.layout-label-14x30 .qr-code-img { order:1; width:12.6mm; height:12.6mm; align-items:center; }
   body.layout-label-14x30 .qr-card.no-name .meta { margin-top:1mm; max-height:9mm; }
   body.layout-label-14x30 .qr-card.no-qr { justify-content:flex-start; }
   body.layout-label-14x30 .qr-card.no-qr .edit-name { height:11mm; font-size:7pt; }
   body.layout-label-14x30 .qr-card.no-qr .meta { max-height:14mm; font-size:4.5pt; }
   body.layout-label-14x30 .qr-code-img img,
-  body.layout-label-14x30 .qr-code-img canvas { width:11.4mm !important; height:11.4mm !important; image-rendering:pixelated; }
+  body.layout-label-14x30 .qr-code-img canvas { width:12.6mm !important; height:12.6mm !important; image-rendering:pixelated; }
   body.layout-label-14x30 .hint-label { display:inline; }
   .hint-label { display:none; color:#b45309; font-weight:600; }
   @page { margin: 8mm; }
@@ -2180,12 +2187,12 @@ function buildQRManagerHTML() {
     .qr-card .edit-name { border: none; background: transparent; font-size: 12pt; padding: 0; text-overflow: ellipsis;}
     body.layout-label-14x30 { padding:0; margin:0; }
     body.layout-label-14x30 .grid { display:block; width:14mm; margin:0; padding:0; }
-    body.layout-label-14x30 .qr-card { width:14mm !important; min-width:14mm; max-width:14mm; height:30mm !important; min-height:30mm; max-height:30mm; margin:0; padding:1.2mm .9mm; border:none; page-break-after:always; break-after:page; overflow:hidden; }
-    body.layout-label-14x30 .qr-card .edit-name { font-size:5.4pt; height:7.2mm; line-height:1.1; }
-    body.layout-label-14x30 .qr-card .meta { font-size:3.6pt; height:4.8mm; }
+    body.layout-label-14x30 .qr-card { width:14mm !important; min-width:14mm; max-width:14mm; height:30mm !important; min-height:30mm; max-height:30mm; margin:0; padding:.7mm .55mm; border:none; page-break-after:always; break-after:page; overflow:hidden; }
+    body.layout-label-14x30 .qr-card .edit-name { font-size:5pt; height:6.4mm; line-height:1.08; }
+    body.layout-label-14x30 .qr-card .meta { font-size:3.4pt; height:3.9mm; }
     body.layout-label-14x30 .qr-code-img,
     body.layout-label-14x30 .qr-code-img img,
-    body.layout-label-14x30 .qr-code-img canvas { width:11.4mm !important; height:11.4mm !important; max-width:11.4mm !important; max-height:11.4mm !important; }
+    body.layout-label-14x30 .qr-code-img canvas { width:12.6mm !important; height:12.6mm !important; max-width:12.6mm !important; max-height:12.6mm !important; }
   }
 </style>
 </head>
@@ -2318,8 +2325,8 @@ function buildQRManagerHTML() {
         if(opts.showQR) {
           new QRCode(document.getElementById('qr-'+it.id), {
             text: it.id,
-            width: isSmallLabel ? 86 : 130,
-            height: isSmallLabel ? 86 : 130,
+            width: isSmallLabel ? 96 : 130,
+            height: isSmallLabel ? 96 : 130,
             correctLevel: QRCode.CorrectLevel.M
           });
         }
@@ -2406,7 +2413,7 @@ function buildQRManagerHTML() {
       if(opts.showQR) {
         const qrSrc = await makeQrDataUrl(String(it.id || ''));
         const qrImg = await loadImage(qrSrc);
-        const qrSize = 92;
+        const qrSize = 104;
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(qrImg, Math.round((canvas.width - qrSize) / 2), y, qrSize, qrSize);
         y += qrSize + 8;
@@ -2486,25 +2493,111 @@ function buildQRManagerHTML() {
 }
 
 let html5QrCode = null;
+let scannerTorchOn = false;
+
+function getScannerVideoTrack() {
+  const video = document.querySelector('#reader video');
+  const stream = video && video.srcObject;
+  return stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
+}
+
+async function applyScannerConstraints(constraints) {
+  const track = getScannerVideoTrack();
+  if(!track || !track.applyConstraints) return false;
+  try {
+    await track.applyConstraints({ advanced: [constraints] });
+    return true;
+  } catch(err) {
+    console.debug('Scanner constraint not supported', constraints, err);
+    return false;
+  }
+}
+
+async function enhanceScannerCamera() {
+  const track = getScannerVideoTrack();
+  if(!track) return;
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  if(caps.focusMode && caps.focusMode.includes('continuous')) {
+    await applyScannerConstraints({ focusMode: 'continuous' });
+  }
+  if(caps.zoom) {
+    await setScannerZoom(Math.min(2, caps.zoom.max || 2));
+  }
+}
+
+async function setScannerZoom(level) {
+  const track = getScannerVideoTrack();
+  if(!track || !track.getCapabilities) return;
+  const caps = track.getCapabilities();
+  if(!caps.zoom) {
+    showToast('此手機瀏覽器不支援相機變焦，可直接把手機靠近 QR 再掃', 'info');
+    return;
+  }
+  const min = caps.zoom.min || 1;
+  const max = caps.zoom.max || level;
+  const step = caps.zoom.step || 0.1;
+  const zoom = Math.max(min, Math.min(max, Number(level) || min));
+  await applyScannerConstraints({ zoom: Math.round(zoom / step) * step });
+}
+
+async function toggleScannerTorch() {
+  const track = getScannerVideoTrack();
+  if(!track || !track.getCapabilities) return;
+  const caps = track.getCapabilities();
+  if(!caps.torch) {
+    showToast('此手機瀏覽器不支援補光燈控制', 'info');
+    return;
+  }
+  scannerTorchOn = !scannerTorchOn;
+  await applyScannerConstraints({ torch: scannerTorchOn });
+}
+
 function openScanner() {
   document.getElementById('scanner-overlay').classList.add('open');
+  const manualInput = document.getElementById('manual-scan-input');
+  if(manualInput) manualInput.value = '';
+  scannerTorchOn = false;
   html5QrCode = new Html5Qrcode("reader");
   html5QrCode.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 250, height: 250 } },
+    {
+      fps: 15,
+      qrbox: (viewfinderWidth, viewfinderHeight) => {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        const size = Math.max(180, Math.min(320, Math.floor(minEdge * 0.72)));
+        return { width: size, height: size };
+      },
+      aspectRatio: 1
+    },
     onScanSuccess, onScanFailure
-  ).catch(err => {
+  ).then(() => {
+    setTimeout(enhanceScannerCamera, 350);
+  }).catch(err => {
     console.error("相機啟動失敗", err);
     showToast('無法啟動相機，請確認瀏覽器已允許相機權限', 'err');
   });
 }
 function closeScanner() {
   if (html5QrCode) {
+    applyScannerConstraints({ torch: false });
     html5QrCode.stop().then(() => { html5QrCode.clear(); html5QrCode = null; }).catch(err => console.error(err));
   }
   document.getElementById('scanner-overlay').classList.remove('open');
 }
 function closeScannerIfBg(e) { if(e.target === document.getElementById('scanner-overlay')) closeScanner(); }
+
+function manualScanLookup() {
+  const input = document.getElementById('manual-scan-input');
+  const keyword = String(input && input.value || '').trim().toLowerCase();
+  if(!keyword) { showToast('請輸入器材名稱、型號或 QR 末 6 碼', 'err'); return; }
+  const matched = items.find(it => {
+    const id = String(it.id || '').toLowerCase();
+    const fields = [it.name, it.brand, it.code, it.cat, it.note].map(v => String(v || '').toLowerCase());
+    return id === keyword || id.endsWith(keyword) || fields.some(v => v.includes(keyword));
+  });
+  if(!matched) { showToast('找不到符合的器材，請換一個關鍵字', 'err'); return; }
+  onScanSuccess(matched.id);
+}
 
 // 【修改點 2】掃描辨識時，若商品為借出狀態，給予明確警告並詢問是否歸還
 function onScanSuccess(decodedText) {
