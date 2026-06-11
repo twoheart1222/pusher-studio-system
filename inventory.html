@@ -207,21 +207,21 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .loan-edit-badge svg { flex-shrink: 0; }
 
 /* ===== RWD MOBILE ===== */
-@media(max-width:1200px){ 
-  .kpi-row{grid-template-columns:repeat(3,1fr);} 
+@media(max-width:1200px){
+  .kpi-row{grid-template-columns:repeat(3,1fr);}
 }
-@media(max-width:900px){ 
-  .two-col-grid { grid-template-columns: 1fr; } 
-  .kpi-row{grid-template-columns:repeat(3,1fr);} 
+@media(max-width:900px){
+  .two-col-grid { grid-template-columns: 1fr; }
+  .kpi-row{grid-template-columns:repeat(3,1fr);}
 }
-@media(max-width:600px){ 
-  .kpi-row{grid-template-columns:1fr 1fr;} 
+@media(max-width:600px){
+  .kpi-row{grid-template-columns:1fr 1fr;}
   .topbar { padding: 10px; }
   .topbar-actions { width: 100%; justify-content: flex-start; }
   .field-row.col2, .field-row.col3 { grid-template-columns: 1fr; }
   .main { padding: 14px; }
   .panel-header { flex-direction: column; align-items: flex-start; }
-  .toolbar { position: static; } 
+  .toolbar { position: static; }
 }
 
 /* ── auth loading overlay ── */
@@ -241,7 +241,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     authDomain: "company-system-6ea1a.firebaseapp.com",
     projectId: "company-system-6ea1a"
   };
-  
+
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -253,23 +253,23 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       try {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.exists() ? userDoc.data() : {};
-        
+
         const myRole = userData.role || 'viewer';
         const myName = user.displayName || user.email.split('@')[0];
-        const myPerms = userData.permissions || {}; 
+        const myPerms = userData.permissions || {};
 
         if (window.RoleGuard && window.RoleGuard.setSession) {
           window.RoleGuard.setSession(user.uid, myRole, myName, myPerms);
           if (!window.RoleGuard.guardPage()) return;
           window.RoleGuard.applyAll();
         }
-        
+
         var ov = document.getElementById('auth-overlay');
         if (ov) ov.remove();
       } catch (e) {
         console.error("權限載入失敗", e);
         var ov = document.getElementById('auth-overlay');
-        if (ov) ov.remove(); 
+        if (ov) ov.remove();
       }
     }
   });
@@ -537,13 +537,13 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
           <input type="date" id="item-buy-date" onchange="updateCurValueField()" oninput="updateCurValueField()">
         </div>
       </div>
-      
+
       <div class="field">
         <label>現值估算（NT$）</label>
         <input type="text" id="item-cur-value" placeholder="自動計算" readonly style="background:rgba(0,0,0,.03); color:var(--ink); font-weight:600; cursor:not-allowed;">
         <span class="field-hint" id="cur-value-hint" style="color:var(--acc);">※ 系統自動依「購入日期」計算，每年折損 10%（每月攤提）</span>
       </div>
-      
+
       <div class="field-row col2" style="background:rgba(180,83,9,.03); padding:10px; border-radius:6px; border:1px solid rgba(180,83,9,.15); margin-top:8px;">
         <div class="field">
           <label>日租金（NT$／天）</label>
@@ -555,7 +555,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
           <div id="rate-warning" style="font-size:10px; margin-top:3px; font-weight:600;"></div>
         </div>
       </div>
-      
+
       <div class="field" style="background:#fff; padding:10px; border-radius:6px; border:1px dashed var(--line);">
         <label style="color:var(--acc)">🔍 行情快速查詢</label>
         <div style="font-size:10px; color:var(--ink3); margin-bottom:6px;">點擊下方按鈕，系統會帶入「器材名稱」自動開新網頁搜尋行情：</div>
@@ -877,11 +877,11 @@ function safeDate(s){var t=String(s||'').trim();return /^\d{4}(-\d{2}(-\d{2})?)?
 /* =============================================
    STATE
    ============================================= */
-let items   = [];   
-let loans   = [];   
-let repairs = [];   
-let projects = [];  
-let costItems = []; 
+let items   = [];
+let loans   = [];
+let repairs = [];
+let projects = [];
+let costItems = [];
 
 let filterStatus = 'all';
 let filterCat    = 'all';
@@ -920,7 +920,7 @@ window.generateItemCode = function(cat) {
     '支撐': 'SUP'
   };
   const pfx = pfxMap[cat] || 'OTH';
-  
+
   let maxNum = 0;
   items.forEach(it => {
     if (it.code && it.code.startsWith(pfx + '-')) {
@@ -931,7 +931,7 @@ window.generateItemCode = function(cat) {
       }
     }
   });
-  
+
   return pfx + '-' + String(maxNum + 1).padStart(4, '0');
 };
 
@@ -993,7 +993,7 @@ window.updateCurValueField = function() {
   const curVal = calculateCurValue(price, date);
   const inputEl = document.getElementById('item-cur-value');
   const hintEl = document.getElementById('cur-value-hint');
-  
+
   if (parseFloat(price) > 0 && curVal <= 0) {
     inputEl.value = 'NT$ 0';
     inputEl.style.color = '#dc2626';
@@ -1037,7 +1037,7 @@ window.initData = async function() {
 function setupRealtimeSync() {
   const { collection, onSnapshot, fbDb } = window._invFb;
   let initLoads = 0;
-  
+
   const onUpdate = () => {
      if (initLoads < 5) {
         initLoads++;
@@ -1087,7 +1087,7 @@ async function fbSet(col, id, data) {
 async function fbDel(col, id) {
   if(!window._fbReady){ saveLocal(); return; }
   const { doc, deleteDoc, fbDb } = window._invFb;
-  await deleteDoc(doc(fbDb, col, id)); 
+  await deleteDoc(doc(fbDb, col, id));
 }
 
 function saveLocal() {
@@ -1114,7 +1114,7 @@ function setSyncStatus(state, text) {
 }
 function setPill(state) {
   const p = document.getElementById('fb-status-pill');
-  if(!p) return; 
+  if(!p) return;
   if(state==='ok'){ p.textContent='Firebase ✓'; p.style.color='#34d399'; p.style.borderColor='#34d399'; }
   else{ p.textContent='本機模式'; p.style.color='#d97706'; p.style.borderColor='#d97706'; }
 }
@@ -1137,14 +1137,14 @@ function getAllInvCats() {
 function renderInvCatFilters() {
   const container = document.getElementById('cat-filter-container');
   const allCats = getAllInvCats();
-  
+
   let html = `<span class="tg-label">類別</span>`;
   html += `<button class="view-pill ${filterCat==='all'?'on':''}" onclick="setFilter('cat','all',this)">全部</button>`;
-  
+
   allCats.forEach(cat => {
     html += `<button class="view-pill ${filterCat===cat?'on':''}" onclick="setFilter('cat','${cat}',this)">${cat}</button>`;
   });
-  
+
   container.innerHTML = html;
 }
 
@@ -1153,11 +1153,11 @@ function populateInvCatSelect(currentValue) {
   if (!sel) return;
   const cats = getAllInvCats();
   let opts = cats.map(c => `<option value="${c}">${c}</option>`).join('');
-  
+
   if (currentValue && !cats.includes(currentValue)) {
     opts += `<option value="${currentValue}">${currentValue}</option>`;
   }
-  
+
   sel.innerHTML = opts;
   if (currentValue) sel.value = currentValue;
 }
@@ -1201,11 +1201,11 @@ function addCustomInvCat() {
   if(!name) return;
   const all = getAllInvCats();
   if(all.includes(name)) { showToast('此分類已存在', 'err'); return; }
-  
-  const customs = getCustomInvCats(); 
+
+  const customs = getCustomInvCats();
   customs.push(name);
   saveCustomInvCats(customs);
-  
+
   input.value = '';
   renderInvCatList();
   showToast(`✓ 已新增分類「${name}」`);
@@ -1276,7 +1276,7 @@ function renderAll() {
   renderLoans();
   renderRentalStats();
   initRentalYearSelect();
-  
+
   if (window.RoleGuard && typeof window.RoleGuard.applySection === 'function') {
     window.RoleGuard.applySection();
   }
@@ -1291,22 +1291,22 @@ function renderKPI() {
   const ok     = items.filter(i=>i.status==='在庫').length;
   const out    = items.filter(i=>i.status==='借出').length;
   const repair = items.filter(i=>i.status==='維修中').length;
-  
+
   const totalValue  = items.reduce((a,i)=>(a+(+i.buyPrice||0)),0);
   const curValueTotal = items.reduce((a,i)=> a + calculateCurValue(i.buyPrice, i.buyDate), 0);
 
   document.getElementById('k-total').textContent = total;
   document.getElementById('k-total-sub').textContent = `共 ${total} 件器材`;
-  
+
   document.getElementById('k-ok').textContent = ok;
   document.getElementById('k-ok-sub').textContent = `${ok} 件可使用`;
-  
+
   document.getElementById('k-out').textContent = out;
   document.getElementById('k-out-sub').textContent = out ? `${out} 件待歸還` : '無借出';
-  
+
   document.getElementById('k-repair').textContent = repair;
   document.getElementById('k-repair-sub').textContent = repair ? `${repair} 件送修` : '無維修';
-  
+
   document.getElementById('k-value').textContent = totalValue ? 'NT$'+Math.round(totalValue).toLocaleString() : '—';
   document.getElementById('k-cur-value').textContent = curValueTotal ? 'NT$'+Math.round(curValueTotal).toLocaleString() : '—';
 }
@@ -1336,11 +1336,11 @@ function checkRate() {
 
 function quickSearch(site) {
   const name = document.getElementById('item-name').value.trim();
-  if(!name) { 
-    showToast('請先輸入上方「器材名稱」再點擊搜尋', 'err'); 
-    return; 
+  if(!name) {
+    showToast('請先輸入上方「器材名稱」再點擊搜尋', 'err');
+    return;
   }
-  
+
   let url = '';
   if (site === 'google') {
     url = `https://www.google.com/search?q=${encodeURIComponent(name + ' 租借 價格')}`;
@@ -1351,7 +1351,7 @@ function quickSearch(site) {
   } else if (site === 'lens') {
     url = `https://www.google.com/search?q=site:lensbank.com.tw+${encodeURIComponent(name)}`;
   }
-  
+
   if(url) window.open(url, '_blank');
 }
 
@@ -1378,9 +1378,9 @@ function renderTable() {
     const activeLoanQty = loans.filter(l=>l.itemId===it.id&&!l.returned).reduce((a,l)=>a+(+l.qty||1),0);
     const avail = (+it.qty||1) - activeLoanQty;
     const warrantyExpired = it.warranty && new Date(it.warranty) < new Date();
-    
+
     const quickSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(it.name + ' 租金 攝影')}`;
-    
+
     const curVal = calculateCurValue(it.buyPrice, it.buyDate);
     let curValHtml = '—';
     if (parseFloat(it.buyPrice) > 0) {
@@ -1401,7 +1401,7 @@ function renderTable() {
       <td><span class="status-badge s-${it.status||'在庫'}">${it.status||'在庫'}</span></td>
       <td class="qty-cell">${it.qty||1}</td>
       <td class="qty-cell ${avail<=0?'qty-low':'qty-avail'}">${avail}</td>
-      
+
       <td class="price-cell">
         <div style="color:var(--ink2);">${it.buyPrice?'NT$'+(+it.buyPrice).toLocaleString():'—'}</div>
         <div style="color:#b45309; font-weight:600; margin-top:3px; font-size:12px;">${curValHtml}</div>
@@ -1438,7 +1438,7 @@ function renderLoans() {
   wrap.innerHTML = active.map(l => {
     const item = items.find(i=>i.id===l.itemId);
     const proj = projects.find(p=>p.id===l.projId);
-    
+
     let overdueTag = '';
     const isOverdue = l.returnDate && l.returnDate < today;
     if (isOverdue) {
@@ -1672,10 +1672,10 @@ function openItemModal(itemId) {
   document.getElementById('item-modal-title').textContent = it ? '編輯器材' : '新增器材';
   document.getElementById('item-id').value = it ? it.id : '';
   document.getElementById('item-name').value = it ? it.name : '';
-  
+
   const defaultCat = it ? (it.cat||'攝影機') : '攝影機';
   populateInvCatSelect(defaultCat);
-  
+
   document.getElementById('item-brand').value = it ? (it.brand||'') : '';
   document.getElementById('item-code').value  = it ? (it.code||'') : generateItemCode(defaultCat);
   document.getElementById('item-qty').value   = it ? (it.qty||1) : 1;
@@ -1686,9 +1686,9 @@ function openItemModal(itemId) {
   document.getElementById('item-buy-date').value   = it ? (it.buyDate||'') : '';
   document.getElementById('item-warranty').value   = it ? (it.warranty||'') : '';
   document.getElementById('item-note').value  = it ? (it.note||'') : '';
-  
+
   updateCurValueField();
-  checkRate(); 
+  checkRate();
 
   document.getElementById('item-overlay').classList.add('open');
   setTimeout(()=>document.getElementById('item-name').focus(),100);
@@ -1716,7 +1716,7 @@ async function saveItem() {
     createdAt:  items.find(i=>i.id===id)?.createdAt || Date.now(),
     updatedAt:  Date.now()
   };
-  
+
   const idx = items.findIndex(i=>i.id===id);
   if(idx>=0) items[idx]=it; else items.unshift(it);
   await fbSet('inv_items', id, it);
@@ -1790,10 +1790,10 @@ function openLoanModal(preItemId) {
     const curQty = +document.getElementById('loan-qty').value || 1;
     if(curQty > avail) document.getElementById('loan-qty').value = avail;
   };
-  
+
   const psel = document.getElementById('loan-proj-id');
   psel.innerHTML = `<option value="">— 不連結 —</option>` + projects.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
-  
+
   const today = new Date().toISOString().slice(0,10);
   document.getElementById('loan-out-date').value = today;
   document.getElementById('loan-return-date').value = '';
@@ -1938,7 +1938,7 @@ function openEditLoanModal(loanId) {
     .filter(it => it.status !== '報廢')
     .map(it => `<option value="${esc(it.id)}" ${it.id === loan.itemId ? 'selected' : ''}>${esc(it.name)}${it.brand ? ' ('+esc(it.brand)+')' : ''} — ${it.status}</option>`)
     .join('');
-  
+
   if (!items.filter(it => it.status !== '報廢').find(it => it.id === loan.itemId)) {
     const ghost = items.find(i => i.id === loan.itemId);
     if (ghost) itemSel.innerHTML = `<option value="${esc(ghost.id)}" selected>${esc(ghost.name)} — ${ghost.status}</option>` + itemSel.innerHTML;
@@ -2064,7 +2064,7 @@ async function deleteRepair(id) {
 }
 
 /* =============================================
-   QR CODE 
+   QR CODE
    ============================================= */
 let qrcodeInstance = null;
 let _currentQRItemId = null;
@@ -2126,7 +2126,7 @@ function openQRManager() {
   setTimeout(() => URL.revokeObjectURL(url), 15000);
 }
 
-function buildQRManagerHTML() { 
+function buildQRManagerHTML() {
   return `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -2137,7 +2137,7 @@ function buildQRManagerHTML() {
 <style>
   body { font-family: 'Noto Sans TC', sans-serif; background: #eeeae4; padding: 20px; color: #1c1917; }
   .no-print { margin-bottom: 20px; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); max-width: 800px; margin-left: auto; margin-right: auto;}
-  .controls { display: flex; gap: 20px; margin: 15px 0; background: #f9f7f4; padding: 15px; border-radius: 8px;}
+  .controls { display: flex; gap: 10px 18px; margin: 15px 0; background: #f9f7f4; padding: 15px; border-radius: 8px; flex-wrap:wrap;}
   .controls label { font-size: 14px; font-weight: 500; cursor: pointer; display:flex; align-items:center; gap:6px;}
   .print-btn { background: #b45309; color: #fff; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 600; display:inline-flex; align-items:center; gap:8px;}
   .print-btn:hover { background: #d97706; }
@@ -2148,19 +2148,26 @@ function buildQRManagerHTML() {
   .qr-card .meta { font-size: 11px; color: #78716c; margin-bottom: 12px; height: 16px; font-family: 'IBM Plex Mono', monospace;}
   .qr-code-img { margin: 0 auto; display: flex; justify-content: center; }
   .qr-code-img img { border-radius: 4px; }
+  .option-title { width:100%; font-size:12px; color:#78716c; font-weight:600; margin-bottom:-4px; }
+  .qr-card.no-name .meta { margin-top: 0; }
+  .qr-card.no-qr { display:flex; flex-direction:column; justify-content:center; min-height:160px; }
   .layout-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 12px 0 4px; }
   .layout-row select { border:1px solid #d6d3d1; border-radius:6px; padding:8px 10px; font-family:inherit; font-size:14px; background:#fff; }
   body.layout-label-14x30 { background:#f5f6f8; }
   body.layout-label-14x30 .grid { display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start; justify-content:center; max-width:900px; }
   body.layout-label-14x30 .qr-card { width:14mm; height:30mm; padding:1.2mm .9mm; border-radius:2px; border:1px solid #d7d7d7; box-shadow:none; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow:hidden; }
   body.layout-label-14x30 .qr-card .edit-name { order:2; border:none; background:transparent; margin:1mm 0 0; padding:0; width:100%; height:8mm; font-size:6pt; line-height:1.15; white-space:normal; overflow:hidden; text-align:center; font-weight:700; color:#111; }
-  body.layout-label-14x30 .qr-card .meta { display:none; }
+  body.layout-label-14x30 .qr-card .meta { order:3; display:block; width:100%; height:auto; max-height:5.2mm; margin:.5mm 0 0; font-size:4pt; line-height:1.1; color:#222; overflow:hidden; font-family:'Noto Sans TC', sans-serif; }
   body.layout-label-14x30 .qr-code-img { order:1; width:11.4mm; height:11.4mm; align-items:center; }
+  body.layout-label-14x30 .qr-card.no-name .meta { margin-top:1mm; max-height:9mm; }
+  body.layout-label-14x30 .qr-card.no-qr { justify-content:flex-start; }
+  body.layout-label-14x30 .qr-card.no-qr .edit-name { height:11mm; font-size:7pt; }
+  body.layout-label-14x30 .qr-card.no-qr .meta { max-height:14mm; font-size:4.5pt; }
   body.layout-label-14x30 .qr-code-img img,
   body.layout-label-14x30 .qr-code-img canvas { width:11.4mm !important; height:11.4mm !important; image-rendering:pixelated; }
   body.layout-label-14x30 .hint-label { display:inline; }
   .hint-label { display:none; color:#b45309; font-weight:600; }
-  @page label14x30 { size: 14mm 30mm; margin: 0; }
+  @page { margin: 8mm; }
   @media print {
     body { background: #fff; padding: 0; }
     .no-print { display: none !important; }
@@ -2169,8 +2176,9 @@ function buildQRManagerHTML() {
     .qr-card .edit-name { border: none; background: transparent; font-size: 12pt; padding: 0; text-overflow: ellipsis;}
     body.layout-label-14x30 { padding:0; margin:0; }
     body.layout-label-14x30 .grid { display:block; margin:0; padding:0; }
-    body.layout-label-14x30 .qr-card { page: label14x30; width:14mm; height:30mm; margin:0; padding:1.2mm .9mm; border:none; page-break-after:always; break-after:page; }
+    body.layout-label-14x30 .qr-card { width:14mm; height:30mm; margin:0; padding:1.2mm .9mm; border:none; page-break-after:always; break-after:page; }
     body.layout-label-14x30 .qr-card .edit-name { font-size:6pt; height:8mm; line-height:1.15; }
+    body.layout-label-14x30 .qr-card .meta { font-size:4pt; }
   }
 </style>
 </head>
@@ -2179,9 +2187,16 @@ function buildQRManagerHTML() {
     <h2 style="margin-top:0;">🖨️ 器材 QR Code 標籤列印</h2>
     <p style="color:#57534e; font-size:14px;">請勾選您要在標籤上顯示的附加資訊。若品名太長，您可以直接點擊卡片上的「器材名稱」進行縮減修改（修改僅限本次列印使用，不影響系統資料）。</p>
     <div class="controls">
-      <label><input type="checkbox" id="chk-brand" checked onchange="renderQRs()"> 顯示品牌</label>
-      <label><input type="checkbox" id="chk-model" checked onchange="renderQRs()"> 顯示型號/編號</label>
-      <label><input type="checkbox" id="chk-cat" checked onchange="renderQRs()"> 顯示類別</label>
+      <div class="option-title">勾選標籤上要顯示的內容</div>
+      <label><input type="checkbox" id="chk-name" checked onchange="renderQRs()"> 器材名稱</label>
+      <label><input type="checkbox" id="chk-qr" checked onchange="renderQRs()"> QR Code</label>
+      <label><input type="checkbox" id="chk-cat" checked onchange="renderQRs()"> 類別</label>
+      <label><input type="checkbox" id="chk-brand" checked onchange="renderQRs()"> 品牌</label>
+      <label><input type="checkbox" id="chk-model" checked onchange="renderQRs()"> 型號/編號</label>
+      <label><input type="checkbox" id="chk-status" onchange="renderQRs()"> 狀態</label>
+      <label><input type="checkbox" id="chk-buy-date" onchange="renderQRs()"> 購入日期</label>
+      <label><input type="checkbox" id="chk-rate" onchange="renderQRs()"> 日租金</label>
+      <label><input type="checkbox" id="chk-note" onchange="renderQRs()"> 備註</label>
     </div>
     <div class="layout-row">
       <label style="font-size:14px;font-weight:600;">標籤版型</label>
@@ -2201,58 +2216,85 @@ function buildQRManagerHTML() {
   <script>
     const items = JSON.parse(sessionStorage.getItem('qr_items') || '[]');
     let currentLayout = 'standard';
-    
+
+    function applyPageSize(layout) {
+      let style = document.getElementById('dynamic-page-size');
+      if(!style) {
+        style = document.createElement('style');
+        style.id = 'dynamic-page-size';
+        document.head.appendChild(style);
+      }
+      style.textContent = layout === '14x30'
+        ? '@page { size: 14mm 30mm; margin: 0; }'
+        : '@page { margin: 8mm; }';
+    }
+
     function setLabelLayout(layout) {
       currentLayout = layout;
       document.body.classList.toggle('layout-label-14x30', layout === '14x30');
+      applyPageSize(layout);
       renderQRs();
     }
-    
+
     function printLabels() {
       setLabelLayout(document.getElementById('label-layout').value);
       setTimeout(() => window.print(), 120);
     }
-    
+
     function renderQRs() {
+      const showName = document.getElementById('chk-name').checked;
+      const showQR = document.getElementById('chk-qr').checked;
       const showBrand = document.getElementById('chk-brand').checked;
       const showModel = document.getElementById('chk-model').checked;
       const showCat = document.getElementById('chk-cat').checked;
+      const showStatus = document.getElementById('chk-status').checked;
+      const showBuyDate = document.getElementById('chk-buy-date').checked;
+      const showRate = document.getElementById('chk-rate').checked;
+      const showNote = document.getElementById('chk-note').checked;
       const isSmallLabel = currentLayout === '14x30';
-      
+
       const grid = document.getElementById('qr-grid');
       grid.innerHTML = '';
-      
+
       items.forEach(it => {
         const card = document.createElement('div');
-        card.className = 'qr-card';
-        
+        card.className = 'qr-card' + (showName ? '' : ' no-name') + (showQR ? '' : ' no-qr');
+
         let metaArr = [];
         if(showCat && it.cat) metaArr.push(it.cat);
         if(showBrand && it.brand) metaArr.push(it.brand);
         if(showModel && it.code) metaArr.push(it.code);
+        if(showStatus && it.status) metaArr.push('狀態：' + it.status);
+        if(showBuyDate && it.buyDate) metaArr.push('購入：' + it.buyDate);
+        if(showRate && it.dayRate) metaArr.push('日租：NT$' + Number(it.dayRate).toLocaleString());
+        if(showNote && it.note) metaArr.push(it.note);
         const metaStr = metaArr.join(' · ');
+        const safeName = String(it.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeMeta = metaStr.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
         card.innerHTML = \`
-          <div class="edit-name" contenteditable="true" title="點擊修改列印名稱">\${it.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-          <div class="meta">\${metaStr}</div>
-          <div class="qr-code-img" id="qr-\${it.id}"></div>
+          \${showName ? '<div class="edit-name" contenteditable="true" title="點擊修改列印名稱">' + safeName + '</div>' : ''}
+          \${safeMeta ? '<div class="meta">' + safeMeta + '</div>' : ''}
+          \${showQR ? '<div class="qr-code-img" id="qr-' + it.id + '"></div>' : ''}
         \`;
         grid.appendChild(card);
-        
-        new QRCode(document.getElementById('qr-'+it.id), {
-          text: it.id,
-          width: isSmallLabel ? 86 : 130,
-          height: isSmallLabel ? 86 : 130,
-          correctLevel: QRCode.CorrectLevel.M
-        });
+
+        if(showQR) {
+          new QRCode(document.getElementById('qr-'+it.id), {
+            text: it.id,
+            width: isSmallLabel ? 86 : 130,
+            height: isSmallLabel ? 86 : 130,
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        }
       });
     }
-    
+
     // 確保字體載入後再繪製，避免排版偏移
-    setTimeout(renderQRs, 100);
+    setTimeout(() => setLabelLayout(document.getElementById('label-layout').value), 100);
   <\/script>
 </body>
-</html>`; 
+</html>`;
 }
 
 let html5QrCode = null;
@@ -2260,7 +2302,7 @@ function openScanner() {
   document.getElementById('scanner-overlay').classList.add('open');
   html5QrCode = new Html5Qrcode("reader");
   html5QrCode.start(
-    { facingMode: "environment" }, 
+    { facingMode: "environment" },
     { fps: 10, qrbox: { width: 250, height: 250 } },
     onScanSuccess, onScanFailure
   ).catch(err => {
@@ -2291,7 +2333,7 @@ function onScanSuccess(decodedText) {
 function onScanFailure(error) {}
 
 /* =============================================
-   EXCEL IMPORT / EXPORT 
+   EXCEL IMPORT / EXPORT
    ============================================= */
 function openExcelImport() {
   document.getElementById('item-import-msg').style.display = 'none';
@@ -2355,7 +2397,7 @@ async function importItemExcel(event) {
           updatedAt: Date.now()
         };
 
-        if(existing) { Object.assign(existing, entry); await fbSet('inv_items', id, entry); updated++; } 
+        if(existing) { Object.assign(existing, entry); await fbSet('inv_items', id, entry); updated++; }
         else { items.unshift(entry); await fbSet('inv_items', id, entry); added++; }
       }
       renderAll();
