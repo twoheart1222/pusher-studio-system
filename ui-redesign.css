@@ -649,3 +649,217 @@ body:has(.login-box) {
     grid-column: auto !important;
   }
 }
+
+@media (max-width: 700px) {
+  .topbar-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    flex-wrap: unset !important;
+  }
+
+  .topbar-actions .btn {
+    width: 100% !important;
+    min-height: 38px !important;
+    font-size: 12px !important;
+  }
+
+  .topbar-actions > div[style*="width: 1px"] {
+    display: none !important;
+  }
+
+  #user-display-name,
+  #role-badge {
+    grid-column: 1 / -1 !important;
+  }
+
+  .toolbar {
+    position: static !important;
+    height: auto !important;
+    padding: 10px 12px !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+  }
+
+  .tg {
+    width: 100% !important;
+    height: auto !important;
+    border-right: none !important;
+    padding: 0 !important;
+    gap: 7px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .tg-label {
+    width: 100% !important;
+  }
+
+  #inv-search {
+    width: 100% !important;
+    min-height: 38px !important;
+    font-size: 14px !important;
+  }
+
+  .main {
+    padding: 12px !important;
+    gap: 12px !important;
+  }
+
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    margin-bottom: 0 !important;
+  }
+
+  .kpi-card {
+    min-height: auto !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+  }
+
+  .kpi-value {
+    font-size: 19px !important;
+    letter-spacing: 0 !important;
+  }
+
+  .kpi-card.k-value,
+  .kpi-card.k-cur-value {
+    grid-column: span 2 !important;
+  }
+
+  .panel-header {
+    padding: 12px !important;
+    align-items: stretch !important;
+  }
+
+  .panel-header > div {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+
+  .inv-table-wrap {
+    overflow: visible !important;
+  }
+
+  .inv-table {
+    min-width: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    border-collapse: separate !important;
+  }
+
+  .inv-table thead {
+    display: none !important;
+  }
+
+  .inv-table tbody {
+    display: grid !important;
+    gap: 10px !important;
+    padding: 10px !important;
+    background: #f7f3ee !important;
+  }
+
+  .inv-table tr {
+    display: grid !important;
+    gap: 8px !important;
+    padding: 12px !important;
+    background: #fff !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .inv-table td {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    padding: 0 !important;
+    border-bottom: none !important;
+    font-size: 12px !important;
+    background: transparent !important;
+  }
+
+  .inv-table td::before {
+    content: attr(data-label);
+    color: var(--ink3);
+    font-size: 11px;
+    flex: 0 0 72px;
+  }
+
+  .inv-table td.item-main {
+    display: block !important;
+  }
+
+  .inv-table td.item-main::before {
+    content: none;
+  }
+
+  .td-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .td-actions .btn {
+    min-height: 34px !important;
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+  }
+
+  .loan-wrap {
+    overflow: visible !important;
+  }
+
+  .loan-inner {
+    min-width: 0 !important;
+  }
+
+  .loan-header {
+    display: none !important;
+  }
+
+  .loan-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    margin: 10px !important;
+    padding: 12px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .loan-row > div {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+  }
+
+  .loan-row > div::before {
+    content: attr(data-label);
+    color: var(--ink3);
+    font-size: 11px;
+    flex: 0 0 72px;
+  }
+
+  .loan-row > div:first-child,
+  .loan-row > div:last-child {
+    display: block !important;
+  }
+
+  .loan-row > div:first-child::before,
+  .loan-row > div:last-child::before {
+    content: none;
+  }
+
+  .loan-row > div:last-child {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+}

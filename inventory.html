@@ -227,6 +227,63 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 }
 
 /* ── auth loading overlay ── */
+@media(max-width:700px){
+  body{ font-size:14px; padding-bottom:12px; }
+  .topbar{ padding:10px 12px; gap:8px; }
+  .topbar-brand{ width:100%; font-size:13px; }
+  .topbar-nav{ width:100%; overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px; scrollbar-width:none; }
+  .topbar-nav::-webkit-scrollbar{ display:none; }
+  .nav-tab{ flex:0 0 auto; padding:7px 12px; }
+  .topbar-actions{ width:100%; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .topbar-actions .btn{ width:100%; min-height:38px; font-size:12px; }
+  .topbar-actions > div[style*="width: 1px"]{ display:none !important; }
+  #user-display-name,#role-badge{ grid-column:1/-1; }
+  .toolbar{ position:static; height:auto; padding:10px 12px; gap:10px; flex-wrap:wrap; overflow:visible; }
+  .tg{ width:100%; height:auto; border-right:none; padding:0; gap:7px; flex-wrap:wrap; }
+  .tg-label{ width:100%; color:#a8a29e; }
+  .view-pill{ min-height:34px; padding:7px 12px; font-size:12px; }
+  .t-select{ min-height:34px; font-size:12px; }
+  #inv-search{ width:100% !important; min-height:38px; font-size:14px !important; }
+  .main{ padding:12px; gap:12px; }
+  .kpi-row{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .kpi-card{ padding:12px; border-radius:8px; }
+  .kpi-value{ font-size:19px; letter-spacing:0; }
+  .kpi-card.k-value,.kpi-card.k-cur-value{ grid-column:span 2; }
+  .panel{ border-radius:8px; }
+  .panel-header{ padding:12px; align-items:stretch; }
+  .panel-header > div{ width:100%; flex-wrap:wrap; }
+  .panel-header .btn{ min-height:34px; }
+  .inv-table-wrap{ overflow:visible; }
+  .inv-table{ min-width:0; display:block; width:100%; }
+  .inv-table thead{ display:none; }
+  .inv-table tbody{ display:grid; gap:10px; padding:10px; background:#f7f3ee; }
+  .inv-table tr{ display:grid; gap:8px; padding:12px; background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:var(--shadow-sm); }
+  .inv-table tr:hover td{ background:transparent; }
+  .inv-table td{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:0; border-bottom:none; font-size:12px; }
+  .inv-table td::before{ content:attr(data-label); color:var(--ink3); font-size:11px; flex:0 0 72px; }
+  .inv-table td.item-main{ display:block; }
+  .inv-table td.item-main::before{ content:none; }
+  .item-name{ font-size:15px; line-height:1.35; margin-bottom:3px; }
+  .item-code{ font-size:11px; }
+  .price-cell{ align-items:flex-end; text-align:right; }
+  .td-actions{ width:100%; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; justify-content:stretch; }
+  .td-actions .btn{ min-height:34px; padding:6px 4px; font-size:11px; }
+  .loan-wrap{ overflow:visible; }
+  .loan-inner{ min-width:0; }
+  .loan-header{ display:none; }
+  .loan-row{ display:grid; grid-template-columns:1fr; gap:8px; margin:10px; padding:12px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:var(--shadow-sm); }
+  .loan-row > div{ display:flex; justify-content:space-between; gap:12px; }
+  .loan-row > div::before{ content:attr(data-label); color:var(--ink3); font-size:11px; flex:0 0 72px; }
+  .loan-row > div:first-child{ display:block; }
+  .loan-row > div:first-child::before,.loan-row > div:last-child::before{ content:none; }
+  .loan-row > div:last-child{ display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  .loan-row .btn{ min-height:34px; }
+  .modal{ width:calc(100vw - 20px); max-width:calc(100vw - 20px); max-height:92vh; }
+  .modal-body{ padding:14px; }
+  .modal-footer{ padding:12px 14px; flex-wrap:wrap; }
+  .modal-footer .btn{ min-height:36px; }
+}
+
 #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
 <link rel="stylesheet" href="ui-redesign.css">
@@ -1406,17 +1463,17 @@ function renderTable() {
     }
 
     return `<tr>
-      <td>
+      <td class="item-main" data-label="器材">
         <div class="item-name">${it.name}</div>
         <div class="item-code">${[it.brand, it.code].filter(Boolean).join(' · ')}</div>
         ${it.warranty ? `<div style="font-size:9px;color:${warrantyExpired?'#dc2626':'var(--ink3)'};">${warrantyExpired?'⚠ 保固已到期':'保固至 '+it.warranty}</div>` : ''}
       </td>
-      <td><span class="cat-badge cat-${it.cat||'其他'}">${it.cat||'其他'}</span></td>
-      <td><span class="status-badge s-${it.status||'在庫'}">${it.status||'在庫'}</span></td>
-      <td class="qty-cell">${it.qty||1}</td>
-      <td class="qty-cell ${avail<=0?'qty-low':'qty-avail'}">${avail}</td>
+      <td data-label="類別"><span class="cat-badge cat-${it.cat||'其他'}">${it.cat||'其他'}</span></td>
+      <td data-label="狀態"><span class="status-badge s-${it.status||'在庫'}">${it.status||'在庫'}</span></td>
+      <td class="qty-cell" data-label="總數">${it.qty||1}</td>
+      <td class="qty-cell ${avail<=0?'qty-low':'qty-avail'}" data-label="可用">${avail}</td>
 
-      <td class="price-cell">
+      <td class="price-cell" data-label="價格">
         <div style="color:var(--ink2);">${it.buyPrice?'NT$'+(+it.buyPrice).toLocaleString():'—'}</div>
         <div style="color:#b45309; font-weight:600; margin-top:3px; font-size:12px;">${curValHtml}</div>
         <div style="display:flex; align-items:center; margin-top:6px;">
@@ -1425,8 +1482,8 @@ function renderTable() {
         </div>
         ${getRateBadge(it.dayRate, it.marketRate)}
       </td>
-      <td style="font-size:11px;color:var(--ink3);">${it.buyDate||'—'}</td>
-      <td>
+      <td style="font-size:11px;color:var(--ink3);" data-label="購入日">${it.buyDate||'—'}</td>
+      <td data-label="操作">
         <div class="td-actions">
           <button class="btn btn-ghost-dark btn-xs" onclick="openQRCode('${it.id}','${it.name.replace(/'/g, "\\'")}')" title="產生 QR Code">🔲 QR</button>
           <button class="btn btn-blue btn-xs" data-role-section="inventory-add" onclick="openLoanModal('${it.id}')">借出</button>
