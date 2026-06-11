@@ -862,6 +862,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     </div>
     <div class="modal-body" style="padding:0; background:#000; position:relative; min-height:250px;">
       <div id="reader"></div>
+      <div id="scan-hint" style="position:absolute;left:12px;right:12px;top:12px;color:#fff;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:8px 10px;font-size:12px;text-align:center;pointer-events:none;">請把 QR 放在畫面中央，佔畫面約 1/3，停留 1 秒</div>
       <div style="position:absolute;left:10px;right:10px;bottom:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;pointer-events:none;">
         <button class="btn btn-ghost btn-xs" style="pointer-events:auto;background:rgba(255,255,255,.92);" onclick="setScannerZoom(1)">1x</button>
         <button class="btn btn-amber btn-xs" style="pointer-events:auto;" onclick="setScannerZoom(2)">小 QR</button>
@@ -2625,6 +2626,14 @@ function startBackupQrScanner() {
   backupQrCanvas = backupQrCanvas || document.createElement('canvas');
   const ctx = backupQrCanvas.getContext('2d', { willReadFrequently: true });
 
+  function decodeFrame(sourceX, sourceY, sourceW, sourceH, targetW, targetH) {
+    backupQrCanvas.width = targetW;
+    backupQrCanvas.height = targetH;
+    ctx.drawImage(video, sourceX, sourceY, sourceW, sourceH, 0, 0, targetW, targetH);
+    const imageData = ctx.getImageData(0, 0, targetW, targetH);
+    return jsQR(imageData.data, targetW, targetH, { inversionAttempts: 'attemptBoth' });
+  }
+
   const scan = () => {
     const activeVideo = document.querySelector('#reader video');
     if(!activeVideo || activeVideo.readyState < 2) {
@@ -2634,12 +2643,12 @@ function startBackupQrScanner() {
     const width = activeVideo.videoWidth || activeVideo.clientWidth;
     const height = activeVideo.videoHeight || activeVideo.clientHeight;
     if(width && height) {
-      backupQrCanvas.width = width;
-      backupQrCanvas.height = height;
-      ctx.drawImage(activeVideo, 0, 0, width, height);
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const code = jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' });
+      const cropSize = Math.floor(Math.min(width, height) * 0.72);
+      const cropX = Math.floor((width - cropSize) / 2);
+      const cropY = Math.floor((height - cropSize) / 2);
+      const code = decodeFrame(cropX, cropY, cropSize, cropSize, 900, 900) || decodeFrame(0, 0, width, height, Math.min(width, 1280), Math.min(height, 960));
       if(code && code.data) {
+        stopBackupQrScanner();
         onScanSuccess(code.data);
         return;
       }
@@ -2661,7 +2670,7 @@ async function startSimpleSafariScanner() {
   html5QrCode = new Html5Qrcode("reader");
   await html5QrCode.start(
     { facingMode: "environment" },
-    { fps: 10, disableFlip: true },
+    { fps: 15, disableFlip: true },
     onScanSuccess,
     onScanFailure
   );
@@ -2695,7 +2704,7 @@ async function startHtml5Scanner() {
     verbose: false
   });
   const scanConfig = {
-    fps: 25,
+    fps: 30,
     disableFlip: true
   };
   try {
@@ -2724,7 +2733,7 @@ async function startHtml5Scanner() {
       try {
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 10, disableFlip: true },
+          { fps: 15, disableFlip: true },
           onScanSuccess,
           onScanFailure
         );
