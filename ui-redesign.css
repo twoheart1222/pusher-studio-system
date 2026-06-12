@@ -837,8 +837,23 @@ body:has(.login-box) {
     padding: 12px !important;
     background: #fff !important;
     border: 1px solid var(--line) !important;
+    border-left-width: 5px !important;
     border-radius: 8px !important;
     box-shadow: var(--shadow-sm) !important;
+  }
+
+  .inv-table tr.state-available {
+    border-left-color: #16835f !important;
+  }
+
+  .inv-table tr.state-empty {
+    border-left-color: #c93d3d !important;
+    background: #fffafa !important;
+  }
+
+  .inv-table tr.state-blocked {
+    border-left-color: #b65f28 !important;
+    background: #fffaf5 !important;
   }
 
   .inv-table td {
@@ -865,6 +880,45 @@ body:has(.login-box) {
 
   .inv-table td.item-main::before {
     content: none;
+  }
+
+  .mobile-card-head {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 10px !important;
+    align-items: start !important;
+  }
+
+  .mobile-state-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 28px !important;
+    padding: 4px 10px !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+  }
+
+  .state-available .mobile-state-badge {
+    color: #fff !important;
+    background: #16835f !important;
+  }
+
+  .state-empty .mobile-state-badge {
+    color: #fff !important;
+    background: #c93d3d !important;
+  }
+
+  .state-blocked .mobile-state-badge {
+    color: #fff !important;
+    background: #b65f28 !important;
+  }
+
+  .state-empty .item-name,
+  .state-blocked .item-name {
+    color: #52606d !important;
   }
 
   .price-cell {

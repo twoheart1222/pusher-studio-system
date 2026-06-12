@@ -1459,6 +1459,8 @@ function renderTable() {
     const activeLoanQty = loans.filter(l=>l.itemId===it.id&&!l.returned).reduce((a,l)=>a+(+l.qty||1),0);
     const avail = (+it.qty||1) - activeLoanQty;
     const warrantyExpired = it.warranty && new Date(it.warranty) < new Date();
+    const mobileStateClass = it.status !== '在庫' ? 'state-blocked' : (avail > 0 ? 'state-available' : 'state-empty');
+    const mobileStateText = it.status !== '在庫' ? it.status : (avail > 0 ? `可借 ${avail}` : '已借完');
 
     const quickSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(it.name + ' 租金 攝影')}`;
 
@@ -1472,9 +1474,12 @@ function renderTable() {
       }
     }
 
-    return `<tr>
+    return `<tr class="${mobileStateClass}">
       <td class="item-main" data-label="器材">
-        <div class="item-name">${it.name}</div>
+        <div class="mobile-card-head">
+          <div class="item-name">${it.name}</div>
+          <span class="mobile-state-badge">${mobileStateText}</span>
+        </div>
         <div class="item-code">${[it.brand, it.code].filter(Boolean).join(' · ')}</div>
         ${it.warranty ? `<div style="font-size:9px;color:${warrantyExpired?'#dc2626':'var(--ink3)'};">${warrantyExpired?'⚠ 保固已到期':'保固至 '+it.warranty}</div>` : ''}
       </td>
