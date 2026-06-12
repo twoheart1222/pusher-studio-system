@@ -541,6 +541,10 @@ tr:hover td,
   border-radius: 8px !important;
 }
 
+.mobile-field-mode {
+  display: none;
+}
+
 #auth-overlay {
   background: #f5f6f8 !important;
 }
@@ -651,6 +655,61 @@ body:has(.login-box) {
 }
 
 @media (max-width: 700px) {
+  .mobile-field-mode {
+    display: grid !important;
+    gap: 10px !important;
+    padding: 14px !important;
+    background: #17202a !important;
+    color: #fff !important;
+    border-radius: 12px !important;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, .18) !important;
+  }
+
+  .mobile-field-title {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+  }
+
+  .mobile-field-sub {
+    color: rgba(255,255,255,.7) !important;
+    font-size: 12px !important;
+  }
+
+  .mobile-scan-btn {
+    width: 100% !important;
+    min-height: 58px !important;
+    border: none !important;
+    border-radius: 10px !important;
+    background: #16835f !important;
+    color: #fff !important;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    font-family: inherit !important;
+    box-shadow: 0 12px 24px rgba(22, 131, 95, .28) !important;
+  }
+
+  .mobile-quick-row {
+    display: grid !important;
+    grid-template-columns: 1fr 82px !important;
+    gap: 8px !important;
+  }
+
+  .mobile-quick-row input {
+    min-width: 0 !important;
+    min-height: 42px !important;
+    padding: 9px 11px !important;
+    border-radius: 9px !important;
+    border: 1px solid rgba(255,255,255,.2) !important;
+    background: rgba(255,255,255,.1) !important;
+    color: #fff !important;
+    font-size: 14px !important;
+  }
+
+  .mobile-quick-row input::placeholder {
+    color: rgba(255,255,255,.58) !important;
+  }
+
   .topbar-actions {
     width: 100% !important;
     display: grid !important;
@@ -672,6 +731,19 @@ body:has(.login-box) {
   #user-display-name,
   #role-badge {
     grid-column: 1 / -1 !important;
+  }
+
+  .topbar-actions button[onclick="openQRManager()"],
+  .topbar-actions button[onclick="openExcelImport()"],
+  .topbar-actions button[onclick="openItemModal()"],
+  .topbar-actions button[onclick="openLoanModal()"] {
+    display: none !important;
+  }
+
+  .topbar-actions button[onclick="openScanner()"] {
+    grid-column: 1 / -1 !important;
+    min-height: 46px !important;
+    font-size: 15px !important;
   }
 
   .toolbar {
@@ -708,9 +780,7 @@ body:has(.login-box) {
   }
 
   .kpi-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 8px !important;
-    margin-bottom: 0 !important;
+    display: none !important;
   }
 
   .kpi-card {
@@ -795,6 +865,13 @@ body:has(.login-box) {
 
   .inv-table td.item-main::before {
     content: none;
+  }
+
+  .price-cell {
+    align-items: flex-end !important;
+    text-align: right !important;
+    color: #7a8794 !important;
+    font-size: 11px !important;
   }
 
   .td-actions {

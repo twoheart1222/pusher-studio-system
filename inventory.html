@@ -416,6 +416,16 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 
 <div class="main">
 
+  <div class="mobile-field-mode">
+    <div class="mobile-field-title">現場借還</div>
+    <div class="mobile-field-sub">掃描器材 QR，或輸入名稱、型號、QR 末 6 碼。</div>
+    <button class="mobile-scan-btn" data-role-section="inventory-add" onclick="openScanner()">📷 掃描借還</button>
+    <div class="mobile-quick-row">
+      <input type="text" id="mobile-inv-search" placeholder="快速搜尋器材..." oninput="syncMobileSearch(this.value)">
+      <button class="btn btn-amber" data-role-section="inventory-add" onclick="openLoanModal()">借出</button>
+    </div>
+  </div>
+
   <div class="kpi-row" id="kpi-row">
     <div class="kpi-card k-total"><div class="kpi-label">器材總數</div><div class="kpi-value" id="k-total">—</div><div class="kpi-sub" id="k-total-sub">所有品項</div></div>
     <div class="kpi-card k-ok"><div class="kpi-label">可用中</div><div class="kpi-value" id="k-ok" style="color:#059669">—</div><div class="kpi-sub" id="k-ok-sub">狀態在庫</div></div>
@@ -2814,6 +2824,12 @@ function startLiveScanner() {
     showScannerMessage('相機無法啟動', getCameraErrorText(err));
     showToast('無法啟動相機，請確認瀏覽器已允許相機權限', 'err');
   });
+}
+
+function syncMobileSearch(value) {
+  const search = document.getElementById('inv-search');
+  if(search) search.value = value;
+  renderAll();
 }
 
 function openScanner() {
