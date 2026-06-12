@@ -421,7 +421,10 @@ tr:hover td,
   grid-template-columns: minmax(300px, 390px) 1fr !important;
   gap: 0 !important;
   background: #ffffff !important;
-  border-bottom: 1px solid #dfe5eb !important;
+}
+
+.quick-calc-panel {
+  overflow: hidden !important;
 }
 
 .quick-calc-form {

@@ -1133,8 +1133,8 @@ function renderProjectCalculator(projId, items) {
   return `<div class="quick-calc" id="quick-calc">
     <div class="quick-calc-form">
       <div class="calc-title">
-        <span>快速預算估算</span>
-        <span class="calc-hint">扣稅、保留利潤、抓人事上限</span>
+        <span>輸入總價先試算</span>
+        <span class="calc-hint">試算完成後，再新增到收支明細</span>
       </div>
       <div class="calc-field">
         <label>專案報價 / 合約總價</label>
@@ -1354,6 +1354,15 @@ function renderProjectDetail(id) {
 
   const rp = document.getElementById('right-panels');
   rp.innerHTML = `
+    <div class="panel quick-calc-panel">
+      <div class="panel-header">
+        <div>
+          <span class="panel-title">預算試算</span>
+          <div style="font-size:11px;color:var(--ink3);margin-top:3px;">這裡只做估算，不會直接寫入成本明細。</div>
+        </div>
+      </div>
+      ${renderProjectCalculator(id, items)}
+    </div>
     <div class="panel">
       <div class="panel-header">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -1377,7 +1386,6 @@ function renderProjectDetail(id) {
           <div style="font-size:16px;font-weight:600;font-family:var(--font-mono);color:${c};">${v}</div>
         </div>`).join('')}
       </div>
-      ${renderProjectCalculator(id, items)}
       <div class="tab-bar" id="proj-tabs">
         <div class="tab-item active" onclick="switchTab('detail','${id}',this)">明細列表</div>
         <div class="tab-item" onclick="switchTab('chart','${id}',this)">圖表分析</div>
