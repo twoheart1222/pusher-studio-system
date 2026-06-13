@@ -23,6 +23,10 @@
 
 * { letter-spacing: 0 !important; }
 
+.mobile-item-meta {
+  display: none;
+}
+
 body {
   background:
     linear-gradient(180deg, #ffffff 0, #f5f7f9 260px, #eef2f6 100%) !important;
@@ -1103,6 +1107,32 @@ body:has(.login-box) {
     font-size: 11px !important;
   }
 
+  .mobile-item-meta {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    margin-top: 8px !important;
+  }
+
+  .mobile-item-meta span {
+    border: 1px solid rgba(148,163,184,.35) !important;
+    border-radius: 999px !important;
+    color: #475569 !important;
+    background: #f8fafc !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    padding: 4px 8px !important;
+  }
+
+  .inv-table td[data-label="類別"],
+  .inv-table td[data-label="狀態"],
+  .inv-table td[data-label="總數"],
+  .inv-table td[data-label="可用"],
+  .inv-table td[data-label="價格"],
+  .inv-table td[data-label="購入日"] {
+    display: none !important;
+  }
+
   .mobile-state-badge {
     display: inline-flex !important;
     align-items: center !important;
@@ -1142,18 +1172,23 @@ body:has(.login-box) {
     font-size: 11px !important;
   }
 
-  .td-actions {
+  .inv-table .td-actions {
     width: 100% !important;
     display: grid !important;
-    grid-template-columns: 1.15fr 1.15fr .85fr .85fr !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 8px !important;
   }
 
-  .td-actions .btn {
+  .inv-table .td-actions .btn {
     min-height: 38px !important;
     padding: 7px 4px !important;
     font-size: 11px !important;
     border-radius: 12px !important;
+  }
+
+  .inv-table .td-actions .btn:nth-child(3),
+  .inv-table .td-actions .btn:nth-child(4) {
+    display: none !important;
   }
 
   .mobile-bottom-dock {

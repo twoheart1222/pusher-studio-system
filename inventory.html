@@ -133,6 +133,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .qty-avail{ color:var(--success); font-weight:500; }
 .qty-low{ color:var(--danger); }
 .price-cell{ font-family:var(--font-mono); font-size:11px; color:var(--ink2); display:flex; flex-direction:column; }
+.mobile-item-meta{ display:none; }
 .td-actions{ display:flex; gap:4px; justify-content:flex-end; white-space:nowrap; }
 .empty-state{ padding:48px 20px; text-align:center; }
 .empty-icon{ font-size:32px; margin-bottom:10px; opacity:.4; }
@@ -265,9 +266,19 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   .inv-table td.item-main::before{ content:none; }
   .item-name{ font-size:15px; line-height:1.35; margin-bottom:3px; }
   .item-code{ font-size:11px; }
+  .mobile-item-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .mobile-item-meta span{ border:1px solid rgba(148,163,184,.35); border-radius:999px; color:#475569; background:#f8fafc; font-size:11px; font-weight:700; padding:4px 8px; }
+  .inv-table td[data-label="類別"],
+  .inv-table td[data-label="狀態"],
+  .inv-table td[data-label="總數"],
+  .inv-table td[data-label="可用"],
+  .inv-table td[data-label="價格"],
+  .inv-table td[data-label="購入日"]{ display:none; }
   .price-cell{ align-items:flex-end; text-align:right; }
-  .td-actions{ width:100%; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; justify-content:stretch; }
+  .td-actions{ width:100%; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; justify-content:stretch; }
   .td-actions .btn{ min-height:34px; padding:6px 4px; font-size:11px; }
+  .td-actions .btn:nth-child(3),
+  .td-actions .btn:nth-child(4){ display:none; }
   .loan-wrap{ overflow:visible; }
   .loan-inner{ min-width:0; }
   .loan-header{ display:none; }
@@ -687,6 +698,10 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     </div>
     <div class="modal-body">
       <input type="hidden" id="loan-id">
+      <div class="field">
+        <label>分類</label>
+        <select id="loan-cat-filter" onchange="renderLoanItemOptions()"></select>
+      </div>
       <div class="field">
         <label>器材 *</label>
         <select id="loan-item-id"></select>
@@ -1516,6 +1531,11 @@ function renderTable() {
           <span class="mobile-state-badge">${mobileStateText}</span>
         </div>
         <div class="item-code">${[it.brand, it.code].filter(Boolean).join(' · ')}</div>
+        <div class="mobile-item-meta">
+          <span>${it.cat||'其他'}</span>
+          <span>總數 ${it.qty||1}</span>
+          <span>可借 ${Math.max(avail, 0)}</span>
+        </div>
         ${it.warranty ? `<div style="font-size:9px;color:${warrantyExpired?'#dc2626':'var(--ink3)'};">${warrantyExpired?'⚠ 保固已到期':'保固至 '+it.warranty}</div>` : ''}
       </td>
       <td data-label="類別"><span class="cat-badge cat-${it.cat||'其他'}">${it.cat||'其他'}</span></td>
@@ -1867,11 +1887,56 @@ function getItemAvailQty(itemId) {
   return (+it.qty||1) - activeLoanQty;
 }
 
+function getAvailableLoanItems() {
+  return items.filter(it => it.status !== '維修中' && it.status !== '報廢' && getItemAvailQty(it.id) > 0);
+}
+
+function updateLoanQtyLimit() {
+  const sel = document.getElementById('loan-item-id');
+  const qtyEl = document.getElementById('loan-qty');
+  if(!sel || !qtyEl || !sel.value) return;
+  const avail = getItemAvailQty(sel.value);
+  qtyEl.max = avail;
+  const curQty = +qtyEl.value || 1;
+  qtyEl.value = Math.max(1, Math.min(curQty, avail));
+}
+
+function renderLoanItemOptions(preItemId) {
+  const sel = document.getElementById('loan-item-id');
+  const catSel = document.getElementById('loan-cat-filter');
+  if(!sel || !catSel) return;
+
+  const selectedCat = catSel.value || 'all';
+  const availableItems = getAvailableLoanItems().filter(it => selectedCat === 'all' || (it.cat || '其他') === selectedCat);
+
+  sel.innerHTML = availableItems.map(it => {
+    const avail = getItemAvailQty(it.id);
+    return `<option value="${esc(it.id)}" ${it.id===preItemId?'selected':''}>${esc(it.name)}${it.brand?' ('+ esc(it.brand) +')':''} — 可用 ${avail}/${it.qty||1}</option>`;
+  }).join('');
+
+  if(preItemId && availableItems.some(it => it.id === preItemId)) {
+    sel.value = preItemId;
+  }
+
+  updateLoanQtyLimit();
+}
+
+function renderLoanCategoryOptions(preItemId) {
+  const catSel = document.getElementById('loan-cat-filter');
+  if(!catSel) return;
+
+  const availableItems = getAvailableLoanItems();
+  const cats = [...new Set(availableItems.map(it => it.cat || '其他'))].sort((a,b)=>a.localeCompare(b, 'zh-Hant'));
+  const preItem = items.find(it => it.id === preItemId);
+  const preCat = preItem ? (preItem.cat || '其他') : 'all';
+
+  catSel.innerHTML = `<option value="all">全部分類</option>` + cats.map(cat => `<option value="${esc(cat)}">${esc(cat)}</option>`).join('');
+  catSel.value = cats.includes(preCat) ? preCat : 'all';
+}
+
 function openLoanModal(preItemId) {
   document.getElementById('loan-id').value = '';
   const sel = document.getElementById('loan-item-id');
-
-  const loanableItems = items.filter(it => it.status !== '維修中' && it.status !== '報廢');
 
   if(preItemId) {
     const preIt = items.find(i=>i.id===preItemId);
@@ -1886,30 +1951,16 @@ function openLoanModal(preItemId) {
     }
   }
 
-  const availableItems = loanableItems.filter(it => getItemAvailQty(it.id) > 0);
-
-  sel.innerHTML = availableItems.map(it => {
-    const avail = getItemAvailQty(it.id);
-    return `<option value="${esc(it.id)}" ${it.id===preItemId?'selected':''}>${esc(it.name)}${it.brand?' ('+ esc(it.brand) +')':''} — 可用 ${avail}/${it.qty||1}</option>`;
-  }).join('');
-  if(!availableItems.length) {
+  if(!getAvailableLoanItems().length) {
     showToast('目前沒有可借出的器材（可用數量為 0、維修中或報廢）', 'err');
     return;
   }
-  if(preItemId) sel.value = preItemId;
 
-  const selectedId = sel.value;
-  if(selectedId) {
-    const maxAvail = getItemAvailQty(selectedId);
-    document.getElementById('loan-qty').max = maxAvail;
-    document.getElementById('loan-qty').value = Math.min(1, maxAvail);
-  }
+  renderLoanCategoryOptions(preItemId);
+  renderLoanItemOptions(preItemId);
 
   sel.onchange = function() {
-    const avail = getItemAvailQty(this.value);
-    document.getElementById('loan-qty').max = avail;
-    const curQty = +document.getElementById('loan-qty').value || 1;
-    if(curQty > avail) document.getElementById('loan-qty').value = avail;
+    updateLoanQtyLimit();
   };
 
   const psel = document.getElementById('loan-proj-id');
