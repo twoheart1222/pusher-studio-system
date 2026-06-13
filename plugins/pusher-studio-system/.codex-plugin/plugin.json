@@ -1,0 +1,18 @@
+{
+  "name": "pusher-studio-system",
+  "version": "0.1.0",
+  "description": "Repo-specific workflow guidance for maintaining the Pusher Studio internal management system.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Pusher Studio System",
+    "shortDescription": "Maintain the Pusher Studio internal system with its local rules.",
+    "longDescription": "Adds repo-specific guidance for the Pusher Studio internal HTML/Firebase management system, including QR inventory constraints, mobile field workflow, validation, and GitHub handoff habits.",
+    "developerName": "Pusher Studio",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Help me maintain the Pusher Studio internal management system."
+  }
+}
