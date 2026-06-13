@@ -1,0 +1,18 @@
+{
+  "name": "uprise-production-website",
+  "version": "0.1.0+codex.20260613074140",
+  "description": "Repo-specific workflow guidance for maintaining the Uprise Production company website.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Uprise Production Website",
+    "shortDescription": "Maintain the Uprise static website, Firebase CMS, and GitHub deploy workflow.",
+    "longDescription": "Adds repo-specific guidance for the Uprise Production company website: static HTML/CSS/JS pages, Firebase/Firestore CMS fallback, cache-busting deploys, browser verification, and GitHub handoff habits.",
+    "developerName": "Uprise Production",
+    "category": "Developer Tools",
+    "capabilities": [],
+    "defaultPrompt": "Help me maintain and publish the Uprise Production website."
+  }
+}
