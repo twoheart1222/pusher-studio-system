@@ -417,12 +417,32 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 <div class="main">
 
   <div class="mobile-field-mode">
-    <div class="mobile-field-title">現場借還</div>
-    <div class="mobile-field-sub">掃描器材 QR，或輸入名稱、型號、QR 末 6 碼。</div>
-    <button class="mobile-scan-btn" data-role-section="inventory-add" onclick="openScanner()">📷 掃描借還</button>
+    <div class="mobile-app-head">
+      <div>
+        <div class="mobile-field-title">現場借還</div>
+        <div class="mobile-field-sub">掃描 QR，快速借出或歸還。</div>
+      </div>
+      <div class="mobile-live-pill"><span class="sync-dot"></span> 即時</div>
+    </div>
+    <div class="mobile-stat-strip">
+      <div><span id="mobile-total">—</span><small>器材</small></div>
+      <div><span id="mobile-ok">—</span><small>可用</small></div>
+      <div><span id="mobile-out">—</span><small>借出</small></div>
+      <div><span id="mobile-repair">—</span><small>維修</small></div>
+    </div>
+    <button class="mobile-scan-btn" data-role-section="inventory-add" onclick="openScanner()">
+      <span class="mobile-scan-icon">📷</span>
+      <span>掃描 QR Code</span>
+      <small>借出 / 歸還</small>
+    </button>
     <div class="mobile-quick-row">
       <input type="text" id="mobile-inv-search" placeholder="快速搜尋器材..." oninput="syncMobileSearch(this.value)">
       <button class="btn btn-amber" data-role-section="inventory-add" onclick="openLoanModal()">借出</button>
+    </div>
+    <div class="mobile-action-grid">
+      <button type="button" onclick="document.getElementById('inventory-panel').scrollIntoView({behavior:'smooth'});">器材清單</button>
+      <button type="button" onclick="document.getElementById('loan-panel').scrollIntoView({behavior:'smooth'});">借出中</button>
+      <button type="button" data-role-section="inventory-add" onclick="openLoanModal()">手動借出</button>
     </div>
   </div>
 
@@ -435,7 +455,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
     <div class="kpi-card k-cur-value"><div class="kpi-label">折損後總金額</div><div class="kpi-value" id="k-cur-value" style="color:#b45309;font-size:16px;">—</div><div class="kpi-sub">依年份扣除10%折舊</div></div>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="inventory-panel">
     <div class="panel-header">
       <span class="panel-title">器材清單</span>
       <div style="display:flex; align-items:center; gap:10px;">
@@ -464,7 +484,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 
   <div class="two-col-grid">
 
-    <div class="panel">
+    <div class="panel" id="loan-panel">
       <div class="panel-header">
         <span class="panel-title">借出紀錄</span>
         <button class="btn btn-ghost-dark btn-xs" data-role-section="inventory-add" onclick="openLoanModal()">＋ 新增借出</button>
@@ -512,6 +532,12 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       </div>
     </div>
 
+  </div>
+
+  <div class="mobile-bottom-dock">
+    <button type="button" onclick="openScanner()" data-role-section="inventory-add">掃描</button>
+    <button type="button" onclick="document.getElementById('mobile-inv-search')?.focus()">搜尋</button>
+    <button type="button" onclick="openLoanModal()" data-role-section="inventory-add">借出</button>
   </div>
 
 </div>
@@ -1390,6 +1416,15 @@ function renderKPI() {
 
   document.getElementById('k-value').textContent = totalValue ? 'NT$'+Math.round(totalValue).toLocaleString() : '—';
   document.getElementById('k-cur-value').textContent = curValueTotal ? 'NT$'+Math.round(curValueTotal).toLocaleString() : '—';
+
+  const setMobileText = (id, value) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = value;
+  };
+  setMobileText('mobile-total', total);
+  setMobileText('mobile-ok', ok);
+  setMobileText('mobile-out', out);
+  setMobileText('mobile-repair', repair);
 }
 
 /* =============================================
