@@ -146,6 +146,9 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
 .loan-row{ display:grid; grid-template-columns:1fr 100px 100px 100px 100px 80px; gap:12px; padding:10px 18px; border-bottom:1px solid var(--line); align-items:center; font-size:12px; }
 .loan-row:last-child{ border-bottom:none; }
 .loan-row:hover{ background:#faf9f7; }
+.loan-project-group{ padding:10px 18px; background:#f5efe7; border-top:1px solid var(--line); border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.loan-project-name{ font-size:12px; font-weight:700; color:var(--ink); }
+.loan-project-meta{ font-size:10px; color:var(--ink3); white-space:nowrap; }
 
 /* 逾期醒目提示 */
 .loan-row.is-overdue {
@@ -295,6 +298,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   .loan-wrap{ overflow:visible; }
   .loan-inner{ min-width:0; }
   .loan-header{ display:none; }
+  .loan-project-group{ margin:10px 10px 0; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:#f5efe7; }
   .loan-row{ display:grid; grid-template-columns:1fr; gap:8px; margin:10px; padding:12px; border:1px solid var(--line); border-radius:8px; background:#fff; box-shadow:var(--shadow-sm); }
   .loan-row > div{ display:flex; justify-content:space-between; gap:12px; }
   .loan-row > div::before{ content:attr(data-label); color:var(--ink3); font-size:11px; flex:0 0 72px; }
@@ -1664,7 +1668,24 @@ function renderLoans() {
     return;
   }
   const today = new Date().toISOString().slice(0,10);
-  wrap.innerHTML = active.map(l => {
+  const groups = active.reduce((acc, loan) => {
+    const key = loan.projId || '__no_project__';
+    if(!acc[key]) {
+      const proj = projects.find(p=>p.id===loan.projId);
+      acc[key] = { key, project: proj || null, loans: [] };
+    }
+    acc[key].loans.push(loan);
+    return acc;
+  }, {});
+  const orderedGroups = Object.values(groups).sort((a,b) => {
+    if(a.key === '__no_project__') return 1;
+    if(b.key === '__no_project__') return -1;
+    const an = a.project?.name || '已刪除專案';
+    const bn = b.project?.name || '已刪除專案';
+    return an.localeCompare(bn, 'zh-Hant');
+  });
+
+  const renderLoanRow = (l) => {
     const item = items.find(i=>i.id===l.itemId);
     const proj = projects.find(p=>p.id===l.projId);
     const bundleContents = l.bundleContentsSnapshot || getItemBundleContents(item);
@@ -1706,6 +1727,19 @@ function renderLoans() {
         <button class="btn btn-red btn-xs" data-role-section="inventory-delete" onclick="deleteLoan('${l.id}')">刪</button>
       </div>
     </div>`;
+  };
+
+  wrap.innerHTML = orderedGroups.map(group => {
+    const overdueCount = group.loans.filter(l => l.returnDate && l.returnDate < today).length;
+    const projectName = group.key === '__no_project__' ? '未連結專案' : (group.project?.name || '已刪除專案');
+    const meta = `${group.loans.length} 筆借出${overdueCount ? ` · ${overdueCount} 筆逾期` : ''}`;
+    return `
+      <div class="loan-project-group">
+        <div class="loan-project-name">${esc(projectName)}</div>
+        <div class="loan-project-meta">${esc(meta)}</div>
+      </div>
+      ${group.loans.map(renderLoanRow).join('')}
+    `;
   }).join('');
 }
 
@@ -2214,8 +2248,17 @@ async function confirmReturnLoan(forcedId) {
 
 async function deleteLoan(id) {
   showConfirm('確定刪除此借出紀錄？', async () => {
+    const loan = loans.find(l=>l.id===id);
+    const item = loan ? items.find(i=>i.id===loan.itemId) : null;
     loans = loans.filter(l=>l.id!==id);
     await fbDel('inv_loans', id);
+    if(loan && !loan.returned && item && item.status === '借出') {
+      const stillOut = loans.some(l=>l.itemId===loan.itemId && !l.returned);
+      if(!stillOut) {
+        item.status = '在庫';
+        await fbSet('inv_items', item.id, item);
+      }
+    }
     showToast('已刪除借出紀錄');
     renderAll();
   });
