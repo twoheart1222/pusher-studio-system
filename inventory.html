@@ -208,6 +208,19 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
   margin-bottom: 4px;
 }
 .loan-edit-badge svg { flex-shrink: 0; }
+.bundle-card{
+  background:#fffaf3;
+  border:1px solid rgba(180,83,9,.22);
+  border-radius:8px;
+  padding:10px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.bundle-card.is-empty{ display:none; }
+.bundle-card-title{ font-size:11px; font-weight:700; color:#92400e; display:flex; align-items:center; gap:6px; }
+.bundle-card-body{ white-space:pre-wrap; font-size:12px; color:var(--ink); line-height:1.65; }
+.bundle-note{ font-size:10px; color:var(--ink3); }
 
 /* ===== RWD MOBILE ===== */
 @media(max-width:1200px){
@@ -682,6 +695,11 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
         <label>備註</label>
         <textarea id="item-note" rows="2" placeholder="配件清單、注意事項..."></textarea>
       </div>
+      <div class="field">
+        <label>套組內容 / 借還確認清單</label>
+        <textarea id="item-bundle-contents" rows="4" placeholder="例：機身 ×1&#10;電池 ×2&#10;充電器 ×1&#10;記憶卡 ×2"></textarea>
+        <span class="field-hint">填寫後，借出與歸還時會自動顯示，方便現場逐項確認。</span>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost-dark" onclick="closeItemModal()">取消</button>
@@ -705,6 +723,11 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       <div class="field">
         <label>器材 *</label>
         <select id="loan-item-id"></select>
+      </div>
+      <div class="bundle-card is-empty" id="loan-bundle-card">
+        <div class="bundle-card-title">套組內容確認</div>
+        <div class="bundle-card-body" id="loan-bundle-contents"></div>
+        <div class="bundle-note">借出前請依上方清單逐項確認。</div>
       </div>
       <div class="field-row col2">
         <div class="field">
@@ -748,6 +771,10 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
         <label>備註</label>
         <input type="text" id="loan-note" placeholder="選填">
       </div>
+      <div class="field">
+        <label>借出套組確認紀錄</label>
+        <textarea id="loan-bundle-check-note" rows="2" placeholder="例：已確認電池 2 顆、充電器 1 個、記憶卡 2 張"></textarea>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost-dark" onclick="closeLoanModal()">取消</button>
@@ -774,6 +801,10 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
       <div class="field">
         <label>器材</label>
         <select id="el-item-id"></select>
+      </div>
+      <div class="bundle-card is-empty" id="el-bundle-card">
+        <div class="bundle-card-title">套組內容確認</div>
+        <div class="bundle-card-body" id="el-bundle-contents"></div>
       </div>
       <div class="field-row col2">
         <div class="field">
@@ -817,6 +848,14 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
         <label>備註</label>
         <input type="text" id="el-note" placeholder="選填">
       </div>
+      <div class="field">
+        <label>借出套組確認紀錄</label>
+        <textarea id="el-bundle-check-note" rows="2" placeholder="借出時確認內容"></textarea>
+      </div>
+      <div class="field">
+        <label>歸還套組確認紀錄</label>
+        <textarea id="el-return-bundle-check-note" rows="2" placeholder="歸還時確認內容"></textarea>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost-dark" onclick="closeEditLoanModal()">取消</button>
@@ -824,6 +863,31 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--ink); font
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         更新借出紀錄
       </button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="return-loan-overlay" onclick="closeReturnLoanIfBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">歸還確認</span>
+      <button class="btn btn-ghost btn-xs btn-icon" onclick="closeReturnLoanModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="return-loan-id">
+      <div class="bundle-card" id="return-bundle-card">
+        <div class="bundle-card-title">套組內容確認</div>
+        <div class="bundle-card-body" id="return-bundle-contents"></div>
+        <div class="bundle-note">歸還前請依清單檢查每一項是否齊全。</div>
+      </div>
+      <div class="field">
+        <label>歸還確認紀錄</label>
+        <textarea id="return-bundle-check-note" rows="3" placeholder="例：內容齊全；缺 1 顆電池；線材有破損..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost-dark" onclick="closeReturnLoanModal()">取消</button>
+      <button class="btn btn-green" onclick="confirmReturnLoan()">確認歸還</button>
     </div>
   </div>
 </div>
@@ -1494,6 +1558,29 @@ function getRateBadge(myRate, mktRate) {
   return '<div style="color:#059669;font-size:9px;">✓ 合理</div>';
 }
 
+function getItemBundleContents(item) {
+  return String(item?.bundleContents || '').trim();
+}
+
+function renderBundleCard(cardId, bodyId, item) {
+  const card = document.getElementById(cardId);
+  const body = document.getElementById(bodyId);
+  if(!card || !body) return;
+  const contents = getItemBundleContents(item);
+  card.classList.toggle('is-empty', !contents);
+  body.textContent = contents;
+}
+
+function updateLoanBundlePreview() {
+  const itemId = document.getElementById('loan-item-id')?.value;
+  renderBundleCard('loan-bundle-card', 'loan-bundle-contents', items.find(i=>i.id===itemId));
+}
+
+function updateEditLoanBundlePreview() {
+  const itemId = document.getElementById('el-item-id')?.value;
+  renderBundleCard('el-bundle-card', 'el-bundle-contents', items.find(i=>i.id===itemId));
+}
+
 /* =============================================
    INVENTORY TABLE
    ============================================= */
@@ -1531,6 +1618,7 @@ function renderTable() {
           <span class="mobile-state-badge">${mobileStateText}</span>
         </div>
         <div class="item-code">${[it.brand, it.code].filter(Boolean).join(' · ')}</div>
+        ${getItemBundleContents(it) ? `<div style="font-size:10px;color:#92400e;margin-top:3px;">套組內容已建檔</div>` : ''}
         <div class="mobile-item-meta">
           <span>${it.cat||'其他'}</span>
           <span>總數 ${it.qty||1}</span>
@@ -1579,6 +1667,7 @@ function renderLoans() {
   wrap.innerHTML = active.map(l => {
     const item = items.find(i=>i.id===l.itemId);
     const proj = projects.find(p=>p.id===l.projId);
+    const bundleContents = l.bundleContentsSnapshot || getItemBundleContents(item);
 
     let overdueTag = '';
     const isOverdue = l.returnDate && l.returnDate < today;
@@ -1593,6 +1682,9 @@ function renderLoans() {
       <div data-label="器材">
         <div>
           <div style="font-weight:500;font-size:12px;">${item?item.name:'(已刪除)'} ${l.qty>1?`×${l.qty}`:''}</div>
+          ${bundleContents?`<div style="font-size:10px;color:#92400e;">套組：${esc(bundleContents).replace(/\n/g,'、')}</div>`:''}
+          ${l.bundleCheckNote?`<div style="font-size:10px;color:#059669;">借出確認：${esc(l.bundleCheckNote)}</div>`:''}
+          ${l.returnBundleCheckNote?`<div style="font-size:10px;color:#0369a1;">歸還確認：${esc(l.returnBundleCheckNote)}</div>`:''}
           ${l.note?`<div style="font-size:10px;color:var(--ink3);">${l.note}</div>`:''}
         </div>
       </div>
@@ -1827,6 +1919,7 @@ function openItemModal(itemId) {
   document.getElementById('item-buy-date').value   = it ? (it.buyDate||'') : '';
   document.getElementById('item-warranty').value   = it ? (it.warranty||'') : '';
   document.getElementById('item-note').value  = it ? (it.note||'') : '';
+  document.getElementById('item-bundle-contents').value = it ? (it.bundleContents||'') : '';
 
   updateCurValueField();
   checkRate();
@@ -1854,6 +1947,7 @@ async function saveItem() {
     buyDate:    document.getElementById('item-buy-date').value,
     warranty:   document.getElementById('item-warranty').value,
     note:       document.getElementById('item-note').value,
+    bundleContents: document.getElementById('item-bundle-contents').value,
     createdAt:  items.find(i=>i.id===id)?.createdAt || Date.now(),
     updatedAt:  Date.now()
   };
@@ -1919,6 +2013,7 @@ function renderLoanItemOptions(preItemId) {
   }
 
   updateLoanQtyLimit();
+  updateLoanBundlePreview();
 }
 
 function renderLoanCategoryOptions(preItemId) {
@@ -1961,6 +2056,7 @@ function openLoanModal(preItemId) {
 
   sel.onchange = function() {
     updateLoanQtyLimit();
+    updateLoanBundlePreview();
   };
 
   const psel = document.getElementById('loan-proj-id');
@@ -1975,6 +2071,8 @@ function openLoanModal(preItemId) {
   document.getElementById('loan-fixed-amount').value = '';
   document.getElementById('loan-fixed-amount-field').style.display = 'none';
   document.getElementById('loan-note').value = '';
+  document.getElementById('loan-bundle-check-note').value = '';
+  updateLoanBundlePreview();
   document.getElementById('loan-overlay').classList.add('open');
 }
 function closeLoanModal() { document.getElementById('loan-overlay').classList.remove('open'); }
@@ -2024,6 +2122,8 @@ async function saveLoan() {
     costMode,
     fixedAmount: +document.getElementById('loan-fixed-amount').value||0,
     note: document.getElementById('loan-note').value,
+    bundleCheckNote: document.getElementById('loan-bundle-check-note').value,
+    bundleContentsSnapshot: getItemBundleContents(it),
     returned: false,
     createdAt: Date.now()
   };
@@ -2073,18 +2173,43 @@ async function returnLoan(id) {
   const loan = loans.find(l=>l.id===id);
   if(!loan) return;
   const item = items.find(i=>i.id===loan.itemId);
-  showConfirm(`確認「${item?item.name:'器材'}」已歸還？`, async () => {
-    loan.returned = true;
-    loan.actualReturnDate = new Date().toISOString().slice(0,10);
-    await fbSet('inv_loans', id, loan);
-    const stillOut = loans.filter(l=>l.itemId===loan.itemId&&!l.returned&&l.id!==id).length;
-    if(item && !stillOut) {
-      item.status = '在庫';
-      await fbSet('inv_items', item.id, item);
-    }
-    showToast('✓ 已登記歸還');
-    renderAll();
-  });
+  const bundleContents = loan.bundleContentsSnapshot || getItemBundleContents(item);
+  if(bundleContents) {
+    document.getElementById('return-loan-id').value = id;
+    document.getElementById('return-bundle-contents').textContent = bundleContents;
+    document.getElementById('return-bundle-check-note').value = loan.returnBundleCheckNote || '';
+    document.getElementById('return-loan-overlay').classList.add('open');
+    setTimeout(()=>document.getElementById('return-bundle-check-note').focus(),100);
+    return;
+  }
+  showConfirm(`確認「${item?item.name:'器材'}」已歸還？`, () => confirmReturnLoan(id));
+}
+
+function closeReturnLoanModal() {
+  document.getElementById('return-loan-overlay').classList.remove('open');
+}
+function closeReturnLoanIfBg(e) {
+  if(e.target===document.getElementById('return-loan-overlay')) closeReturnLoanModal();
+}
+
+async function confirmReturnLoan(forcedId) {
+  const id = forcedId || document.getElementById('return-loan-id').value;
+  const loan = loans.find(l=>l.id===id);
+  if(!loan) return;
+  const item = items.find(i=>i.id===loan.itemId);
+  loan.returned = true;
+  loan.actualReturnDate = new Date().toISOString().slice(0,10);
+  const noteEl = document.getElementById('return-bundle-check-note');
+  if(noteEl && !forcedId) loan.returnBundleCheckNote = noteEl.value;
+  await fbSet('inv_loans', id, loan);
+  const stillOut = loans.filter(l=>l.itemId===loan.itemId&&!l.returned&&l.id!==id).length;
+  if(item && !stillOut) {
+    item.status = '在庫';
+    await fbSet('inv_items', item.id, item);
+  }
+  closeReturnLoanModal();
+  showToast('✓ 已登記歸還');
+  renderAll();
 }
 
 async function deleteLoan(id) {
@@ -2116,6 +2241,8 @@ function openEditLoanModal(loanId) {
     if (ghost) itemSel.innerHTML = `<option value="${esc(ghost.id)}" selected>${esc(ghost.name)} — ${ghost.status}</option>` + itemSel.innerHTML;
   }
   itemSel.value = loan.itemId;
+  itemSel.onchange = updateEditLoanBundlePreview;
+  updateEditLoanBundlePreview();
 
   document.getElementById('el-qty').value        = loan.qty || 1;
   document.getElementById('el-borrower').value   = loan.borrower || '';
@@ -2131,6 +2258,8 @@ function openEditLoanModal(loanId) {
   document.getElementById('el-fixed-amount').value= loan.fixedAmount || '';
   document.getElementById('el-fixed-amount-field').style.display = loan.costMode === 'fixed' ? '' : 'none';
   document.getElementById('el-note').value        = loan.note || '';
+  document.getElementById('el-bundle-check-note').value = loan.bundleCheckNote || '';
+  document.getElementById('el-return-bundle-check-note').value = loan.returnBundleCheckNote || '';
 
   document.getElementById('edit-loan-overlay').classList.add('open');
 }
@@ -2162,6 +2291,11 @@ async function saveEditLoan() {
   loan.costMode    = document.getElementById('el-cost-mode').value;
   loan.fixedAmount = +document.getElementById('el-fixed-amount').value || 0;
   loan.note        = document.getElementById('el-note').value;
+  loan.bundleCheckNote = document.getElementById('el-bundle-check-note').value;
+  loan.returnBundleCheckNote = document.getElementById('el-return-bundle-check-note').value;
+  if (oldItemId !== newItemId || !loan.bundleContentsSnapshot) {
+    loan.bundleContentsSnapshot = getItemBundleContents(items.find(i => i.id === newItemId));
+  }
   loan.updatedAt   = Date.now();
 
   if (oldItemId !== newItemId) {
@@ -3047,6 +3181,7 @@ async function importItemExcel(event) {
           warranty: String(row[10]||'').trim(),
           note: String(row[11]||'').trim(),
           marketRate: parseFloat(row[12])||0,
+          bundleContents: row.length > 13 ? String(row[13]||'').trim() : (existing?.bundleContents || ''),
           createdAt: existing ? existing.createdAt : Date.now(),
           updatedAt: Date.now()
         };
@@ -3072,10 +3207,10 @@ function showImportMsg(text, type) {
 }
 
 function downloadItemTemplate() {
-  const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','現值(免填)','日租金(每天)','購入日期','保固到期','備註','市場行情(選填)'];
-  const sample = ['Sony A7 IV','攝影機','Sony','ILCE-7M4',1,'在庫',90000,'',1500,'2023-01-15','2025-01-15','含原廠電池x2', 1500];
+  const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','現值(免填)','日租金(每天)','購入日期','保固到期','備註','市場行情(選填)','套組內容'];
+  const sample = ['Sony A7 IV','攝影機','Sony','ILCE-7M4',1,'在庫',90000,'',1500,'2023-01-15','2025-01-15','含原廠電池x2', 1500, '機身 ×1\n電池 ×2\n充電器 ×1'];
   const ws = XLSX.utils.aoa_to_sheet([header, sample]);
-  ws['!cols'] = [{wch:22},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:20},{wch:12}];
+  ws['!cols'] = [{wch:22},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:20},{wch:12},{wch:28}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '器材清單');
   XLSX.writeFile(wb, '器材庫存範本.xlsx');
@@ -3083,14 +3218,14 @@ function downloadItemTemplate() {
 
 function exportItemsExcel() {
   if(!items.length){ showToast('目前無器材可匯出','err'); return; }
-  const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','折損後現值','日租金(每天)','購入日期','保固到期','備註','市場行情'];
+  const header = ['器材名稱','類別','品牌','型號/編號','數量','狀態','購入價格','折損後現值','日租金(每天)','購入日期','保固到期','備註','市場行情','套組內容'];
   const rows = items.map(it => {
     let curVal = calculateCurValue(it.buyPrice, it.buyDate);
     if (parseFloat(it.buyPrice) > 0 && curVal <= 0) curVal = 0;
-    return [it.name, it.cat||'', it.brand||'', it.code||'', it.qty||1, it.status||'在庫', it.buyPrice||0, curVal, it.dayRate||0, it.buyDate||'', it.warranty||'', it.note||'', it.marketRate||0];
+    return [it.name, it.cat||'', it.brand||'', it.code||'', it.qty||1, it.status||'在庫', it.buyPrice||0, curVal, it.dayRate||0, it.buyDate||'', it.warranty||'', it.note||'', it.marketRate||0, it.bundleContents||''];
   });
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  ws['!cols'] = [{wch:22},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:20},{wch:10}];
+  ws['!cols'] = [{wch:22},{wch:8},{wch:10},{wch:14},{wch:6},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:20},{wch:10},{wch:28}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '器材清單');
   XLSX.writeFile(wb, '器材庫存.xlsx');
