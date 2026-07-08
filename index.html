@@ -282,6 +282,15 @@ input[type="date"] { cursor: pointer; }
 .row-del-btn:hover { color: var(--danger) !important; background: #fee2e2; }
 .btn-add-row { width: 100%; padding: 8px; font-family: inherit; font-size: 11px; color: var(--ink3); background: transparent; border: 1px dashed #d6cfc5; border-radius: var(--r); cursor: pointer; transition: .15s; margin-bottom: 22px; letter-spacing: .5px; }
 .btn-add-row:hover { border-color: var(--t-acc, var(--acc)); color: var(--t-acc, var(--acc)); background: rgba(180,83,9,.04); }
+.add-row-wrap { position: relative; display: flex; gap: 6px; margin-bottom: 22px; }
+.add-row-wrap .btn-add-row { margin-bottom: 0; flex: 1; }
+.btn-add-row-caret { flex-shrink: 0; width: 36px; font-family: inherit; font-size: 11px; color: var(--ink3); background: transparent; border: 1px dashed #d6cfc5; border-radius: var(--r); cursor: pointer; transition: .15s; }
+.btn-add-row-caret:hover { border-color: var(--t-acc, var(--acc)); color: var(--t-acc, var(--acc)); background: rgba(180,83,9,.04); }
+.add-row-menu { display: none; position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 50; background: #1c1917; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 12px; width: 220px; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+.add-row-menu.open { display: block; }
+.arm-title { font-size: 11px; color: #e7e5e4; margin-bottom: 8px; letter-spacing: .3px; }
+.arm-opt { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #d6d3d1; padding: 5px 2px; cursor: pointer; }
+.arm-opt input { cursor: pointer; }
 
 /* ========== SUMMARY ========== */
 .s-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 12px; color: var(--ink2); }
@@ -433,7 +442,7 @@ input[type="date"] { cursor: pointer; }
 @media print {
   @page { size: A4; margin: 0; }
   body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .topbar, .toolbar, .btn-add-row, .th-del, .td-del, .td-del-float, .row-del-btn, .overlay, .save-overlay, .field-style-overlay, .table-toolbar, #inline-toolbar, .col-resize-handle, .drag-dot, .logo-resize-handle { display: none !important; }
+  .topbar, .toolbar, .btn-add-row, .add-row-wrap, .btn-add-row-caret, .add-row-menu, .th-del, .td-del, .td-del-float, .row-del-btn, .overlay, .save-overlay, .field-style-overlay, .table-toolbar, #inline-toolbar, .col-resize-handle, .drag-dot, .logo-resize-handle { display: none !important; }
   .canvas { padding: 0; display: block; }
   .paper { box-shadow: none; width: 210mm; min-height: unset !important; height: auto !important; padding: 12mm 16mm; margin: 0; }
   input, textarea { border: none !important; background: transparent !important; box-shadow: none !important; resize: none; -webkit-appearance: none !important; appearance: none !important; outline: none !important; }
@@ -844,7 +853,18 @@ input[type="date"] { cursor: pointer; }
       </tr></thead>
       <tbody id="tbody"></tbody>
     </table>
-    <button class="btn-add-row" onclick="addRow()">＋ 新增項目</button>
+    <div class="add-row-wrap">
+      <button class="btn-add-row btn-add-row-main" onclick="addRow()">＋ 新增項目</button>
+      <button class="btn-add-row-caret" onclick="toggleAddRowMenu(event)" title="選擇這一列要顯示的欄位">▾</button>
+      <div class="add-row-menu" id="add-row-menu">
+        <div class="arm-title">這一列要顯示哪些欄位？</div>
+        <label class="arm-opt"><input type="checkbox" id="arm-unit"> 單位欄</label>
+        <label class="arm-opt"><input type="checkbox" id="arm-remark"> 備註欄</label>
+        <label class="arm-opt"><input type="checkbox" id="arm-discount"> 折扣欄</label>
+        <div id="arm-custom-list"></div>
+        <button class="btn btn-amber btn-sm" style="width:100%;margin-top:8px" onclick="addRowWithFields()">新增此項目</button>
+      </div>
+    </div>
 
     <div class="bottom-wrap">
       <div class="notes-side">
@@ -1821,6 +1841,69 @@ function toggleCol(col, btn) {
     el.style.display = colState[col] ? '' : 'none';
   });
 }
+function enableCol(col) {
+  if (colState[col]) return;
+  colState[col] = true;
+  const btn = $('col-toggle-' + col);
+  if (btn) {
+    btn.classList.add('on');
+    let label = col === 'unit' ? '單位欄' : col === 'remark' ? '備註欄' : '折扣欄';
+    btn.textContent = '− ' + label;
+  }
+  document.querySelectorAll('.col-' + col).forEach(el => { el.style.display = ''; });
+}
+
+/* ===== Add-row field picker ===== */
+function renderAddRowMenuCustom() {
+  const box = $('arm-custom-list');
+  if (!box) return;
+  box.innerHTML = customCols.map(c => `
+    <label class="arm-opt"><input type="checkbox" class="arm-cc" data-id="${c.id}"> ${esc(c.name)}</label>`).join('');
+}
+function toggleAddRowMenu(e) {
+  e.stopPropagation();
+  const menu = $('add-row-menu');
+  if (!menu) return;
+  renderAddRowMenuCustom();
+  menu.classList.toggle('open');
+}
+document.addEventListener('click', (e) => {
+  const menu = $('add-row-menu');
+  if (menu && menu.classList.contains('open') && !menu.contains(e.target) && !e.target.closest('.btn-add-row-caret')) {
+    menu.classList.remove('open');
+  }
+});
+function addRowWithFields() {
+  const wantUnit = $('arm-unit').checked;
+  const wantRemark = $('arm-remark').checked;
+  const wantDiscount = $('arm-discount').checked;
+  const wantCustomIds = Array.from(document.querySelectorAll('.arm-cc:checked')).map(cb => cb.dataset.id);
+
+  if (wantUnit) enableCol('unit');
+  if (wantRemark) enableCol('remark');
+  if (wantDiscount) enableCol('discount');
+
+  items.push({ id: Date.now(), name: '', qty: 1, unit: '式', price: 0 });
+  renderTable();
+
+  setTimeout(() => {
+    const tr = $('tbody').lastElementChild;
+    if (!tr) return;
+    let target = null;
+    if (wantRemark) target = tr.querySelector('.col-remark input');
+    else if (wantUnit) target = tr.querySelector('.col-unit input');
+    else if (wantDiscount) target = tr.querySelector('.col-discount input');
+    else if (wantCustomIds.length) target = tr.querySelector(`.td-custom[data-col-id="${wantCustomIds[0]}"] input`);
+    else target = tr.querySelector('.td-name textarea');
+    if (target) target.focus();
+  }, 30);
+
+  $('arm-unit').checked = false;
+  $('arm-remark').checked = false;
+  $('arm-discount').checked = false;
+  document.querySelectorAll('.arm-cc').forEach(cb => cb.checked = false);
+  $('add-row-menu').classList.remove('open');
+}
 
 /* ===== Field style overlay ===== */
 function openFieldStyle() { $('fs-overlay').classList.add('open'); }
@@ -1875,7 +1958,7 @@ function renderTable(){
   items.forEach((it,i)=>{
     const tr=document.createElement('tr');
     const customCells = customCols.map(col=>`
-      <td class="td-custom" style="text-align:${col.align}">
+      <td class="td-custom" data-col-id="${col.id}" style="text-align:${col.align}">
         <input type="text" value="${esc(it[col.id]||'')}" placeholder="${esc(col.name)}"
           oninput="upd(${it.id},'${col.id}',this.value)" style="text-align:${col.align}">
       </td>`).join('');
