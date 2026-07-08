@@ -282,15 +282,6 @@ input[type="date"] { cursor: pointer; }
 .row-del-btn:hover { color: var(--danger) !important; background: #fee2e2; }
 .btn-add-row { width: 100%; padding: 8px; font-family: inherit; font-size: 11px; color: var(--ink3); background: transparent; border: 1px dashed #d6cfc5; border-radius: var(--r); cursor: pointer; transition: .15s; margin-bottom: 22px; letter-spacing: .5px; }
 .btn-add-row:hover { border-color: var(--t-acc, var(--acc)); color: var(--t-acc, var(--acc)); background: rgba(180,83,9,.04); }
-.add-row-wrap { position: relative; display: flex; gap: 6px; margin-bottom: 22px; }
-.add-row-wrap .btn-add-row { margin-bottom: 0; flex: 1; }
-.btn-add-row-caret { flex-shrink: 0; width: 36px; font-family: inherit; font-size: 11px; color: var(--ink3); background: transparent; border: 1px dashed #d6cfc5; border-radius: var(--r); cursor: pointer; transition: .15s; }
-.btn-add-row-caret:hover { border-color: var(--t-acc, var(--acc)); color: var(--t-acc, var(--acc)); background: rgba(180,83,9,.04); }
-.add-row-menu { display: none; position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 50; background: #1c1917; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 12px; width: 220px; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
-.add-row-menu.open { display: block; }
-.arm-title { font-size: 11px; color: #e7e5e4; margin-bottom: 8px; letter-spacing: .3px; }
-.arm-opt { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #d6d3d1; padding: 5px 2px; cursor: pointer; }
-.arm-opt input { cursor: pointer; }
 
 /* ========== SUMMARY ========== */
 .s-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 12px; color: var(--ink2); }
@@ -442,7 +433,7 @@ input[type="date"] { cursor: pointer; }
 @media print {
   @page { size: A4; margin: 0; }
   body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .topbar, .toolbar, .btn-add-row, .add-row-wrap, .btn-add-row-caret, .add-row-menu, .th-del, .td-del, .td-del-float, .row-del-btn, .overlay, .save-overlay, .field-style-overlay, .table-toolbar, #inline-toolbar, .col-resize-handle, .drag-dot, .logo-resize-handle { display: none !important; }
+  .topbar, .toolbar, .btn-add-row, .th-del, .td-del, .td-del-float, .row-del-btn, .overlay, .save-overlay, .field-style-overlay, .table-toolbar, #inline-toolbar, .col-resize-handle, .drag-dot, .logo-resize-handle { display: none !important; }
   .canvas { padding: 0; display: block; }
   .paper { box-shadow: none; width: 210mm; min-height: unset !important; height: auto !important; padding: 12mm 16mm; margin: 0; }
   input, textarea { border: none !important; background: transparent !important; box-shadow: none !important; resize: none; -webkit-appearance: none !important; appearance: none !important; outline: none !important; }
@@ -457,9 +448,8 @@ input[type="date"] { cursor: pointer; }
   .td-name textarea { min-height: unset !important; white-space: pre-wrap !important; overflow: visible !important; display: block !important; width: 100% !important; }
   .item-table textarea { display: none !important; }
   .print-cell-text { display: block !important; white-space: pre-wrap !important; word-break: break-word !important; font-size: inherit !important; font-family: inherit !important; line-height: inherit !important; padding: 0 !important; margin: 0 !important; width: 100% !important; height: auto !important; text-align: left; }
-  .item-table td input, .item-table td textarea { text-align: center !important; }
-  .item-table td.td-name input, .item-table td.td-name textarea { text-align: left !important; }
-  .item-table td.td-price input { text-align: right !important; }
+  .item-table td .print-input-text { text-align: center; }
+  .item-table td.td-price .print-input-text { text-align: right; }
   .item-table td.td-amt { text-align: right !important; }
   .item-table td { vertical-align: top !important; padding-top: 4px !important; padding-bottom: 4px !important; height: auto !important; overflow: visible !important; }
   .item-table td input { white-space: pre-wrap !important; word-break: break-word !important; overflow: visible !important; }
@@ -832,6 +822,7 @@ input[type="date"] { cursor: pointer; }
 
     <div class="table-toolbar">
       <span class="table-toolbar-label">表格欄位</span>
+      <button class="col-toggle-btn on" id="col-toggle-no" onclick="toggleCol('no',this)">− 序號欄</button>
       <button class="col-toggle-btn" id="col-toggle-unit" onclick="toggleCol('unit',this)">+ 單位欄</button>
       <button class="col-toggle-btn" id="col-toggle-remark" onclick="toggleCol('remark',this)">+ 備註欄</button>
       <button class="col-toggle-btn" id="col-toggle-discount" onclick="toggleCol('discount',this)">+ 折扣欄</button>
@@ -841,7 +832,7 @@ input[type="date"] { cursor: pointer; }
     </div>
     <table class="item-table" id="item-table">
       <thead><tr id="thead-row">
-        <th class="th-no">#</th>
+        <th class="th-no col-no">#</th>
         <th class="th-name" draggable="true"><input class="th-input" placeholder="項目名稱 ／ 規格說明" value="項目名稱 ／ 規格說明" data-default="項目名稱 ／ 規格說明"></th>
         <th class="th-qty" style="text-align:center" draggable="true"><input class="th-input" style="text-align:center" placeholder="數量" value="數量" data-default="數量"></th>
         <th class="th-unit col-unit" style="text-align:center;display:none" draggable="true"><input class="th-input" style="text-align:center" placeholder="單位" value="單位" data-default="單位"></th>
@@ -853,18 +844,7 @@ input[type="date"] { cursor: pointer; }
       </tr></thead>
       <tbody id="tbody"></tbody>
     </table>
-    <div class="add-row-wrap">
-      <button class="btn-add-row btn-add-row-main" onclick="addRow()">＋ 新增項目</button>
-      <button class="btn-add-row-caret" onclick="toggleAddRowMenu(event)" title="選擇這一列要顯示的欄位">▾</button>
-      <div class="add-row-menu" id="add-row-menu">
-        <div class="arm-title">這一列要顯示哪些欄位？</div>
-        <label class="arm-opt"><input type="checkbox" id="arm-unit"> 單位欄</label>
-        <label class="arm-opt"><input type="checkbox" id="arm-remark"> 備註欄</label>
-        <label class="arm-opt"><input type="checkbox" id="arm-discount"> 折扣欄</label>
-        <div id="arm-custom-list"></div>
-        <button class="btn btn-amber btn-sm" style="width:100%;margin-top:8px" onclick="addRowWithFields()">新增此項目</button>
-      </div>
-    </div>
+    <button class="btn-add-row" onclick="addRow()">＋ 新增項目</button>
 
     <div class="bottom-wrap">
       <div class="notes-side">
@@ -1288,7 +1268,7 @@ let items = [];
 let taxMode = 'included';
 let clientDB = [];
 let vendorDB = [];
-let colState = { unit: false, remark: false, discount: false };
+let colState = { no: true, unit: false, remark: false, discount: false };
 
 /* ===== Init ===== */
 window.onload = async () => {
@@ -1832,6 +1812,7 @@ function toggleCol(col, btn) {
   btn.classList.toggle('on', colState[col]);
   
   let label = '';
+  if(col === 'no') label = '序號欄';
   if(col === 'unit') label = '單位欄';
   if(col === 'remark') label = '備註欄';
   if(col === 'discount') label = '折扣欄';
@@ -1840,69 +1821,6 @@ function toggleCol(col, btn) {
   document.querySelectorAll('.col-' + col).forEach(el => {
     el.style.display = colState[col] ? '' : 'none';
   });
-}
-function enableCol(col) {
-  if (colState[col]) return;
-  colState[col] = true;
-  const btn = $('col-toggle-' + col);
-  if (btn) {
-    btn.classList.add('on');
-    let label = col === 'unit' ? '單位欄' : col === 'remark' ? '備註欄' : '折扣欄';
-    btn.textContent = '− ' + label;
-  }
-  document.querySelectorAll('.col-' + col).forEach(el => { el.style.display = ''; });
-}
-
-/* ===== Add-row field picker ===== */
-function renderAddRowMenuCustom() {
-  const box = $('arm-custom-list');
-  if (!box) return;
-  box.innerHTML = customCols.map(c => `
-    <label class="arm-opt"><input type="checkbox" class="arm-cc" data-id="${c.id}"> ${esc(c.name)}</label>`).join('');
-}
-function toggleAddRowMenu(e) {
-  e.stopPropagation();
-  const menu = $('add-row-menu');
-  if (!menu) return;
-  renderAddRowMenuCustom();
-  menu.classList.toggle('open');
-}
-document.addEventListener('click', (e) => {
-  const menu = $('add-row-menu');
-  if (menu && menu.classList.contains('open') && !menu.contains(e.target) && !e.target.closest('.btn-add-row-caret')) {
-    menu.classList.remove('open');
-  }
-});
-function addRowWithFields() {
-  const wantUnit = $('arm-unit').checked;
-  const wantRemark = $('arm-remark').checked;
-  const wantDiscount = $('arm-discount').checked;
-  const wantCustomIds = Array.from(document.querySelectorAll('.arm-cc:checked')).map(cb => cb.dataset.id);
-
-  if (wantUnit) enableCol('unit');
-  if (wantRemark) enableCol('remark');
-  if (wantDiscount) enableCol('discount');
-
-  items.push({ id: Date.now(), name: '', qty: 1, unit: '式', price: 0 });
-  renderTable();
-
-  setTimeout(() => {
-    const tr = $('tbody').lastElementChild;
-    if (!tr) return;
-    let target = null;
-    if (wantRemark) target = tr.querySelector('.col-remark input');
-    else if (wantUnit) target = tr.querySelector('.col-unit input');
-    else if (wantDiscount) target = tr.querySelector('.col-discount input');
-    else if (wantCustomIds.length) target = tr.querySelector(`.td-custom[data-col-id="${wantCustomIds[0]}"] input`);
-    else target = tr.querySelector('.td-name textarea');
-    if (target) target.focus();
-  }, 30);
-
-  $('arm-unit').checked = false;
-  $('arm-remark').checked = false;
-  $('arm-discount').checked = false;
-  document.querySelectorAll('.arm-cc').forEach(cb => cb.checked = false);
-  $('add-row-menu').classList.remove('open');
 }
 
 /* ===== Field style overlay ===== */
@@ -1963,13 +1881,13 @@ function renderTable(){
           oninput="upd(${it.id},'${col.id}',this.value)" style="text-align:${col.align}">
       </td>`).join('');
     tr.innerHTML=`
-      <td class="td-no">${i+1}</td>
+      <td class="td-no col-no" style="display:${colState.no?'':'none'}">${i+1}</td>
       <td class="td-name"><textarea rows="1" oninput="upd(${it.id},'name',this.value);ar(this)" placeholder="項目名稱／規格">${it.name}</textarea></td>
       <td><input type="number" min="0" value="${it.qty}" oninput="upd(${it.id},'qty',this.value)" style="text-align:center"></td>
       <td class="col-unit" style="display:${colState.unit?'':'none'}"><input type="text" value="${it.unit}" placeholder="式" oninput="upd(${it.id},'unit',this.value)" style="text-align:center"></td>
       <td class="td-price"><input type="number" min="0" value="${it.price}" oninput="upd(${it.id},'price',this.value)" style="text-align:right"></td>
       <td class="col-discount" style="display:${colState.discount?'':'none'}"><input type="text" value="${it.discount||''}" placeholder="0%" oninput="upd(${it.id},'discount',this.value)" style="text-align:center"></td>
-      <td class="td-amt" id="a-${it.id}">${fmt(calcAmt(it))}</td>
+      <td class="td-amt" id="a-${it.id}">${calcAmt(it) === 0 ? '' : fmt(calcAmt(it))}</td>
       <td class="col-remark" style="display:${colState.remark?'':'none'}"><input type="text" value="${it.remark||''}" placeholder="備註" oninput="upd(${it.id},'remark',this.value)"></td>
       ${customCells}`;
     const tdDel = document.createElement('td');
@@ -2005,7 +1923,7 @@ function calcAmt(it){
 function upd(id,f,v){
   const it=items.find(i=>i.id===id); if(!it) return;
   it[f]=(f==='qty'||f==='price')?Number(v)||0:v;
-  if(f==='qty'||f==='price'||f==='discount') $(`a-${id}`).innerText=fmt(calcAmt(it));
+  if(f==='qty'||f==='price'||f==='discount') $(`a-${id}`).innerText = calcAmt(it) === 0 ? '' : fmt(calcAmt(it));
   recalc();
 }
 function addRow(){ items.push({id:Date.now(),name:'',qty:1,unit:'式',price:0}); renderTable(); }
@@ -2032,9 +1950,12 @@ function recalc(){
 /* ===== Sample / Clear ===== */
 function loadSample(){
   // 1. 重置開關按鈕與顯示狀態
-  colState = { unit: false, remark: false, discount: false };
+  colState = { no: true, unit: false, remark: false, discount: false };
   document.querySelectorAll('.col-unit, .col-remark, .col-discount').forEach(el => el.style.display = 'none');
-  
+  document.querySelectorAll('.col-no').forEach(el => el.style.display = '');
+
+  const btnN = document.getElementById('col-toggle-no');
+  if(btnN) { btnN.classList.add('on'); btnN.textContent = '− 序號欄'; }
   const btnU = document.getElementById('col-toggle-unit');
   if(btnU) { btnU.classList.remove('on'); btnU.textContent = '+ 單位欄'; }
   const btnR = document.getElementById('col-toggle-remark');
@@ -2081,13 +2002,16 @@ function loadSample(){
 
 function clearAll(){
   if(!confirm('確定清空所有資料？')) return;
-  colState = { unit: false, remark: false, discount: false };
+  colState = { no: true, unit: false, remark: false, discount: false };
   items=[{id:Date.now(),name:'',qty:1,unit:'式',price:0}];
   ['c-name','c-taxid','c-contact','c-tel','c-mobile','c-email','c-addr'].forEach(id=>$(id).value='');
   ['my-name','my-taxid','my-contact','my-tel','my-mobile','my-email','my-addr'].forEach(id=>$(id).value='');
   if($('q-no')) genNo();
   
   // 更新按鈕UI
+  document.querySelectorAll('.col-no').forEach(el => el.style.display = '');
+  const btnN = document.getElementById('col-toggle-no');
+  if(btnN) { btnN.classList.add('on'); btnN.textContent = '− 序號欄'; }
   const btnU = document.getElementById('col-toggle-unit');
   if(btnU) { btnU.classList.remove('on'); btnU.textContent = '+ 單位欄'; }
   const btnR = document.getElementById('col-toggle-remark');
