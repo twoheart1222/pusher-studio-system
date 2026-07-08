@@ -124,6 +124,7 @@ input:focus, textarea:focus { border-color: var(--t-acc, var(--acc)); border-sty
 textarea { resize: none; overflow: hidden; }
 input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 input[type="date"] { cursor: pointer; }
+.print-input-text { display: none; }
 
 /* ========================================
    SECTION 1: TOP BANNER (Title + Logo)
@@ -439,6 +440,9 @@ input[type="date"] { cursor: pointer; }
   input::placeholder, textarea::placeholder { color: transparent; }
   input[type="date"]::-webkit-calendar-picker-indicator { display: none !important; opacity: 0 !important; }
   input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none !important; margin: 0 !important; }
+  input[data-print-span] { display: none !important; }
+  .print-input-text { display: inline-block !important; width: 100%; white-space: pre-wrap; word-break: break-word; padding: 3px 5px; box-sizing: border-box; }
+  .th-input.print-input-text { padding-left: 0 !important; }
   .meta-item input, .meta-item input:focus { color: #ffffff !important; background: transparent !important; }
   textarea { overflow: visible !important; white-space: pre-wrap !important; }
   .td-name textarea { min-height: unset !important; white-space: pre-wrap !important; overflow: visible !important; display: block !important; width: 100% !important; }
@@ -1340,6 +1344,41 @@ window.onload = async () => {
 };
 
 /* ===== Print handling ===== */
+// 將輸入框在列印/PDF時暫時換成純文字，避免瀏覽器原生輸入框外框殘留
+const PRINT_TEXT_INPUT_SELECTOR = '#doc-title, .entity-name-input, .f-inp, .meta-item input, .th-input, .item-table td input';
+function convertInputsForPrint() {
+  document.querySelectorAll(PRINT_TEXT_INPUT_SELECTOR).forEach(inp => {
+    if (inp.dataset.printSpan) return;
+    let val = inp.value;
+    if (inp.type === 'date' && val) {
+      const d = new Date(val + 'T00:00:00');
+      if (!isNaN(d)) val = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    }
+    const span = document.createElement('span');
+    span.className = 'print-input-text ' + inp.className;
+    const cs = window.getComputedStyle(inp);
+    span.textContent = val;
+    span.style.textAlign = inp.style.textAlign || cs.textAlign;
+    span.style.color = cs.color;
+    span.style.fontSize = cs.fontSize;
+    span.style.fontWeight = cs.fontWeight;
+    span.style.fontFamily = cs.fontFamily;
+    span.style.letterSpacing = cs.letterSpacing;
+    span.style.textTransform = cs.textTransform;
+    inp.dataset.printSpan = '1';
+    inp.style.display = 'none';
+    inp.insertAdjacentElement('afterend', span);
+  });
+}
+function restoreInputsAfterPrint() {
+  document.querySelectorAll('.print-input-text').forEach(span => span.remove());
+  document.querySelectorAll(PRINT_TEXT_INPUT_SELECTOR).forEach(inp => {
+    if (inp.dataset.printSpan) {
+      delete inp.dataset.printSpan;
+      inp.style.display = '';
+    }
+  });
+}
 window.addEventListener('beforeprint', () => {
   // 確保字型已載入，避免列印時等待
   if(document.fonts && document.fonts.status !== 'loaded') {
@@ -1365,6 +1404,7 @@ window.addEventListener('beforeprint', () => {
     ta.style.height = ta.scrollHeight + 'px';
     ta.style.overflow = 'visible';
   });
+  convertInputsForPrint();
   const ms = $('meta-strip');
   if(ms) ms.style.display = metaOpen ? 'flex' : 'none';
 });
@@ -1378,6 +1418,7 @@ window.addEventListener('afterprint', () => {
     ta.style.overflow = '';
     ar(ta);
   });
+  restoreInputsAfterPrint();
   const ms = $('meta-strip');
   if(ms) ms.style.display = metaOpen ? 'flex' : 'none';
 });
