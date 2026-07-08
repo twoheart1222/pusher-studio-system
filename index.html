@@ -435,8 +435,10 @@ input[type="date"] { cursor: pointer; }
   .topbar, .toolbar, .btn-add-row, .th-del, .td-del, .td-del-float, .row-del-btn, .overlay, .save-overlay, .field-style-overlay, .table-toolbar, #inline-toolbar, .col-resize-handle, .drag-dot, .logo-resize-handle { display: none !important; }
   .canvas { padding: 0; display: block; }
   .paper { box-shadow: none; width: 210mm; min-height: unset !important; height: auto !important; padding: 12mm 16mm; margin: 0; }
-  input, textarea { border: none !important; background: transparent !important; box-shadow: none !important; resize: none; }
+  input, textarea { border: none !important; background: transparent !important; box-shadow: none !important; resize: none; -webkit-appearance: none !important; appearance: none !important; outline: none !important; }
   input::placeholder, textarea::placeholder { color: transparent; }
+  input[type="date"]::-webkit-calendar-picker-indicator { display: none !important; opacity: 0 !important; }
+  input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none !important; margin: 0 !important; }
   .meta-item input, .meta-item input:focus { color: #ffffff !important; background: transparent !important; }
   textarea { overflow: visible !important; white-space: pre-wrap !important; }
   .td-name textarea { min-height: unset !important; white-space: pre-wrap !important; overflow: visible !important; display: block !important; width: 100% !important; }
