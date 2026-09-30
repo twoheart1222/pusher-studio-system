@@ -749,7 +749,6 @@ tr:hover td:where(:not(.paper *)),
 .paper {
   border-radius: 0 !important;
   border: 1px solid var(--qs-line) !important;
-  border-top: 6px solid var(--t-head-bg, #1c1917) !important;
   box-shadow: 0 1px 3px rgba(29, 28, 26, .05), 0 12px 40px rgba(29, 28, 26, .07) !important;
 }
 
@@ -838,8 +837,7 @@ body:has(.login-box) { background: var(--bg) !important; }
   .canvas { background: #ffffff !important; }
   .paper {
     border: none !important;
-    border-top: 6px solid var(--t-head-bg, #1c1917) !important;
-    border-radius: 0 !important;
+      border-radius: 0 !important;
     box-shadow: none !important;
   }
 }

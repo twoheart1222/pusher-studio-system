@@ -515,250 +515,414 @@ input[type="date"] { cursor: pointer; }
 .ppb-close:hover { color:#fca5a5; }
 
 /* ==========================================================================
-   QUOTE PAPER v2 — 給廠商/客戶的正式報價單版面
-   只改視覺；欄位、主題色、字體設定、欄位拖曳、列印/圖片輸出邏輯皆不變。
-   主題色：--t-head-bg 用於頁首色條、表頭線與總計區；--t-acc 用於小標。
+   QUOTE PAPER v3 — "Frame" 影像製作風格報價單
+   頁首滿版色帶 + 斜切主色塊 + 底片孔裝飾；資訊卡、主題色表頭、斑馬紋、
+   總計色條、可輸入日期的簽章區、頁尾收尾色帶。
+   主題色：--t-head-bg = 深色主色；--t-acc = 點綴色（切換主色會一起變）。
+   只改視覺與少量裝飾標記；欄位、拖曳、列印與圖片輸出邏輯不變。
    ========================================================================== */
 .paper {
+  --pad-x: 18mm;
+  --pad-t: 14mm;
   --q-ink: #1f1d1a;
   --q-muted: #8b857b;
-  --q-rule: #e4e0d8;
+  --q-rule: #e6e2da;
+  --q-tint: linear-gradient(rgba(255,255,255,.92), rgba(255,255,255,.92));
+  --q-tint2: linear-gradient(rgba(255,255,255,.955), rgba(255,255,255,.955));
   color: var(--q-ink);
 }
 .paper::before { display: none !important; }
-
-/* 版面順序：標題 → 單號/日期 → 雙方資訊 → 明細 */
 .paper > * { order: 2; }
 .paper > .doc-banner { order: 0; }
 .paper > .meta-strip { order: 1; }
+.paper > .doc-closing { order: 3; }
 
-/* 標題列 */
+/* ---------- 頁首色帶 ---------- */
 .paper .doc-banner {
-  align-items: flex-end;
-  padding-bottom: 14px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--q-ink);
+  position: relative;
+  margin: calc(-1 * var(--pad-t)) calc(-1 * var(--pad-x)) 22px;
+  padding: calc(var(--pad-t) + 6mm) var(--pad-x) calc(8mm + 10px);
+  min-height: 44mm;
+  align-items: center;
+  border-bottom: none;
+  background: var(--t-head-bg, #1c1917);
+  overflow: hidden;
 }
+/* 右側斜切點綴 */
+.paper .doc-banner::before {
+  content: "";
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 58%;
+  background: linear-gradient(112deg,
+    transparent 0 22%,
+    var(--t-acc, #b45309) 22% 25.5%,
+    rgba(255,255,255,.07) 25.5% 31%,
+    rgba(255,255,255,.035) 31% 100%);
+  pointer-events: none;
+}
+/* 底片孔 */
+.paper .doc-banner::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 6px;
+  height: 6px;
+  background: repeating-linear-gradient(90deg,
+    rgba(255,255,255,.28) 0 9px,
+    transparent 9px 18px);
+  pointer-events: none;
+}
+.paper .doc-banner > * { position: relative; z-index: 1; }
 .paper .doc-title-text {
   font-family: var(--title-font, 'Noto Serif TC', 'Songti TC', 'PMingLiU', serif);
-  font-size: var(--title-size, 32px);
+  font-size: var(--title-size, 34px);
   font-weight: var(--title-weight, 700);
-  letter-spacing: var(--title-ls, 8px);
-  color: var(--t-title-color, var(--q-ink));
+  letter-spacing: var(--title-ls, 10px);
+  color: #ffffff;
 }
+.paper .doc-title-text:focus { border-bottom-color: rgba(255,255,255,.6) !important; }
 .paper .doc-sub {
-  margin-top: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
   font-size: 9px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 5px;
-  color: var(--t-acc, var(--acc));
+  color: rgba(255,255,255,.72);
 }
-.paper .logo-box.no-logo { background: transparent; }
+.paper .doc-sub::before {
+  content: "";
+  width: 18px; height: 2px;
+  background: var(--t-acc, #b45309);
+}
+.paper .logo-box {
+  background: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+.paper .logo-box.no-logo {
+  background: rgba(255,255,255,.08);
+  border: 1.5px dashed rgba(255,255,255,.35);
+}
+.paper .logo-box.no-logo .logo-hint { color: rgba(255,255,255,.6); }
+.paper .logo-clear { color: rgba(255,255,255,.6); }
 
-/* 單號 / 日期 / 有效期限 */
+/* ---------- 單號 / 日期 / 有效期限 ---------- */
 .paper .meta-strip {
   background: transparent;
-  border: 1px solid var(--q-rule);
   border-radius: 0;
-  margin-bottom: 18px;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow: visible;
 }
-.paper .meta-item { padding: 7px 12px 6px; border-right: 1px solid var(--q-rule); }
+.paper .meta-item {
+  padding: 8px 14px 7px;
+  border-right: none;
+  background: var(--q-tint), var(--t-head-bg, #1c1917);
+  border-top: 2px solid var(--t-head-bg, #1c1917);
+}
+.paper .meta-item:nth-child(2) {
+  background: var(--t-acc, #b45309);
+  border-top-color: var(--t-acc, #b45309);
+}
 .paper .meta-key {
   color: var(--q-muted) !important;
   opacity: 1;
   font-size: 9px;
+  font-weight: 600;
   letter-spacing: 1.5px;
   margin-bottom: 1px;
 }
 .paper .meta-item input,
 .paper .meta-item input:focus {
   color: var(--q-ink) !important;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   padding-left: 0;
 }
-.paper .meta-item input::placeholder { color: #c2bcb2 !important; }
-.paper .meta-item input:hover { background: rgba(0,0,0,.025) !important; }
-.paper .meta-item input:focus { background: #fff !important; }
+.paper .meta-item:nth-child(2) .meta-key { color: rgba(255,255,255,.8) !important; }
+.paper .meta-item:nth-child(2) input,
+.paper .meta-item:nth-child(2) input:focus { color: #ffffff !important; }
+.paper .meta-item input::placeholder { color: #b9b2a7 !important; }
+.paper .meta-item input:hover { background: rgba(0,0,0,.03) !important; }
+.paper .meta-item input:focus { background: rgba(255,255,255,.6) !important; }
+.paper .meta-item:nth-child(2) input::-webkit-calendar-picker-indicator { filter: invert(1); }
 
-/* 雙方資訊 */
+/* ---------- 雙方資訊卡 ---------- */
 .paper .info-block {
+  gap: 12px;
   border: none;
   border-radius: 0;
-  border-bottom: 1px solid var(--q-rule);
-  margin-bottom: 20px;
+  margin-bottom: 22px;
   overflow: visible;
 }
-.paper .info-col { padding: 0 0 16px; }
-.paper .info-col-client { border-right: none; padding-right: 24px; }
-.paper .info-col-vendor { padding-left: 24px; border-left: 1px solid var(--q-rule); }
+.paper .info-col {
+  padding: 14px 14px;
+  background: var(--q-tint2), var(--t-head-bg, #1c1917);
+  border-left: 3px solid var(--t-head-bg, #1c1917);
+}
+.paper .info-col-client { border-right: none; }
+.paper .info-col-vendor { border-left-color: var(--t-acc, #b45309); }
 .paper .info-col-eyebrow {
   justify-content: flex-start !important;
-  font-size: 9px;
+  font-size: 9.5px;
   letter-spacing: 2px;
   font-weight: 700;
-  color: var(--t-acc, var(--acc));
+  color: var(--t-head-bg, #1c1917);
   border-bottom: none;
   margin-bottom: 6px;
   padding-bottom: 0;
 }
+.paper .info-col-vendor .info-col-eyebrow { color: var(--t-acc, #b45309); }
 .paper .info-col-eyebrow > svg { display: none; }
 .paper .entity-name-input {
   font-family: var(--font-serif);
   font-size: 16px;
   font-weight: 700;
   letter-spacing: .5px;
-  border-bottom: none !important;
+  border-bottom: 1px solid var(--q-rule) !important;
+  padding-bottom: 6px !important;
   margin-bottom: 8px;
 }
-.paper .entity-name-input:hover { border-color: transparent !important; background: rgba(0,0,0,.025) !important; }
-.paper .fields-grid { gap: 0 16px; }
-.paper .f-lbl { width: 40px; font-size: 9.5px; color: var(--q-muted); }
-.paper .f-inp { font-size: 11.5px; color: var(--q-ink); }
+.paper .entity-name-input:hover { background: rgba(0,0,0,.025) !important; }
+.paper .fields-grid { grid-template-columns: 1.15fr 1fr; gap: 0 10px; }
+.paper .f-lbl { width: 34px; font-size: 9.5px; color: var(--q-muted); }
+.paper .f-inp { font-size: 11px; color: var(--q-ink); }
 
-/* 明細表 */
-.paper .item-table { margin-bottom: 6px; }
-.paper .item-table thead tr { background: transparent; }
+/* ---------- 明細表 ---------- */
+.paper .item-table { margin-bottom: 8px; }
+.paper .item-table thead tr { background: var(--t-head-bg, #1c1917); }
 .paper .item-table th {
-  padding: 8px 7px;
-  color: var(--t-head-bg, var(--q-ink));
+  padding: 9px 8px;
+  color: var(--t-head-fg, #fff);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1.5px;
-  border-top: 1.5px solid var(--t-head-bg, var(--q-ink));
-  border-bottom: 1px solid var(--t-head-bg, var(--q-ink));
   border-radius: 0 !important;
 }
-.paper .th-input::placeholder { color: #c2bcb2; }
-.paper .th-input:hover { background: rgba(0,0,0,.04); }
-.paper .th-input:focus { background: #fff; }
-.paper .col-resize-handle { background: rgba(0,0,0,.12); }
-.paper .drag-dot { color: rgba(0,0,0,.2); }
-.paper .item-table th[draggable="true"]:hover .drag-dot { color: rgba(0,0,0,.5); }
+.paper .item-table th:not(.th-no):not(.th-del) { background: var(--t-head-bg, #1c1917); box-shadow: 1px 0 0 var(--t-head-bg, #1c1917), -1px 0 0 var(--t-head-bg, #1c1917); }
+.paper .item-table th.th-no {
+  background: var(--t-acc, #b45309);
+  color: #ffffff;
+}
+.paper .item-table th.th-del { background: var(--paper, #fff); }
 .paper .item-table td {
-  padding: 8px 7px;
+  padding: 8px 8px;
   border-bottom: 1px solid var(--q-rule);
 }
-.paper .item-table tbody tr:last-child td { border-bottom: 1px solid var(--t-head-bg, var(--q-ink)); }
-.paper .item-table tbody tr:hover td { background: rgba(0,0,0,.018); }
+.paper .item-table tbody tr:nth-child(even) td:not(.td-del-float) {
+  background: #f5f3ef;
+  box-shadow: 1px 0 0 #f5f3ef, -1px 0 0 #f5f3ef;
+}
+.paper .item-table tbody tr:last-child td:not(.td-del-float) {
+  border-bottom: 2px solid var(--t-head-bg, #1c1917);
+}
+.paper .item-table tbody tr:hover td:not(.td-del-float) { background: #efece6; box-shadow: 1px 0 0 #efece6; }
 .paper .td-no {
   font-family: inherit;
   font-size: 10.5px;
-  color: var(--q-muted);
+  font-weight: 700;
+  color: var(--t-acc, #b45309);
   font-variant-numeric: tabular-nums;
 }
 .paper .td-amt {
   font-family: inherit;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .paper .item-table td input { font-variant-numeric: tabular-nums; }
 .paper .btn-add-row { border-radius: 0; margin-bottom: 20px; }
 
-/* 備註 + 金額 */
-.paper .bottom-wrap { gap: 32px; margin-top: 10px; }
+/* ---------- 備註 + 金額 ---------- */
+.paper .bottom-wrap { gap: 28px; margin-top: 12px; }
+.paper .notes-side {
+  padding: 12px 14px;
+  background: var(--q-tint2), var(--t-head-bg, #1c1917);
+}
 .paper .notes-label {
-  font-size: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9.5px;
   letter-spacing: 2px;
   font-weight: 700;
-  color: var(--t-acc, var(--acc));
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--q-rule);
+  color: var(--t-head-bg, #1c1917);
+  margin-bottom: 6px;
+}
+.paper .notes-label::before {
+  content: "";
+  width: 8px; height: 8px;
+  background: var(--t-acc, #b45309);
 }
 .paper .notes-side textarea { font-size: 10.5px; line-height: 1.85; color: #4d4943; }
-.paper .summary-side { min-width: 230px; }
-.paper .s-row { padding: 6px 0; font-size: 11.5px; color: #4d4943; }
+.paper .summary-side { min-width: 240px; }
+.paper .s-row { padding: 6px 2px; font-size: 11.5px; color: #4d4943; }
 .paper .s-row.bordered { border-bottom: 1px solid var(--q-rule); }
 .paper .s-val {
   font-family: inherit;
   color: var(--q-ink);
-  font-weight: 500;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .paper .s-total {
   margin-top: 12px;
-  padding: 12px 14px;
+  padding: 0;
   border-radius: 0;
-  background: var(--t-head-bg, var(--q-ink));
-  align-items: center;
+  background: var(--t-head-bg, #1c1917);
+  align-items: stretch;
+  overflow: hidden;
 }
 .paper .s-total-label {
-  font-size: 12px;
-  letter-spacing: 2px;
-  font-weight: 700;
-  text-transform: none;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  padding: 10px 16px 10px 14px;
+  background: linear-gradient(105deg, var(--t-acc, #b45309) 0 86%, transparent 86%);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
   line-height: 1.2;
+  text-transform: none;
 }
 .paper .s-total-label small {
-  font-size: 8px;
+  font-size: 7.5px;
   letter-spacing: 2.5px;
   font-weight: 500;
-  opacity: .7;
-  margin-top: 2px;
+  opacity: .85;
+  margin-top: 3px;
 }
 .paper .s-total-val {
+  align-self: center;
+  padding: 10px 14px;
   font-family: inherit;
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 700;
   letter-spacing: .5px;
   font-variant-numeric: tabular-nums;
 }
 
-/* 簽章 */
+/* ---------- 簽章（日期可輸入） ---------- */
 .paper .doc-footer {
   margin-top: 26px;
+  margin-bottom: 26px;
   padding-top: 0;
   border-top: none;
-  gap: 44px;
+  gap: 28px;
 }
+.paper .sign-box {
+  padding: 12px 14px 10px;
+  border: 1px solid var(--q-rule);
+  border-top: 3px solid var(--t-head-bg, #1c1917);
+}
+.paper #sign-box-vendor { border-top-color: var(--t-acc, #b45309); }
 .paper .sign-box .sign-label {
-  font-size: 9.5px;
+  font-size: 10px;
   letter-spacing: 1.5px;
-  font-weight: 600;
-  color: var(--q-muted);
+  font-weight: 700;
+  color: var(--q-ink);
 }
 .paper .sign-images {
-  min-height: 64px !important;
-  border-bottom: 1px solid var(--q-ink) !important;
+  min-height: 62px !important;
+  border-bottom: 1px dashed #bfb8ac !important;
 }
-.paper .sign-box::after {
-  content: "日期：　　　　年　　　月　　　日";
-  display: block;
-  margin-top: 7px;
+.paper .sign-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.paper .sign-date-label {
+  flex-shrink: 0;
   font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
   color: var(--q-muted);
-  letter-spacing: 1px;
+}
+.paper .sign-date-input {
+  flex: 1;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--q-ink);
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--q-rule) !important;
+  border-radius: 0;
+}
+.paper .sign-date-input:not(:focus):invalid,
+.paper .sign-date-input[value=""] { color: #b9b2a7; }
+
+/* ---------- 頁尾收尾色帶 ---------- */
+.paper .doc-closing {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: auto calc(-1 * var(--pad-x)) calc(-1 * var(--pad-t));
+  padding: 9px var(--pad-x);
+  background: var(--t-head-bg, #1c1917);
+  overflow: hidden;
+}
+.paper .doc-closing::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; right: 0;
+  width: 32%;
+  background: linear-gradient(112deg, transparent 0 14%, var(--t-acc, #b45309) 14% 100%);
+}
+.paper .doc-closing .dc-text {
+  position: relative;
+  flex: 1;
+  color: rgba(255,255,255,.85);
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 2px 0;
+}
+.paper .doc-closing .dc-text:hover { background: rgba(255,255,255,.06) !important; }
+.paper .doc-closing .dc-text:focus { background: rgba(255,255,255,.1) !important; box-shadow: none; }
+.paper .doc-closing .dc-mark {
+  position: relative;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  white-space: nowrap;
 }
 
+/* ---------- 列印 / PDF ---------- */
 @media print {
+  .paper { --pad-x: 16mm; --pad-t: 12mm; min-height: 296mm !important; }
   .paper .meta-item input,
   .paper .meta-item input:focus { color: var(--q-ink) !important; }
-  .paper .info-block { border-color: var(--q-rule) !important; }
-  .paper .item-table tbody tr:hover td { background: transparent; }
-  .paper .sign-images { border-bottom: 1px solid var(--q-ink) !important; }
-  /* 修正：表頭文字與內容對齊、垂直置中 */
-  .paper .item-table th { vertical-align: middle !important; padding-top: 7px !important; padding-bottom: 7px !important; }
-  .paper .item-table th[draggable="true"] { padding-left: 7px !important; }
+  .paper .meta-item:nth-child(2) input { color: #ffffff !important; }
+  .paper .info-block, .paper .info-col-client { border-color: inherit !important; }
+  .paper .info-col-client { border-left-color: var(--t-head-bg, #1c1917) !important; }
+  .paper .item-table tbody tr:not(:nth-child(even)):hover td { background: none; box-shadow: none; }
+  .paper .item-table tbody tr:nth-child(even) td:not(.td-del-float) { background: #f5f3ef; box-shadow: 1px 0 0 #f5f3ef, -1px 0 0 #f5f3ef; }
+  .paper .sign-images { border-bottom: 1px dashed #bfb8ac !important; }
+  .paper .sign-date .print-input-text { flex: 1; min-height: 20px; padding: 2px 4px !important; border-bottom: 1px solid var(--q-rule); }
+  .paper .doc-closing .print-input-text { flex: 1; position: relative; padding: 2px 0 !important; color: rgba(255,255,255,.85) !important; }
+  .paper .item-table th { vertical-align: middle !important; padding-top: 8px !important; padding-bottom: 8px !important; }
+  .paper .item-table th[draggable="true"] { padding-left: 8px !important; }
   .paper .item-table th .print-input-text { display: block !important; padding: 0 !important; line-height: 1.5; }
-  /* 修正：明細每一格文字頂端對齊 */
   .paper .item-table td { padding-top: 8px !important; padding-bottom: 8px !important; line-height: 1.6; }
   .paper .item-table td .print-input-text { display: block !important; padding: 0 !important; line-height: 1.6; }
   .paper .f-row { min-height: 21px; }
-  .paper .print-input-text.entity-name-input { display: block !important; padding: 0 !important; margin-bottom: 10px !important; line-height: 1.4; }
-  /* 修正：PDF 中欄位值被擠成窄欄、逐字斷行 */
+  .paper .print-input-text.entity-name-input { display: block !important; padding: 0 0 6px !important; margin-bottom: 8px !important; line-height: 1.4; }
   .paper .f-row > .print-input-text {
     display: block !important;
     flex: 1 1 auto !important;
     width: auto !important;
     min-width: 0 !important;
-    word-break: normal !important;
+    word-break: keep-all !important;
     overflow-wrap: anywhere;
   }
+  .paper .sign-date .print-input-text.is-empty { color: var(--q-muted) !important; }
 }
 
   /* ── auth loading overlay ── */
@@ -1116,6 +1280,7 @@ input[type="date"] { cursor: pointer; }
           <button class="sign-upload-btn" onclick="addSignImage('client')" style="font-size:9px;padding:2px 7px;background:rgba(180,83,9,.08);border:1px solid rgba(180,83,9,.3);color:var(--t-acc,var(--acc));border-radius:3px;cursor:pointer;font-family:inherit;white-space:nowrap">＋ 上傳圖章</button>
         </div>
         <div class="sign-images" id="sign-images-client" style="display:flex;flex-wrap:wrap;gap:8px;min-height:56px;border-bottom:1px solid var(--ink2);padding-bottom:4px;align-items:flex-end"></div>
+        <div class="sign-date"><span class="sign-date-label">日期</span><input type="date" class="sign-date-input" id="sign-date-client" title="簽署日期"></div>
       </div>
       <div class="sign-box" id="sign-box-vendor">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -1123,7 +1288,13 @@ input[type="date"] { cursor: pointer; }
           <button class="sign-upload-btn" onclick="addSignImage('vendor')" style="font-size:9px;padding:2px 7px;background:rgba(180,83,9,.08);border:1px solid rgba(180,83,9,.3);color:var(--t-acc,var(--acc));border-radius:3px;cursor:pointer;font-family:inherit;white-space:nowrap">＋ 上傳圖章</button>
         </div>
         <div class="sign-images" id="sign-images-vendor" style="display:flex;flex-wrap:wrap;gap:8px;min-height:56px;border-bottom:1px solid var(--ink2);padding-bottom:4px;align-items:flex-end"></div>
+        <div class="sign-date"><span class="sign-date-label">日期</span><input type="date" class="sign-date-input" id="sign-date-vendor" title="簽署日期"></div>
       </div>
+    </div>
+
+    <div class="doc-closing">
+      <input type="text" class="dc-text" id="dc-text" value="感謝您的詢價，期待與您合作" placeholder="頁尾文字">
+      <span class="dc-mark">QUOTATION</span>
     </div>
 
   </div></main>
@@ -1592,17 +1763,22 @@ window.onload = async () => {
 
 /* ===== Print handling ===== */
 // 將輸入框在列印/PDF時暫時換成純文字，避免瀏覽器原生輸入框外框殘留
-const PRINT_TEXT_INPUT_SELECTOR = '#doc-title, .entity-name-input, .f-inp, .meta-item input, .th-input, .item-table td input';
+const PRINT_TEXT_INPUT_SELECTOR = '#doc-title, .entity-name-input, .f-inp, .meta-item input, .th-input, .item-table td input, .sign-date-input, #dc-text';
 function convertInputsForPrint() {
   document.querySelectorAll(PRINT_TEXT_INPUT_SELECTOR).forEach(inp => {
-    if (inp.dataset.printSpan) return;
+    if (inp.tagName !== 'INPUT' || inp.dataset.printSpan) return;
     let val = inp.value;
+    const isSignDate = inp.classList.contains('sign-date-input');
     if (inp.type === 'date' && val) {
       const d = new Date(val + 'T00:00:00');
-      if (!isNaN(d)) val = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+      if (!isNaN(d)) {
+        const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+        val = isSignDate ? `${y} 年 ${m} 月 ${dd} 日` : `${y}/${m}/${dd}`;
+      }
     }
+    if (isSignDate && !val) val = '　　　　　年　　　月　　　日';
     const span = document.createElement('span');
-    span.className = 'print-input-text ' + inp.className;
+    span.className = 'print-input-text ' + inp.className + (isSignDate && !inp.value ? ' is-empty' : '');
     const cs = window.getComputedStyle(inp);
     span.textContent = val;
     span.style.textAlign = inp.style.textAlign || cs.textAlign;
@@ -2006,6 +2182,8 @@ function applySpacing() {
   $('sp-row-val').textContent     = rw+'px';
   $('sp-sign-val').textContent    = sg+'px';
   paper.style.padding = `${pad}mm ${pad}mm`;
+  paper.style.setProperty('--pad-x', pad+'mm');
+  paper.style.setProperty('--pad-t', pad+'mm');
   document.querySelectorAll('.info-block').forEach(el=>el.style.marginBottom=sec+'px');
   document.querySelectorAll('.meta-strip').forEach(el=>el.style.marginBottom=sec+'px');
   document.querySelectorAll('.info-col').forEach(el=>el.style.padding=`${ic}px`);
