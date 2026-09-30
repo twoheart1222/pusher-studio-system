@@ -514,6 +514,253 @@ input[type="date"] { cursor: pointer; }
 .ppb-close { background:none; border:none; color:#57534e; cursor:pointer; font-size:15px; padding:0 2px; line-height:1; margin-left:2px; }
 .ppb-close:hover { color:#fca5a5; }
 
+/* ==========================================================================
+   QUOTE PAPER v2 — 給廠商/客戶的正式報價單版面
+   只改視覺；欄位、主題色、字體設定、欄位拖曳、列印/圖片輸出邏輯皆不變。
+   主題色：--t-head-bg 用於頁首色條、表頭線與總計區；--t-acc 用於小標。
+   ========================================================================== */
+.paper {
+  --q-ink: #1f1d1a;
+  --q-muted: #8b857b;
+  --q-rule: #e4e0d8;
+  color: var(--q-ink);
+}
+.paper::before { display: none !important; }
+
+/* 版面順序：標題 → 單號/日期 → 雙方資訊 → 明細 */
+.paper > * { order: 2; }
+.paper > .doc-banner { order: 0; }
+.paper > .meta-strip { order: 1; }
+
+/* 標題列 */
+.paper .doc-banner {
+  align-items: flex-end;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--q-ink);
+}
+.paper .doc-title-text {
+  font-family: var(--title-font, 'Noto Serif TC', 'Songti TC', 'PMingLiU', serif);
+  font-size: var(--title-size, 32px);
+  font-weight: var(--title-weight, 700);
+  letter-spacing: var(--title-ls, 8px);
+  color: var(--t-title-color, var(--q-ink));
+}
+.paper .doc-sub {
+  margin-top: 9px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 5px;
+  color: var(--t-acc, var(--acc));
+}
+.paper .logo-box.no-logo { background: transparent; }
+
+/* 單號 / 日期 / 有效期限 */
+.paper .meta-strip {
+  background: transparent;
+  border: 1px solid var(--q-rule);
+  border-radius: 0;
+  margin-bottom: 18px;
+}
+.paper .meta-item { padding: 7px 12px 6px; border-right: 1px solid var(--q-rule); }
+.paper .meta-key {
+  color: var(--q-muted) !important;
+  opacity: 1;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  margin-bottom: 1px;
+}
+.paper .meta-item input,
+.paper .meta-item input:focus {
+  color: var(--q-ink) !important;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding-left: 0;
+}
+.paper .meta-item input::placeholder { color: #c2bcb2 !important; }
+.paper .meta-item input:hover { background: rgba(0,0,0,.025) !important; }
+.paper .meta-item input:focus { background: #fff !important; }
+
+/* 雙方資訊 */
+.paper .info-block {
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--q-rule);
+  margin-bottom: 20px;
+  overflow: visible;
+}
+.paper .info-col { padding: 0 0 16px; }
+.paper .info-col-client { border-right: none; padding-right: 24px; }
+.paper .info-col-vendor { padding-left: 24px; border-left: 1px solid var(--q-rule); }
+.paper .info-col-eyebrow {
+  justify-content: flex-start !important;
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--t-acc, var(--acc));
+  border-bottom: none;
+  margin-bottom: 6px;
+  padding-bottom: 0;
+}
+.paper .info-col-eyebrow > svg { display: none; }
+.paper .entity-name-input {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  border-bottom: none !important;
+  margin-bottom: 8px;
+}
+.paper .entity-name-input:hover { border-color: transparent !important; background: rgba(0,0,0,.025) !important; }
+.paper .fields-grid { gap: 0 16px; }
+.paper .f-lbl { width: 40px; font-size: 9.5px; color: var(--q-muted); }
+.paper .f-inp { font-size: 11.5px; color: var(--q-ink); }
+
+/* 明細表 */
+.paper .item-table { margin-bottom: 6px; }
+.paper .item-table thead tr { background: transparent; }
+.paper .item-table th {
+  padding: 8px 7px;
+  color: var(--t-head-bg, var(--q-ink));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  border-top: 1.5px solid var(--t-head-bg, var(--q-ink));
+  border-bottom: 1px solid var(--t-head-bg, var(--q-ink));
+  border-radius: 0 !important;
+}
+.paper .th-input::placeholder { color: #c2bcb2; }
+.paper .th-input:hover { background: rgba(0,0,0,.04); }
+.paper .th-input:focus { background: #fff; }
+.paper .col-resize-handle { background: rgba(0,0,0,.12); }
+.paper .drag-dot { color: rgba(0,0,0,.2); }
+.paper .item-table th[draggable="true"]:hover .drag-dot { color: rgba(0,0,0,.5); }
+.paper .item-table td {
+  padding: 8px 7px;
+  border-bottom: 1px solid var(--q-rule);
+}
+.paper .item-table tbody tr:last-child td { border-bottom: 1px solid var(--t-head-bg, var(--q-ink)); }
+.paper .item-table tbody tr:hover td { background: rgba(0,0,0,.018); }
+.paper .td-no {
+  font-family: inherit;
+  font-size: 10.5px;
+  color: var(--q-muted);
+  font-variant-numeric: tabular-nums;
+}
+.paper .td-amt {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.paper .item-table td input { font-variant-numeric: tabular-nums; }
+.paper .btn-add-row { border-radius: 0; margin-bottom: 20px; }
+
+/* 備註 + 金額 */
+.paper .bottom-wrap { gap: 32px; margin-top: 10px; }
+.paper .notes-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--t-acc, var(--acc));
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--q-rule);
+}
+.paper .notes-side textarea { font-size: 10.5px; line-height: 1.85; color: #4d4943; }
+.paper .summary-side { min-width: 230px; }
+.paper .s-row { padding: 6px 0; font-size: 11.5px; color: #4d4943; }
+.paper .s-row.bordered { border-bottom: 1px solid var(--q-rule); }
+.paper .s-val {
+  font-family: inherit;
+  color: var(--q-ink);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.paper .s-total {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 0;
+  background: var(--t-head-bg, var(--q-ink));
+  align-items: center;
+}
+.paper .s-total-label {
+  font-size: 12px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  text-transform: none;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.paper .s-total-label small {
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  font-weight: 500;
+  opacity: .7;
+  margin-top: 2px;
+}
+.paper .s-total-val {
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 簽章 */
+.paper .doc-footer {
+  margin-top: 26px;
+  padding-top: 0;
+  border-top: none;
+  gap: 44px;
+}
+.paper .sign-box .sign-label {
+  font-size: 9.5px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  color: var(--q-muted);
+}
+.paper .sign-images {
+  min-height: 64px !important;
+  border-bottom: 1px solid var(--q-ink) !important;
+}
+.paper .sign-box::after {
+  content: "日期：　　　　年　　　月　　　日";
+  display: block;
+  margin-top: 7px;
+  font-size: 9.5px;
+  color: var(--q-muted);
+  letter-spacing: 1px;
+}
+
+@media print {
+  .paper .meta-item input,
+  .paper .meta-item input:focus { color: var(--q-ink) !important; }
+  .paper .info-block { border-color: var(--q-rule) !important; }
+  .paper .item-table tbody tr:hover td { background: transparent; }
+  .paper .sign-images { border-bottom: 1px solid var(--q-ink) !important; }
+  /* 修正：表頭文字與內容對齊、垂直置中 */
+  .paper .item-table th { vertical-align: middle !important; padding-top: 7px !important; padding-bottom: 7px !important; }
+  .paper .item-table th[draggable="true"] { padding-left: 7px !important; }
+  .paper .item-table th .print-input-text { display: block !important; padding: 0 !important; line-height: 1.5; }
+  /* 修正：明細每一格文字頂端對齊 */
+  .paper .item-table td { padding-top: 8px !important; padding-bottom: 8px !important; line-height: 1.6; }
+  .paper .item-table td .print-input-text { display: block !important; padding: 0 !important; line-height: 1.6; }
+  .paper .f-row { min-height: 21px; }
+  .paper .print-input-text.entity-name-input { display: block !important; padding: 0 !important; margin-bottom: 10px !important; line-height: 1.4; }
+  /* 修正：PDF 中欄位值被擠成窄欄、逐字斷行 */
+  .paper .f-row > .print-input-text {
+    display: block !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    word-break: normal !important;
+    overflow-wrap: anywhere;
+  }
+}
+
   /* ── auth loading overlay ── */
   #auth-overlay{position:fixed;inset:0;background:var(--bg,#eeeae4);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:13px;color:#78716c;}
 </style>
@@ -857,7 +1104,7 @@ input[type="date"] { cursor: pointer; }
         <div class="summary-box">
           <div class="s-row bordered"><span id="lbl-sub">銷售金額</span><span class="s-val" id="v-sub">—</span></div>
           <div class="s-row bordered" id="tax-row"><span id="lbl-tax">營業稅 (5%)</span><span class="s-val" id="v-tax">—</span></div>
-          <div class="s-total"><span class="s-total-label">Total</span><span class="s-total-val" id="v-total">$ 0</span></div>
+          <div class="s-total"><span class="s-total-label">總計<small>TOTAL</small></span><span class="s-total-val" id="v-total">$ 0</span></div>
         </div>
       </div>
     </div>
